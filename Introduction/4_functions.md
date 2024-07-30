@@ -358,3 +358,16 @@ let fac_tr n = fact_aux n 1
 ```
 
 with this tail-recursive version, you can calculate large factorials without running into stack overflow issues.
+
+### Advantages and disadvantages of tail-recursive
+
+#### Advantages
+
+- Memory efficiency: The tail-recursive version use constant stake space. Instead of creating new stack frames for each recursive call, it reuses the same stake frame.
+- Scalability: The tail-recursive function can handle larger input sizes without risking a stack overflow. For example, `count_tr 1_000_000` can execute without running out of stake space.
+- Performance: Reduced overhead from avoding stake frame creating and destruction can make the tail-recursive function faster.
+
+#### Disadvantages
+- Complexity: Introducing an accumulator and a helper function can make the code less intuitive and harder to write, especially for more complex functions.
+- Readability: The additional parameters and helper functions can make the code harder to read and understand, particularly for beginners.
+

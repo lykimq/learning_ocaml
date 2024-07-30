@@ -11,3 +11,6 @@
 
 ## Section 4
 [Functions](4_functions.md)
+
+## Section 5
+[Debugging](5_debugging.md)
