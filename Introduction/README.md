@@ -14,3 +14,6 @@
 
 ## Section 5
 [Debugging](5_debugging.md)
+
+## Section 6
+[Exercises](intro_ex)

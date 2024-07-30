@@ -1,0 +1,4 @@
+(executable
+ (public_name intro_ex)
+ (name main)
+ (libraries intro_ex ounit2))
