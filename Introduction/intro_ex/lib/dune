@@ -1,2 +1,4 @@
 (library
- (name intro_ex))
+ (name intro_ex)
+ (public_name intro_ex)
+ (modules intro_ex))

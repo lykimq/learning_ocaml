@@ -1,4 +1,6 @@
 (executable
  (public_name intro_ex)
  (name main)
- (libraries intro_ex ounit2))
+ (libraries intro_ex ounit2)
+ (preprocess
+  (pps ppx_deriving.std)))

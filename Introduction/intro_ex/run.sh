@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # Function to build the project
 build() {
     echo "Building the project..."
@@ -8,14 +7,14 @@ build() {
 }
 
 # Function to run tests
-test(){
+test() {
     echo "Running test...."
-    dune exec ./bin/main.exe
+    dune build @runtest
 }
 
 # Function to clean the project
-clean(){
-    echo "Cleaning up build aritfacts...."
+clean() {
+    echo "Cleaning up build artifacts...."
     dune clean
 }
 
@@ -23,16 +22,15 @@ clean(){
 case "$1" in
     build)
         build
-    ;;
+        ;;
     test)
         test
-    ;;
+        ;;
     clean)
         clean
-    ;;
+        ;;
     *)
-    echo "Usage: $0 {build|test|clean}"
-    exit 1
-    ;;
+        echo "Usage: $0 {build|test|clean}"
+        exit 1
+        ;;
 esac
-
