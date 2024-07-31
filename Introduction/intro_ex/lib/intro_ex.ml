@@ -25,3 +25,10 @@ let cube x =
    Test your function by applying it to a few inputs.*)
 
 let sign x = if x > 0 then 1 else if x < 0 then -1 else 0
+
+(***********************************************************************)
+(* Define a reverse list *)
+
+let reverse lst =
+  let rec aux acc = function [] -> acc | hd :: tl -> aux (hd :: acc) tl in
+  aux [] lst
