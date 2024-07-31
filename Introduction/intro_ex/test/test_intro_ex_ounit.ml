@@ -23,11 +23,12 @@ let assert_close a b =
     (abs_float (a -. b) < epsilon)
 
 (** TEST *)
-let test_cube_zero = "test_cube_zero" >:: fun _ -> assert_close (cube 0.0) 0.0
+let test_cube_zero () =
+  "test_cube_zero" >:: fun _ -> assert_close (cube 0.0) 0.0
 
-let test_cube_two = "test_cube_two" >:: fun _ -> assert_close (cube 2.0) 8.0
+let test_cube_two () = "test_cube_two" >:: fun _ -> assert_close (cube 2.0) 8.0
 
-let test_cube_three_point_five_correct =
+let test_cube_three_point_five_correct () =
   "test_cube_three_point_five_correct" >:: fun _ ->
   assert_close (cube 3.5) 42.875
 
@@ -50,25 +51,30 @@ let test_cube_three_point_five_incorrect =
 
 let test_cube =
   "cube_tests"
-  >::: [ test_cube_zero; test_cube_two; test_cube_three_point_five_correct ]
+  >::: [
+         test_cube_zero ();
+         test_cube_two ();
+         test_cube_three_point_five_correct ();
+       ]
 
-let _expected_failure =
+let _test_cube_expected_failure =
   "expected_failures" >::: [ test_cube_three_point_five_incorrect ]
 
 (***********************************************************************)
 (* Define a function that computes the sign (1, 0, or -1) of an integer.
    Use a nested if expression.
    Test your function by applying it to a few inputs.*)
-let test_sign_positive =
+let test_sign_positive () =
   "test_sign_positive" >:: fun _ -> assert_equal 1 (sign 42)
 
-let test_sign_negative =
+let test_sign_negative () =
   "test_sign_negative" >:: fun _ -> assert_equal (-1) (sign (-42))
 
-let test_sign_zero = "test_sign_zero" >:: fun _ -> assert_equal 0 (sign 0)
+let test_sign_zero () = "test_sign_zero" >:: fun _ -> assert_equal 0 (sign 0)
 
 let test_sign =
-  "sign_tests" >::: [ test_sign_positive; test_sign_zero; test_sign_negative ]
+  "sign_tests"
+  >::: [ test_sign_positive (); test_sign_zero (); test_sign_negative () ]
 
 let test_suite = "test_suite" >::: [ test_cube; test_sign ]
 

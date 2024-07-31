@@ -1,3 +1,9 @@
 (test
- (name test_intro_ex)
- (libraries ounit2 intro_ex))
+ (name test_intro_ex_ounit)
+ (libraries ounit2 intro_ex)
+ (modules test_intro_ex_ounit))
+
+(test
+ (name test_intro_ex_alcotest)
+ (libraries alcotest intro_ex)
+ (modules test_intro_ex_alcotest))

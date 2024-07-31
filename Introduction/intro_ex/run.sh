@@ -7,9 +7,15 @@ build() {
 }
 
 # Function to run tests
-test() {
-    echo "Running test...."
-    dune build @runtest
+test_ounit() {
+    echo "Running OUnit2 tests...."
+    dune exec ./test/test_intro_ex_ounit.exe
+}
+
+
+test_alcotest() {
+    echo "Running Alcotest tests...."
+    dune exec ./test/test_intro_ex_alcotest.exe
 }
 
 # Function to clean the project
@@ -23,14 +29,17 @@ case "$1" in
     build)
         build
         ;;
-    test)
-        test
+    test-ounit)
+        test_ounit
+        ;;
+    test-alcotest)
+        test_alcotest
         ;;
     clean)
         clean
         ;;
     *)
-        echo "Usage: $0 {build|test|clean}"
+        echo "Usage: $0 {build|test-ounit|test-alcotest|clean}"
         exit 1
         ;;
 esac
