@@ -1,12 +1,18 @@
+;; Test executable for OUnit
+
 (test
  (name test_intro_ex_ounit)
  (libraries ounit2 intro_ex)
  (modules test_intro_ex_ounit))
 
+;; Test executable for Alcotest
+
 (test
  (name test_intro_ex_alcotest)
  (libraries alcotest intro_ex)
  (modules test_intro_ex_alcotest))
+
+;; Test executable for QCheck
 
 (test
  (name test_intro_ex_qcheck)

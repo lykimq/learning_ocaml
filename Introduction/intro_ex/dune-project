@@ -19,7 +19,7 @@
  (name intro_ex)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune)
+ (depends ocaml dune fmt ppx_deriving ppx_expect)
  (tags
   (topics "to describe" your project)))
 

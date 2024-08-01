@@ -32,3 +32,25 @@ let sign x = if x > 0 then 1 else if x < 0 then -1 else 0
 let reverse lst =
   let rec aux acc = function [] -> acc | hd :: tl -> aux (hd :: acc) tl in
   aux [] lst
+
+(***********************************************************************)
+(* Define a function to convert a list of integers into a comma-separated
+    string, as an example to use the library: expect-test
+   Ref: https://www.chrisarmstrong.dev/posts/unit-testing-with-ppx_expect
+*)
+
+let list_to_string lst =
+  let rec aux = function
+    | [] -> ""
+    | [ x ] -> string_of_int x
+    | hd :: tl -> string_of_int hd ^ ", " ^ aux tl
+  in
+  aux lst
+
+(* ppx_expect only works on libraries, not executables.
+   If your tests are successful, you will see no output.
+*)
+
+let%expect_test "list_to_string" =
+  print_endline (list_to_string [ 1; 2; 3; 4; 5 ]);
+  [%expect {|1, 2, 3, 4, 5|}]
