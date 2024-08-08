@@ -1,4 +1,4 @@
-# OCaml introduction
+# Chapter 1 - OCaml introduction
 
 ## Section 1
 [Past, present, future](1_past_present_future.md)
