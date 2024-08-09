@@ -1,0 +1,4 @@
+(library
+ (name ocaml_trees)
+ (public_name ocaml_trees)
+ (libraries))
