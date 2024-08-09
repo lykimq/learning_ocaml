@@ -56,6 +56,8 @@ So, in this section, we are learning about the different toys (data types) and t
 
 ## 11. Example: Trees
 
+[Trees](trees.md)
+
 ## 12. Example: Natural Numbers
 
 ## 13. Summary
