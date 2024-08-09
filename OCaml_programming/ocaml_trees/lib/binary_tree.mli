@@ -1,8 +1,8 @@
 (** A module for a simple binary tree structure *)
 
-module BinaryTree : sig
-  (** The type representing a binary tree. *)
+module Binary_Tree : sig
   type 'a tree
+  (** The type representing a binary tree. *)
 
   (** An empty tree *)
 
@@ -21,4 +21,8 @@ module BinaryTree : sig
 in in-order traversal order (left, root, right). *)
 
   val inorder : 'a tree -> 'a list
+
+  (** [print_tree tree] helper function to print tree. *)
+
+  val print_tree : string tree -> unit
 end

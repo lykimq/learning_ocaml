@@ -1,10 +1,11 @@
-module BinaryTree : sig
+module Binary_Tree : sig
   type 'a tree
 
   val empty : 'a tree
   val insert : 'a -> 'a tree -> 'a tree
   val search : 'a -> 'a tree -> bool
   val inorder : 'a tree -> 'a list
+  val print_tree : string tree -> unit
 end = struct
   type 'a tree = Empty | Node of 'a * 'a tree * 'a tree
 
@@ -43,4 +44,19 @@ end = struct
     in
     (* inorder: left, root, right *)
     List.rev (aux [] tree)
+
+  let print_tree tree =
+    let rec print_tree_aux tree indent is_right =
+      match tree with
+      | Empty -> ()
+      | Node (v, left, right) ->
+          let edge = if is_right then "|__" else "|--" in
+          let new_indent =
+            if is_right then indent ^ "   " else indent ^ "|   "
+          in
+          print_tree_aux right new_indent true;
+          Printf.printf "%s%s%s\n" indent edge v;
+          print_tree_aux left indent false
+    in
+    print_tree_aux tree "" false
 end

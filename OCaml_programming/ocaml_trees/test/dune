@@ -1,3 +1,11 @@
 (test
  (name test_binary_tree)
  (libraries ounit2 ocaml_trees))
+
+(test
+ (name test_binary_tree_qcheck)
+ (libraries qcheck ocaml_trees))
+
+(test
+ (name test_binary_tree_alcotest)
+ (libraries alcotest ocaml_trees))
