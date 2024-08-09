@@ -36,7 +36,11 @@ So, in this section, we are learning about the different toys (data types) and t
 
 ## 3. Unit Testing with OUnit
 
+[Unit Testing with OUnit](ounit.md)
+
+
 ## 4. Records and Tuples
+[Records and Tuples](records_tuples.md)
 
 ## 5. Advanced Pattern Matching
 
