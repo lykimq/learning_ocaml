@@ -11,17 +11,35 @@ let test_insert_search _ =
 
 let test_inorder _ =
   let open Binary_Tree in
-  let tree = empty |> insert "10" |> insert "5" |> insert "20" |> insert "15" in
-  let () = print_tree tree in
+  (* tree:    [10;5;20;15]
+     inorder: [5;10;15;20] *)
+  let tree = empty |> insert 10 |> insert 5 |> insert 20 |> insert 15 in
   let result = inorder tree in
-  let () = List.iter (fun i -> Printf.printf " %s " i) result in
-  assert_equal result [ "5"; "20"; "15"; "10" ]
+  assert_equal result [ 5; 10; 15; 20 ]
+
+let test_preorder _ =
+  let open Binary_Tree in
+  (* tree:     [10; 5; 20; 15]
+     preorder: [10; 5; 20; 15]*)
+  let tree = empty |> insert 10 |> insert 5 |> insert 20 |> insert 15 in
+  let result = preorder tree in
+  assert_equal result [ 10; 5; 20; 15 ]
+
+let test_postorder _ =
+  let open Binary_Tree in
+  (* tree: [10; 5; 20; 15]
+     postorder: [5; 15; 20; 10] *)
+  let tree = empty |> insert 10 |> insert 5 |> insert 20 |> insert 15 in
+  let result = postorder tree in
+  assert_equal result [ 5; 15; 20; 10 ]
 
 let test_suite =
   "Binary Tree Test Suite"
   >::: [
          "test_insert_search" >:: test_insert_search;
          "test_inorder" >:: test_inorder;
+         "test_preorder" >:: test_preorder;
+         "test_postorder" >:: test_postorder;
        ]
 
 let () = run_test_tt_main test_suite

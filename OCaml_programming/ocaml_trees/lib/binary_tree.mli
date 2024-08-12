@@ -22,7 +22,17 @@ in in-order traversal order (left, root, right). *)
 
   val inorder : 'a tree -> 'a list
 
+  (** [preorder tree] returns a list of all the elements in the binary tree [tree]
+in in-order traversal order (root, left, right). *)
+
+  val preorder : 'a tree -> 'a list
+
+  (** [postorder tree] returns a list of all the elements in the binary tree [tree]
+in in-order traversal order (left, right, root). *)
+
+  val postorder : 'a tree -> 'a list
+
   (** [print_tree tree] helper function to print tree. *)
 
-  val print_tree : string tree -> unit
+  val print_tree : int tree -> unit
 end

@@ -2,4 +2,4 @@
  (name ocaml_trees)
  (public_name ocaml_trees)
  (libraries)
- (modules binary_tree))
+ (modules binary_tree avl_tree))

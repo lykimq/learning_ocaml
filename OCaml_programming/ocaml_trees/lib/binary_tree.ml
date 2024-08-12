@@ -5,7 +5,9 @@ module Binary_Tree : sig
   val insert : 'a -> 'a tree -> 'a tree
   val search : 'a -> 'a tree -> bool
   val inorder : 'a tree -> 'a list
-  val print_tree : string tree -> unit
+  val preorder : 'a tree -> 'a list
+  val postorder : 'a tree -> 'a list
+  val print_tree : int tree -> unit
 end = struct
   type 'a tree = Empty | Node of 'a * 'a tree * 'a tree
 
@@ -37,26 +39,50 @@ end = struct
     let rec aux acc = function
       | Empty -> acc
       | Node (v, left, right) ->
-          (* order: right, root, left *)
-          let acc = aux acc right in
-          let acc = v :: acc in
-          aux acc left
+          (* order: left, root, right *)
+          let acc_left = aux acc left in
+          let acc_root = v :: acc_left in
+          aux acc_root right
     in
-    (* inorder: left, root, right *)
+    (* inorder:
+       The result list of aux is constructed in reverse
+       order due to how it constructs the list in ocaml.
+       During the traversal, elements are added to the front
+       of the list, which reverses the order in which they are collected.
+    *)
     List.rev (aux [] tree)
 
-  let print_tree tree =
-    let rec print_tree_aux tree indent is_right =
-      match tree with
-      | Empty -> ()
+  let preorder tree =
+    let rec aux acc = function
+      | Empty -> acc
       | Node (v, left, right) ->
-          let edge = if is_right then "|__" else "|--" in
-          let new_indent =
-            if is_right then indent ^ "   " else indent ^ "|   "
-          in
-          print_tree_aux right new_indent true;
-          Printf.printf "%s%s%s\n" indent edge v;
-          print_tree_aux left indent false
+          (* preorder: (root, left, right)*)
+          let acc_root = v :: acc in
+          let acc_left = aux acc_root left in
+          aux acc_left right
     in
-    print_tree_aux tree "" false
+    List.rev (aux [] tree)
+
+  let postorder tree =
+    let rec aux acc = function
+      | Empty -> acc
+      | Node (v, left, right) ->
+          (* postorder (left, right, root)*)
+          let acc_left = aux acc left in
+          let acc_right = aux acc_left right in
+          v :: acc_right
+    in
+    List.rev (aux [] tree)
+
+  let rec print_tree tree =
+    match tree with
+    | Empty -> print_string "Empty"
+    | Node (v, left, right) ->
+        print_string "Node (";
+        print_string (string_of_int v);
+        print_string ", ";
+        print_tree left;
+        print_string ", ";
+        print_tree right;
+        print_string ")"
 end
