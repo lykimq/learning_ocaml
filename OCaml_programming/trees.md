@@ -78,3 +78,87 @@ In a post-order traversal, you visit the left subtree first, then the right subt
  - Visit the root node.
 
  Post-order result: `1, 3, 2, 5, 7, 6, 4`
+
+## AVL tree
+
+### Properties
+
+#### Left Rotate (LL)
+- Before rotation
+    - Node A: the current root node.
+    - Node B: the right child of node A. Node B has become taller, causing an imbalance.
+
+- After rotation:
+    - Node B becomes the new root.
+    - Node A becomes the left child of node B.
+    - Any left subtree of B (if it exits) becomes the right child of node A.
+
+
+```md
+The balance factor of 30 is -2
+   30                 40
+   /\     -->         /\
+     40              30 50
+      \
+      50
+```
+
+#### Right rotation (RR)
+- Before rotation
+    - Node A: the current root node.
+    - Node B: the left child of node A. Node B has become taller, causing an imbalance.
+- After rotation:
+    - Node B: become the new root.
+    - Node A: become right child of node B.
+    - Any right subtree of B (if exits) become the left child of node A.
+
+```md
+The balance factor of 30 is 2
+   30A                 20B
+   /\     -->          /\
+ 20B                  10C 30A
+ /  \                      /
+10C  25D                  25D
+```
+
+#### Left-Right rotation
+- Before rotation:
+    - Node A: the current root node.
+    - Node B: the left child of node A.
+    - Node C: the right child of node B. node C has become taller, causing an imbalance.
+- After rotation:
+    - Node C becomes the new root
+    - Node B becomes the left child of node C.
+    - Node A becomes the right child of node C.
+    - Any left subtree of C (if it exists) become the right child of node B
+
+```md
+   30A                 20C
+   /\     -->          /\
+ 10B                  10B 30A
+   \                   \
+   20C                  D
+   /
+   D
+```
+
+#### Right-Left rotation
+- Before the rotation
+    - Node A: the current root node.
+    - Node B: the right child of node A.
+    - Node C: The left child of node B. Node C has become taller, causing an imbalance.
+- After the rotation:
+    - Node C becomes new root node.
+    - Node B becomes right child of node C.
+    - Node A becomes left child of node C.
+    - Any right subtree of node C (if it exist) becomes the left child of node B
+
+
+```md
+   10A                 20C
+    \     -->          /\
+    30B              10A 30B
+    /                     /
+   20C                   25D
+    \
+    25D
