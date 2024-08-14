@@ -12,6 +12,7 @@ module AVL_Tree : sig
 
   val print_tree : int avl_tree -> string
   val right_rotate : 'a avl_tree -> 'a avl_tree
+  val left_rotate : 'a avl_tree -> 'a avl_tree
 end = struct
   type 'a avl_tree =
     | Empty
@@ -80,14 +81,49 @@ end = struct
           right = y_right;
           _;
         } ->
-        (* Create new subtree with Y and its new right child *)
+        (* Create new subtree with Y and its new right child
+           y now becomes child of x,
+           any right of x becomes left of y,
+        *)
         let new_right =
           update_height
             (Node
                { value = y_value; left = x_right; right = y_right; height = 0 })
         in
-        (* Return new subtree with X as the new root *)
+        (* Return new subtree with X as the new root
+            x becomes root,
+            left of x is still left of x,
+            right of x is the new right.
+        *)
         update_height
           (Node
              { value = x_value; left = x_left; right = new_right; height = 0 })
+
+  (* In left rotation, the structure is adjusted to maintain the AVL tree balance when
+      a node's right child is too heavy.
+
+        y                         x
+        \                        / \
+         x                      y   x_right
+         /\                    /
+     x_left  x_right          x_left
+  *)
+  let left_rotate y =
+    match y with
+    | Empty -> Empty
+    | Node { right = Empty; _ } -> y
+    | Node
+        {
+          value = y_value;
+          right = Node { value = x_value; left = x_left; right = x_right; _ };
+          left = y_left;
+          _;
+        } ->
+        let new_left =
+          update_height
+            (Node { value = y_value; left = y_left; right = x_left; height = 0 })
+        in
+        update_height
+          (Node
+             { value = x_value; left = new_left; right = x_right; height = 0 })
 end

@@ -12,4 +12,5 @@ module AVL_Tree : sig
 
   val print_tree : int avl_tree -> string
   val right_rotate : 'a avl_tree -> 'a avl_tree
+  val left_rotate : 'a avl_tree -> 'a avl_tree
 end
