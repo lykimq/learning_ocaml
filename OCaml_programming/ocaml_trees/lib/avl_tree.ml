@@ -149,14 +149,14 @@ end = struct
     | Empty -> a
     | Node { value = a_value; left = b_node; right = a_right; _ } ->
         (* right rotate at B *)
-        let new_left = left_rotate b_node in
-        right_rotate
+        let new_right = right_rotate b_node in
+        left_rotate
           (update_height
              (Node
                 {
                   value = a_value;
-                  left = new_left;
-                  right = a_right;
+                  left = a_right;
+                  right = new_right;
                   height = 0;
                 }))
 
