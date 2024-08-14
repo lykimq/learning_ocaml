@@ -13,6 +13,8 @@ module AVL_Tree : sig
   val print_tree : int avl_tree -> string
   val right_rotate : 'a avl_tree -> 'a avl_tree
   val left_rotate : 'a avl_tree -> 'a avl_tree
+  val left_right_rotate : 'a avl_tree -> 'a avl_tree
+  val right_left_rotate : 'a avl_tree -> 'a avl_tree
 end = struct
   type 'a avl_tree =
     | Empty
@@ -34,33 +36,6 @@ end = struct
         Printf.sprintf "Node(%d, %s, %s, %d)" value (print_tree left)
           (print_tree right) height
 
-  (* Rotate right function:
-
-         original tree:
-
-                Y
-               / \
-              X   C
-             / \
-             A   B
-
-       Because the left is heavier than the right: so we perform the rotate to the
-       right to balance it:
-
-                X
-               / \
-              A   Y
-                 / \
-                 B   C
-
-      - Check if we can rotate: make sure Y is not empty and has a left child X.
-      - Adjust tree structure:
-       - Move X up where Y was
-       - Attach Y as the right child of X;
-       - Make sure Y keeps its right child C
-     - Update height: after moving things around, update the heights of X and Y.
-  *)
-
   let height = function Empty -> 0 | Node { height; _ } -> height
 
   let update_height node =
@@ -70,60 +45,156 @@ end = struct
         let new_height = 1 + max (height left) (height right) in
         Node { value; left; right; height = new_height }
 
-  let right_rotate y =
-    match y with
+  let right_rotate a =
+    match a with
     | Empty -> Empty
-    | Node { left = Empty; _ } -> y (* No rotation if Y has no left child *)
+    | Node { left = Empty; _ } -> a (* No rotation if Y has no left child *)
     | Node
         {
-          value = y_value;
-          left = Node { value = x_value; left = x_left; right = x_right; _ };
-          right = y_right;
+          value = a_value;
+          left = Node { value = b_value; left = b_left; right = b_right; _ };
+          right = a_right;
           _;
         } ->
-        (* Create new subtree with Y and its new right child
-           y now becomes child of x,
-           any right of x becomes left of y,
+        (* Right rotation:
+                a                   b
+               /                    \
+               b                     a
+                \                    /
+                 c                  c
+           Before the rotation:
+           - A is the current root node.
+           - B is the left child of A.
+           - C is the right child of B.
+
+           After the rotation:
+           - B becomes the root node.
+           - A becomes the right child of B.
+           - any right subtree of B, becomes left child of A.
         *)
         let new_right =
           update_height
             (Node
-               { value = y_value; left = x_right; right = y_right; height = 0 })
+               { value = a_value; left = b_right; right = a_right; height = 0 })
         in
-        (* Return new subtree with X as the new root
-            x becomes root,
-            left of x is still left of x,
-            right of x is the new right.
-        *)
         update_height
           (Node
-             { value = x_value; left = x_left; right = new_right; height = 0 })
+             { value = b_value; left = b_left; right = new_right; height = 0 })
 
   (* In left rotation, the structure is adjusted to maintain the AVL tree balance when
       a node's right child is too heavy.
 
-        y                         x
-        \                        / \
-         x                      y   x_right
-         /\                    /
-     x_left  x_right          x_left
+        A                         B
+        \                        /
+         B                      A
+         /\                      \
+     B_left                      B_left
+
+     Before the rotation:
+     - Node A is the current root node.
+     - Node B is the right child of A.
+
+     After the rotation:
+     - B becomes the root node.
+     - A becomes the left child of B.
+     - Any left subtree become the right child of A.
   *)
-  let left_rotate y =
-    match y with
+  let left_rotate a =
+    match a with
     | Empty -> Empty
-    | Node { right = Empty; _ } -> y
+    | Node { right = Empty; _ } -> a
     | Node
         {
-          value = y_value;
-          right = Node { value = x_value; left = x_left; right = x_right; _ };
-          left = y_left;
+          value = a_value;
+          right = Node { value = b_value; left = b_left; right = b_right; _ };
+          left = a_left;
           _;
         } ->
         let new_left =
           update_height
-            (Node { value = y_value; left = y_left; right = x_left; height = 0 })
+            (Node { value = a_value; left = a_left; right = b_left; height = 0 })
         in
         update_height
           (Node
-             { value = x_value; left = new_left; right = x_right; height = 0 })
+             { value = b_value; left = new_left; right = b_right; height = 0 })
+
+  (* left-right rotation (LR)
+               A                =>       C
+              /                         / \
+             B                         B   A
+              \                         \
+              C                          D
+              /
+              D
+
+
+      Before the rotation:
+      - A is the current root node.
+      - B is the left child of node A.
+      - C is the right child of node B
+      - D is the left child of C.
+
+     Perform 2 steps:
+     - A left rotation on the right child of node A.
+     - A right rotation on the root node (A)
+
+      After the rotation:
+      - C becomes the new root.
+      - B is the left child of C.
+      - A is the right child of C.
+      - Any left subtree of C (if it exists), becomes the right child of B.
+  *)
+  let left_right_rotate a =
+    match a with
+    | Empty -> a
+    | Node { value = a_value; left = b_node; right = a_right; _ } ->
+        (* right rotate at B *)
+        let new_left = left_rotate b_node in
+        right_rotate
+          (update_height
+             (Node
+                {
+                  value = a_value;
+                  left = new_left;
+                  right = a_right;
+                  height = 0;
+                }))
+
+  (* Right-left rotation
+
+         A         =>    C
+         \              / \
+          B            A   B
+          /                /
+          C                D
+          \
+           D
+
+     Before the rotation:
+     - A is the current root node.
+     - B is the right child of A.
+     - C is the left child of B.
+
+     After the rotation:
+     - C becomes the new root node.
+     - A is the left child of C.
+     - B is the right child of C.
+     - Any right subtree of C, becomes left child of B
+  *)
+
+  let right_left_rotate a =
+    match a with
+    | Empty -> Empty
+    | Node { value = a_value; left = a_left; right = b_node; _ } ->
+        (* left rotation on A *)
+        let new_right = left_rotate b_node in
+        right_rotate
+          (update_height
+             (Node
+                {
+                  value = a_value;
+                  left = a_left;
+                  right = new_right;
+                  height = 0;
+                }))
 end
