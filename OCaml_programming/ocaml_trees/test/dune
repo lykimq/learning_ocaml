@@ -13,3 +13,7 @@
 (test
  (name test_avl_ounit)
  (libraries ounit2 ocaml_trees))
+
+(test
+ (name test_avl_qcheck)
+ (libraries qcheck ocaml_trees))
