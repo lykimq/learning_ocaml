@@ -1,5 +1,12 @@
 module AVL_Tree : sig
-  type 'a avl_tree
+  type 'a avl_tree =
+    | Empty
+    | Node of {
+        value : 'a;
+        left : 'a avl_tree;
+        right : 'a avl_tree;
+        height : int;
+      }
 
   val empty : 'a avl_tree
   val height : 'a avl_tree -> int
