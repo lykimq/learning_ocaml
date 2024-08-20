@@ -48,6 +48,8 @@ let is_balanced tree =
     | Node { left; right; _ } ->
         let left_balanced, left_height = check_balance left in
         let right_balanced, right_height = check_balance right in
+        (* the left, right and the absolute different in height between
+           the left and the right subtrees is at most 1 *)
         let balanced =
           left_balanced && right_balanced
           && abs (left_height - right_height) <= 1
