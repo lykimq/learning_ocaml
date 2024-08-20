@@ -1,4 +1,4 @@
-module Red_Back_Tree : sig
+module Red_Black_Tree : sig
   type color = Red | Black
 
   type 'a tree =
