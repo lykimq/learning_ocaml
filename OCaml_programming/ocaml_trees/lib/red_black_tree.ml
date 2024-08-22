@@ -6,11 +6,13 @@ module Red_Black_Tree : sig
     | Node of { color : color; value : 'a; left : 'a tree; right : 'a tree }
 
   val empty : 'a tree
+  val print_tree : Format.formatter -> int tree -> unit
   val insert : 'a -> 'a tree -> 'a tree
   val search : 'a tree -> 'a -> bool
-  val left_rotate : 'a tree -> 'a tree
-  val right_rotate : 'a tree -> 'a tree
-  val delete : 'a tree -> 'a -> 'a tree
+
+  (*val left_rotate : 'a tree -> 'a tree
+    val right_rotate : 'a tree -> 'a tree
+    val delete : 'a tree -> 'a -> 'a tree*)
 end = struct
   type color = Red | Black
 
@@ -43,7 +45,7 @@ end = struct
          /   \                / \
     y_left y_right           l  y_left
   *)
-  let left_rotate = function
+  let _left_rotate = function
     | Node
         {
           color = color_x;
@@ -68,7 +70,7 @@ end = struct
       /  \                                   /     \
      xleft xright                           xright right
   *)
-  let right_rotate = function
+  let _right_rotate = function
     | Node
         {
           color = color_y;
@@ -86,30 +88,56 @@ end = struct
           }
     | t -> t
 
+  let rec print_tree fmt tree =
+    let open Format in
+    match tree with
+    | Empty -> fprintf fmt "Empty"
+    | Node { color; value; left; right } ->
+        fprintf fmt "Node {color = %s; value = %d; left = %a; right = %a}"
+          (match color with Red -> "Red" | Black -> "Black")
+          value print_tree left print_tree right
+
   let balance = function
-    (* Case 1: Left-left: left child and grandchild are red
-           z(black)                 =>      y(red)
-             /   \                           /    \
-        (red)y     d                   (black)x    z(black)
-          /   \                           /\         /\
-       (red)x  c                         a  b       c  d
-         / \
-        a   b
-    *)
-    | Node
-        {
-          color = Black;
-          value = z;
-          left =
-            Node
-              {
-                color = Red;
-                value = y;
-                left = Node { color = Red; value = x; left = a; right = b };
-                right = c;
-              };
-          right = d;
-        } ->
+    | ( Black,
+        z,
+        Node
+          {
+            color = Red;
+            value = y;
+            left = Node { color = Red; value = x; left = a; right = b };
+            right = c;
+          },
+        d )
+    | ( Black,
+        z,
+        Node
+          {
+            color = Red;
+            value = x;
+            left = a;
+            right = Node { color = Red; value = y; left = b; right = c };
+          },
+        d )
+    | ( Black,
+        x,
+        a,
+        Node
+          {
+            color = Red;
+            value = z;
+            left = Node { color = Red; value = y; left = b; right = c };
+            right = d;
+          } )
+    | ( Black,
+        x,
+        a,
+        Node
+          {
+            color = Red;
+            value = y;
+            left = b;
+            right = Node { color = Red; value = z; left = c; right = d };
+          } ) ->
         Node
           {
             color = Red;
@@ -117,111 +145,19 @@ end = struct
             left = Node { color = Black; value = x; left = a; right = b };
             right = Node { color = Black; value = z; left = c; right = d };
           }
-    (* Case 2: Right-Right: right child and right grandchild are red
-        z(black)       =>          y(red)
-         /\                         /\
-        d  y(red)               (b)z  x(b)
-            / \                  /\    /\
-           a   x(red)           d  a  b  c
-                /\
-               b  c
-    *)
-    | Node
-        {
-          color = Black;
-          value = z;
-          left = d;
-          right =
-            Node
-              {
-                color = Red;
-                value = y;
-                left = a;
-                right = Node { color = Red; value = x; left = b; right = c };
-              };
-        } ->
-        Node
-          {
-            color = Red;
-            value = y;
-            left = Node { color = Black; value = z; left = d; right = a };
-            right = Node { color = Black; value = x; left = b; right = c };
-          }
-    (* Case 3: Left-right (left child is red and right grandchild is red)
-              z(black)              =>  y(red)
-              /       \                   /\
-            (red)x    d               (b)x  z(black)
-             / \                        /\    /\
-            a  y(red)                  a  b   c d
-                /\
-               b  c
-    *)
-    | Node
-        {
-          color = Black;
-          value = z;
-          left =
-            Node
-              {
-                color = Red;
-                value = x;
-                left = a;
-                right = Node { color = Red; value = y; left = b; right = c };
-              };
-          right = d;
-        } ->
-        Node
-          {
-            color = Red;
-            value = y;
-            left = Node { color = Black; value = x; left = a; right = b };
-            right = Node { color = Black; value = z; left = c; right = d };
-          }
-    (* Case 4: Right-left (right child is red and left grandchild is red )
-                  z(black)      =>           y(red)
-                  /   \                      /   \
-                 d    x(red)               (b)z  x(black)
-                       /  \                 /\     /\
-                  (red)y   c               d  a   b  c
-                    /\
-                   a  b
-    *)
-    | Node
-        {
-          color = Black;
-          value = z;
-          left = d;
-          right =
-            Node
-              {
-                color = Red;
-                value = x;
-                left = Node { color = Red; value = y; left = a; right = b };
-                right = c;
-              };
-        } ->
-        Node
-          {
-            color = Red;
-            value = y;
-            left = Node { color = Black; value = z; left = d; right = a };
-            right = Node { color = Black; value = x; left = b; right = c };
-          }
-    | t -> t
+    | color, value, left, right -> Node { color; value; left; right }
 
   let insert x t =
     let rec ins = function
       | Empty -> Node { color = Red; value = x; left = Empty; right = Empty }
-      | Node { color; value; left; right } as t ->
-          if x < value then
-            balance (Node { color; value; left = ins left; right })
-          else if x > value then
-            balance (Node { color; value; left; right = ins right })
-          else t
+      | Node { color; value; left; right } as s ->
+          if x < value then balance (color, value, ins left, right)
+          else if x > value then balance (color, value, left, ins right)
+          else s
     in
     (* ensure the root is black after insertion *)
     match ins t with
-    | Node { value; left; right; _ } ->
+    | Node { color = _; value; left; right } ->
         Node { color = Black; value; left; right }
     | Empty -> failwith "insert: unreachable"
 
@@ -243,7 +179,7 @@ end = struct
      - Delete
   *)
 
-  let adjust_tree tree =
+  (*let adjust_tree tree =
     match tree with
     | Empty -> Empty
     | Node { color = c; value = v; left = l; right = r } -> (
@@ -256,109 +192,109 @@ end = struct
               in
               match rotated with
               | Node { color = _; value = _; left; right = r } ->
-                  (left, Node { color = c; value = v; left; right = r })
+                (left, Node { color = c; value = v; left; right = r })
               | Empty -> failwith "Unexpected tree structure")
           | _ -> (l, Node { color = c; value = v; left = l; right = r })
         in
         match new_left with
         | Node { color = Red; right = Node { color = Red; _ }; _ } ->
-            right_rotate new_tree
+          right_rotate new_tree
         | _ -> new_tree |> balance)
 
-  let rec fix_double_black ~tree ~parent_color ~parent_value ~sibling_color
+    let rec fix_double_black ~tree ~parent_color ~parent_value ~sibling_color
       ~sibling_value ~sibling_left ~sibling_right ~side =
     match sibling_color with
     (* Case 1: sibling is red *)
     | Red ->
-        (* Rotate and swap colors
-             parent          =>    sibling
-              /   \                  /\
-           double  sibling      sibling double
-                     /\          /\
-                    L  R         L R
-        *)
-        let new_parent =
-          Node
-            {
-              color = Red;
-              value = parent_value;
-              left = tree;
-              right =
-                Node
-                  {
-                    color = Black;
-                    value = sibling_value;
-                    left = sibling_left;
-                    right = sibling_right;
-                  };
-            }
-        in
-        let new_tree =
-          if side = `Left then right_rotate new_parent
-          else left_rotate new_parent
-        in
-        fix_double_black ~tree:(balance new_tree) ~parent_color:Red
-          ~parent_value ~sibling_color:Black ~sibling_value ~sibling_left
-          ~sibling_right ~side
+      (* Rotate and swap colors
+           parent          =>    sibling
+            /   \                  /\
+         double  sibling      sibling double
+                   /\          /\
+                  L  R         L R
+      *)
+      let new_parent =
+        Node
+          {
+            color = Red;
+            value = parent_value;
+            left = tree;
+            right =
+              Node
+                {
+                  color = Black;
+                  value = sibling_value;
+                  left = sibling_left;
+                  right = sibling_right;
+                };
+          }
+      in
+      let new_tree =
+        if side = `Left then right_rotate new_parent
+        else left_rotate new_parent
+      in
+      fix_double_black ~tree:(balance new_tree) ~parent_color:Red
+        ~parent_value ~sibling_color:Black ~sibling_value ~sibling_left
+        ~sibling_right ~side
     (* Case 2: sibling is black *)
     | Black ->
-        let has_red_child =
-          match (sibling_left, sibling_right) with
-          | Node { color = Red; _ }, _ | _, Node { color = Red; _ } -> true
-          | _ -> false
+      let has_red_child =
+        match (sibling_left, sibling_right) with
+        | Node { color = Red; _ }, _ | _, Node { color = Red; _ } -> true
+        | _ -> false
+      in
+      if has_red_child then
+        (* Sibling has at least one red child *)
+        let new_tree = adjust_tree tree in
+        fix_double_black ~tree:(balance new_tree) ~parent_color ~parent_value
+          ~sibling_color:Black ~sibling_value ~sibling_left ~sibling_right
+          ~side
+      else
+        (* Case 3: sibling and its children are black
+              parent
+              / \
+           double
+           /
+           sibling (black)
+        *)
+        let new_tree =
+          if side = `Left then
+            Node
+              {
+                color = parent_color;
+                value = parent_value;
+                left =
+                  Node
+                    {
+                      color = Black;
+                      value = sibling_value;
+                      left = sibling_left;
+                      right = sibling_right;
+                    };
+                right = tree;
+              }
+          else
+            Node
+              {
+                color = parent_color;
+                value = parent_value;
+                left = tree;
+                right =
+                  Node
+                    {
+                      color = Black;
+                      value = sibling_value;
+                      left = sibling_left;
+                      right = sibling_right;
+                    };
+              }
         in
-        if has_red_child then
-          (* Sibling has at least one red child *)
-          let new_tree = adjust_tree tree in
-          fix_double_black ~tree:(balance new_tree) ~parent_color ~parent_value
-            ~sibling_color:Black ~sibling_value ~sibling_left ~sibling_right
-            ~side
-        else
-          (* Case 3: sibling and its children are black
-                parent
-                / \
-             double
-             /
-             sibling (black)
-          *)
-          let new_tree =
-            if side = `Left then
-              Node
-                {
-                  color = parent_color;
-                  value = parent_value;
-                  left =
-                    Node
-                      {
-                        color = Black;
-                        value = sibling_value;
-                        left = sibling_left;
-                        right = sibling_right;
-                      };
-                  right = tree;
-                }
-            else
-              Node
-                {
-                  color = parent_color;
-                  value = parent_value;
-                  left = tree;
-                  right =
-                    Node
-                      {
-                        color = Black;
-                        value = sibling_value;
-                        left = sibling_left;
-                        right = sibling_right;
-                      };
-                }
-          in
-          fix_double_black ~tree:(balance new_tree) ~parent_color:Black
-            ~parent_value ~sibling_color:Red ~sibling_value ~sibling_left
-            ~sibling_right ~side
+        fix_double_black ~tree:(balance new_tree) ~parent_color:Black
+          ~parent_value ~sibling_color:Red ~sibling_value ~sibling_left
+          ~sibling_right ~side
 
-  (* Tail-recursive delete function *)
-  let delete t value =
+    (* Tail-recursive delete function *)
+    let delete t value =
     let rec delete_aux t value =
       match t with
       | Empty -> Empty
@@ -383,25 +319,25 @@ end = struct
             | Empty, _ -> right
             | _, Empty -> left
             | _ ->
-                (* Node with two children: find the in-order successor *)
-                let rec min_node t =
-                  match t with
-                  | Empty -> failwith "Tree cannot be empty"
-                  | Node { left = Empty; _ } -> t
-                  | Node { left; _ } -> min_node left
-                in
-                let successor = min_node right in
-                let successor_value =
-                  match successor with
-                  | Node { value = sv; _ } -> sv
-                  | _ -> failwith "Unexpected tree structure"
-                in
-                let new_right = delete_aux right successor_value in
-                Node { color; value = successor_value; left; right = new_right }
-          )
+              (* Node with two children: find the in-order successor *)
+              let rec min_node t =
+                match t with
+                | Empty -> failwith "Tree cannot be empty"
+                | Node { left = Empty; _ } -> t
+                | Node { left; _ } -> min_node left
+              in
+              let successor = min_node right in
+              let successor_value =
+                match successor with
+                | Node { value = sv; _ } -> sv
+                | _ -> failwith "Unexpected tree structure"
+              in
+              let new_right = delete_aux right successor_value in
+              Node { color; value = successor_value; left; right = new_right }
+        )
     in
     match delete_aux t value with
     | Node { value; left; right; _ } ->
-        Node { color = Black; value; left; right }
-    | Empty -> failwith "delete: unreachable"
+      Node { color = Black; value; left; right }
+    | Empty -> failwith "delete: unreachable"*)
 end

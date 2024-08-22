@@ -17,3 +17,7 @@
 (test
  (name test_avl_qcheck)
  (libraries qcheck ocaml_trees))
+
+(test
+ (name test_red_black_tree_alcotest)
+ (libraries alcotest ocaml_trees))
