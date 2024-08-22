@@ -8,4 +8,7 @@ module Red_Black_Tree : sig
   val empty : 'a tree
   val insert : 'a -> 'a tree -> 'a tree
   val search : 'a tree -> 'a -> bool
+  val left_rotate : 'a tree -> 'a tree
+  val right_rotate : 'a tree -> 'a tree
+  val delete : 'a tree -> 'a -> 'a tree
 end
