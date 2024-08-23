@@ -162,3 +162,156 @@ The balance factor of 30 is 2
    20C                   25D
     \
     25D
+```
+
+## Red-Black Tree
+
+A red-black tree is a type of self-balancing binary search tree (BST). It maintains balance through specific rules that help ensure the tree remains approximately balanced.
+
+### Properties
+A red-black tree must satisfy the following properties:
+1. Node color: Each node is either black or red.
+2. Root property: The root is always black.
+3. Red property: red node cannot have red children or a red node has two black children.
+4. Black depth property: every path from a node to its descendant null node must have the same number of black nodes.
+5. Leaf property: every leaf (nil) is black.
+
+### Advantages
+- Balanced: Guarantees `O(log n)` time complexity for insertion, deletion and lookup.
+- Less strick balance: compared to AVL trees, red-black trees have a more relaxed balancing, which can make insertions and deletions faster.
+
+### Disadvantages
+- More complex to implement: due to the multiple cases to handle during insertions and deletions.
+- Slower lookup: slightly slower than AVL trees for lookup because AVL trees are more strictly balanced.
+
+### Deletion
+Delete can either have no children, one child, or two children.
+
+Here are the steps involved in deleting a node in red-black tree:
+
+1. If the node to be deleted has no children, simply remove it and update the parent node.
+2. If the node to be deleted has only one child, replace the node with its child.
+3. If the node to be deleted has two children, then replace the node with its in-order successor, which is the leftmost node in the right subtree. Then delete the in-order successor node as if it has at most one child.
+4. After the node is deleted, the red-black properties might be violated. To restore these properties, some color changes and rotations are perfomred on the ndoes in the tree.
+5. The deletion operation in red-black tree takes O(log n) times on average, making it a good choice for searching and deleting elements in large data sets.
+
+#### Deletion steps
+1. Perform standard BST delete. Let `v` be the node to be deleted, and `u` be the child that replaces `v`.
+2. Simple case:
+- If either `u` or `v` is red. We mark the replaced child as black.
+
+```
+       (B)30                               B(30)
+        / \                                 / \
+   v (B)20  40(B)    ---> delete 20     (B)10  40(B)
+      /
+ u (R)10
+```
+3. If both `u` and `v` are Black.
+3.1. Color `u` as double black. If `v` is leaf, then `u` is null and color of null is black. So the deletion of the black leaf also causes a double black.
+
+```
+        (B)30                                        (B)30
+         /  \                                       /     \
+  v (B)20    40(B)        ---> delete 20      u (BB)nil   40(B)
+      /\         \                                         \
+  u nil nil       50(R)                                    50(R)
+
+ This deletion is not done yet, this double black must become single back.
+```
+
+3.2. Do following while the current node `u` is double black, and it is not the root. Let sibling of node be `s`.
+
+a. If sibling `s` is black and at least one of sibling's children is red => Perform rotation(s). Let the red child `s` be `r`. This case can be divided in 4 subcases depending upon positions of `s` and `r`
+
+i. Left-left case: `s` is left child of its parents and `r` is left child of `s` or both children of `s` are red.
+```
+left-left
+              (B)30 p
+            /        \
+    s   (B)20          40(B)
+         /  \          /  \
+    r (R)15 25(R)  (R)30   50(R)
+
+```
+
+ii. Left-right case: `s` is left child of its parents, `r` is right child.
+
+```
+left-right
+          (B)30 p
+            / \
+       s (B)20
+            \
+            25(R) r
+
+```
+
+iii. Right-right case: `s` is right child of its parents and `r` is right child of `s` or both children of `s` are red.
+
+```
+right-right
+         (B)30 p
+             \
+              40(B) s
+              /  \
+           (R)30   50(R) r
+
+```
+iv. Right-left case: (`s` is right child of its parent and `r` is the left child of `s`)
+
+```
+right-left
+     (B)30 p
+         \
+          40(B) s
+          /
+         30(R) r
+```
+
+b. If sibling is black and its both children are black, perform recoloring, and recur for the parent if parent is black (if parent is red then we don't need to do that, we simple make it black. Red + double black = single red).
+
+```
+       20(B)p                               20(B)p
+       /   \                                /  \
+   v (B)10   30(B) s  --> delete 10   u(BB)nil   30(B)s
+     / \       /  \                               /\
+    nil nil   nil nil                          nil nil
+
+Case 3.2.b sibling s is black, and both of its children are also black.
+Recur for 20 to remove double black from it.
+
+      20 (BB)p
+      /  \
+     nil 30(R)
+          /\
+        nil nil
+```
+
+c. If sibling is red, perform rotation to move old sibling up, recolor the old sibling and parent.
+
+```
+      (B)20 p                              (B)20 p
+        /  \                               /      \
+    v(B)10  30(R)s   ---> delete 10     u(BB)nil   30(R)s
+            /    \                                   /  \
+         25(B)  35(B)                             25(B) 35(B)
+
+Case 3.2.c sibling is red, and right child of its parent. Perform rotation on parent
+
+        30(B)
+        /   \
+    p(R)20    35(B)
+     /    \
+u (BB)nil  25(B)s
+
+--> now it becomes case 3.2.b sibling is black, and both of its children are also black. recolor parent and sibling.
+
+   30(B)
+   /   \
+(B)20   35(B)
+  /  \
+ nil  25(R)
+```
+
+3.3 If `u`  is root, make it single black and return.
