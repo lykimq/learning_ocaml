@@ -24,11 +24,12 @@ end = struct
 
   (* A properties of red-black trees:
      1. Node color: either red or black.
-     2. Root property: root is always black.
-     3. Red property: red node cannot have red children
+     2. Root and leaf(nil) property: root and leaf are always black.
+     3. Red property: red node cannot have red children or
+     if the node is red, then its children are black.
      4. Black property: every path from a node to its descendant null node (leaves)
      has the same number of black nodes.
-     5. Leaf property: all leaves (nil nodes) are black.
+
 
      Compare with AVL tree: the AVL tree is more balance but when it involves
      more insertions and deletions more rotation requires. So if the application
@@ -98,6 +99,15 @@ end = struct
           value print_tree left print_tree right
 
   let balance = function
+    (* Case 1: left-left
+            (black)z        =>  (red) y
+                 / \                 / \
+          (red)y   d           (black)x  z(black)
+              / \                   /\    /\
+        (red)x   c                 a  b   c d
+            / \
+            a b
+    *)
     | ( Black,
         z,
         Node
@@ -108,6 +118,15 @@ end = struct
             right = c;
           },
         d )
+    (* Case 2: left-right
+              (black)z      =>      (red)y
+                /  \                  /  \
+          (red)x    d           (black)x z(black)
+              / \                  /\      / \
+             a   y(red)           a  b     c d
+                 /\
+                b  c
+    *)
     | ( Black,
         z,
         Node
@@ -118,6 +137,15 @@ end = struct
             right = Node { color = Red; value = y; left = b; right = c };
           },
         d )
+    (* Case 3: right-left
+          (black)x       =>              y(red)
+           /   \                          / \
+          a    z(red)             (black)x   z(black)
+               / \                  / \         /\
+          (red)y  d                a   b       c  d
+             /\
+            b  c
+    *)
     | ( Black,
         x,
         a,
@@ -128,6 +156,15 @@ end = struct
             left = Node { color = Red; value = y; left = b; right = c };
             right = d;
           } )
+    (* Case 4: right-right
+          (black)x                =>    (red)y
+           / \                            /   \
+          a   y(red)               (black)x   z(black)
+              / \                      /\       / \
+              b  z(red)               a  b      c d
+                 / \
+                 c  d
+    *)
     | ( Black,
         x,
         a,
@@ -171,173 +208,4 @@ end = struct
           else search_aux right target
     in
     search_aux tree target
-
-  (* Deletion:
-     - Find the minimum value node in a subtree
-     - Rotation: left; right
-     - Fix double black issues
-     - Delete
-  *)
-
-  (*let adjust_tree tree =
-    match tree with
-    | Empty -> Empty
-    | Node { color = c; value = v; left = l; right = r } -> (
-        (* Case 1: if left child is red and right is empty; perform rotation *)
-        let new_left, new_tree =
-          match l with
-          | Node { color = Red; right = Empty; _ } -> (
-              let rotated =
-                left_rotate (Node { color = c; value = v; left = l; right = r })
-              in
-              match rotated with
-              | Node { color = _; value = _; left; right = r } ->
-                (left, Node { color = c; value = v; left; right = r })
-              | Empty -> failwith "Unexpected tree structure")
-          | _ -> (l, Node { color = c; value = v; left = l; right = r })
-        in
-        match new_left with
-        | Node { color = Red; right = Node { color = Red; _ }; _ } ->
-          right_rotate new_tree
-        | _ -> new_tree |> balance)
-
-    let rec fix_double_black ~tree ~parent_color ~parent_value ~sibling_color
-      ~sibling_value ~sibling_left ~sibling_right ~side =
-    match sibling_color with
-    (* Case 1: sibling is red *)
-    | Red ->
-      (* Rotate and swap colors
-           parent          =>    sibling
-            /   \                  /\
-         double  sibling      sibling double
-                   /\          /\
-                  L  R         L R
-      *)
-      let new_parent =
-        Node
-          {
-            color = Red;
-            value = parent_value;
-            left = tree;
-            right =
-              Node
-                {
-                  color = Black;
-                  value = sibling_value;
-                  left = sibling_left;
-                  right = sibling_right;
-                };
-          }
-      in
-      let new_tree =
-        if side = `Left then right_rotate new_parent
-        else left_rotate new_parent
-      in
-      fix_double_black ~tree:(balance new_tree) ~parent_color:Red
-        ~parent_value ~sibling_color:Black ~sibling_value ~sibling_left
-        ~sibling_right ~side
-    (* Case 2: sibling is black *)
-    | Black ->
-      let has_red_child =
-        match (sibling_left, sibling_right) with
-        | Node { color = Red; _ }, _ | _, Node { color = Red; _ } -> true
-        | _ -> false
-      in
-      if has_red_child then
-        (* Sibling has at least one red child *)
-        let new_tree = adjust_tree tree in
-        fix_double_black ~tree:(balance new_tree) ~parent_color ~parent_value
-          ~sibling_color:Black ~sibling_value ~sibling_left ~sibling_right
-          ~side
-      else
-        (* Case 3: sibling and its children are black
-              parent
-              / \
-           double
-           /
-           sibling (black)
-        *)
-        let new_tree =
-          if side = `Left then
-            Node
-              {
-                color = parent_color;
-                value = parent_value;
-                left =
-                  Node
-                    {
-                      color = Black;
-                      value = sibling_value;
-                      left = sibling_left;
-                      right = sibling_right;
-                    };
-                right = tree;
-              }
-          else
-            Node
-              {
-                color = parent_color;
-                value = parent_value;
-                left = tree;
-                right =
-                  Node
-                    {
-                      color = Black;
-                      value = sibling_value;
-                      left = sibling_left;
-                      right = sibling_right;
-                    };
-              }
-        in
-        fix_double_black ~tree:(balance new_tree) ~parent_color:Black
-          ~parent_value ~sibling_color:Red ~sibling_value ~sibling_left
-          ~sibling_right ~side
-
-    (* Tail-recursive delete function *)
-    let delete t value =
-    let rec delete_aux t value =
-      match t with
-      | Empty -> Empty
-      | Node { color; value = v; left; right } -> (
-          if value < v then
-            (* Delete on the left subtree *)
-            let new_left = delete_aux left value in
-            let new_tree = Node { color; value = v; left = new_left; right } in
-            fix_double_black ~tree:new_tree ~parent_color:color ~parent_value:v
-              ~sibling_color:Black ~sibling_value:v ~sibling_left:Empty
-              ~sibling_right:Empty ~side:`Left
-          else if value > v then
-            (* Delete on the right subtree *)
-            let new_right = delete_aux right value in
-            let new_tree = Node { color; value = v; left; right = new_right } in
-            fix_double_black ~tree:new_tree ~parent_color:color ~parent_value:v
-              ~sibling_color:Black ~sibling_value:v ~sibling_left:Empty
-              ~sibling_right:Empty ~side:`Right
-          else
-            (* Node to be deleted found *)
-            match (left, right) with
-            | Empty, _ -> right
-            | _, Empty -> left
-            | _ ->
-              (* Node with two children: find the in-order successor *)
-              let rec min_node t =
-                match t with
-                | Empty -> failwith "Tree cannot be empty"
-                | Node { left = Empty; _ } -> t
-                | Node { left; _ } -> min_node left
-              in
-              let successor = min_node right in
-              let successor_value =
-                match successor with
-                | Node { value = sv; _ } -> sv
-                | _ -> failwith "Unexpected tree structure"
-              in
-              let new_right = delete_aux right successor_value in
-              Node { color; value = successor_value; left; right = new_right }
-        )
-    in
-    match delete_aux t value with
-    | Node { value; left; right; _ } ->
-      Node { color = Black; value; left; right }
-    | Empty -> failwith "delete: unreachable"*)
 end
