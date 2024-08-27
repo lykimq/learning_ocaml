@@ -1,4 +1,4 @@
-module Graph : sig
+module Undirect_graph : sig
   type t = { num_vertices : int; edges : int list array }
   type edge = int * int
 

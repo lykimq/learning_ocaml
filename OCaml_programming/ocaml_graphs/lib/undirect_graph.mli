@@ -1,4 +1,4 @@
-module Graph : sig
+module Undirect_graph : sig
   type t
 
   (* The type representing an edge is a pair of vertices *)
