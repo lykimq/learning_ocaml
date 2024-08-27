@@ -2,4 +2,4 @@
  (name ocaml_graphs)
  (public_name ocaml_graphs)
  (libraries)
- (modules undirect_graph))
+ (modules undirect_graph weight_graph))
