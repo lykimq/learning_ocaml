@@ -36,6 +36,30 @@ let test_dfs () =
   let expected2 = "2 4 0 1 3\n" in
   check string "DFS from 2" expected2 output2
 
+let test_bfs () =
+  let g = Graph.create 5 in
+  (* Add edges to the graph
+           0
+          /\
+         1  4
+         \  /
+          2
+          |
+          3
+  *)
+  Graph.add_edge g (0, 1);
+  Graph.add_edge g (0, 4);
+  Graph.add_edge g (1, 2);
+  Graph.add_edge g (1, 3);
+  Graph.add_edge g (2, 4);
+  (* Test BFS from vertex 0 *)
+  let output0 = capture_output (fun fmt -> Graph.bfs g 0 fmt) in
+  let expected = "0 1 4 2 3\n" in
+  check string "BFS from 0" expected output0
+
 let () =
   run "Graph DFS Tests"
-    [ ("DFS", [ test_case "DFS traversal" `Quick test_dfs ]) ]
+    [
+      ("DFS", [ test_case "DFS traversal" `Quick test_dfs ]);
+      ("BFS", [ test_case "BFS traversal" `Quick test_bfs ]);
+    ]

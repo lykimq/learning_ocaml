@@ -16,4 +16,5 @@ module Graph : sig
   (* Returns a list of all vertices in the graph *)
   val vertices : t -> int list
   val dfs : t -> int -> Format.formatter -> unit
+  val bfs : t -> int -> Format.formatter -> unit
 end
