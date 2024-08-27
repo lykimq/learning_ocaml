@@ -1,0 +1,5 @@
+(library
+ (name ocaml_graphs)
+ (public_name ocaml_graphs)
+ (libraries)
+ (modules graph))
