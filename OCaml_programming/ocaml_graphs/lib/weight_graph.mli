@@ -15,5 +15,5 @@ module Weight_graph : sig
   val add_edge : t -> edge -> directed:bool -> unit
   val neighbors : t -> int -> (int * int) list
   val vertices : t -> int list
-  val dijkstra : t -> int -> int array * bool array
+  val dijkstra : t -> int -> int array
 end

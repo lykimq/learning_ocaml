@@ -45,7 +45,7 @@ module Weight_graph : sig
   val add_edge : t -> edge -> directed:bool -> unit
   val neighbors : t -> int -> (int * int) list
   val vertices : t -> int list
-  val dijkstra : t -> int -> int array * bool array
+  val dijkstra : t -> int -> int array
 end = struct
   (* An edge is defined by a source vertex, a destination vertex and a weight *)
   type edge = { src : int; dest : int; weight : int }
@@ -79,35 +79,32 @@ end = struct
     dist.(start) <- 0;
     let prio_queue = PriorityQueue.create () in
     PriorityQueue.add prio_queue (0, start);
-    let visited = Array.make g.num_vertices false in
-    (dist, prio_queue, visited)
+    (dist, prio_queue)
 
   (* Process a single vertex and update distances *)
-  let process_vertex g dist prio_queue visited u =
-    if not visited.(u) then (
-      visited.(u) <- true;
-      (* Iterate over all neighbors of vertex u *)
-      List.iter
-        (fun (v, weight) ->
-          (* Calculate new distance to vertex v through u *)
-          let new_dist = dist.(u) + weight in
-          (* Update the distance if a shorter path is found *)
-          if new_dist < dist.(v) then (
-            dist.(v) <- new_dist;
-            PriorityQueue.add prio_queue (new_dist, v)))
-        (neighbors g u))
+  let process_vertex g dist prio_queue u =
+    (* Iterate over all neighbors of vertex u *)
+    List.iter
+      (fun (v, weight) ->
+        (* Calculate new distance to vertex v through u *)
+        let new_dist = dist.(u) + weight in
+        (* Update the distance if a shorter path is found *)
+        if new_dist < dist.(v) then (
+          dist.(v) <- new_dist;
+          PriorityQueue.add prio_queue (new_dist, v)))
+      (neighbors g u)
 
   let dijkstra g start =
-    let dist, prio_queue, visited = init_dijkstra g start in
+    let dist, prio_queue = init_dijkstra g start in
 
     let rec process_queue prio_queue =
       if not (PriorityQueue.is_empty prio_queue) then
         let current_dist, u = PriorityQueue.take prio_queue in
         if current_dist <= dist.(u) then (
-          process_vertex g dist prio_queue visited u;
+          process_vertex g dist prio_queue u;
           process_queue prio_queue)
     in
     process_queue prio_queue;
     (* Return the final array *)
-    (dist, visited)
+    dist
 end

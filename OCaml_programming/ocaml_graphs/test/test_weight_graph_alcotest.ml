@@ -56,17 +56,28 @@ let setup_graph () =
 let test_dijkstra () =
   let open Weight_graph in
   let g = setup_graph () in
-  let dist, visited = dijkstra g 0 in
+  let dist = dijkstra g 0 in
   check int "Distance to vertex 0 should be 0" 0 dist.(0);
-  check bool "Vertex 0 should be visited" true visited.(0);
   check int "Distance to vertex 1 should be 7" 7 dist.(1);
-  check bool "Vertex 1 should be visited" true visited.(1);
   check int "Distance to vertex 2 should be 8" 8 dist.(2);
-  check bool "Vertex 2 should be visited" true visited.(2);
   check int "Distance to vertex 3 should be 8" 8 dist.(3);
-  check bool "Vertex 3 should be visited" true visited.(3);
-  check int "Distance to vertex 4 should be 5" 5 dist.(4);
-  check bool "Vertex 4 should be visited" true visited.(4)
+  check int "Distance to vertex 4 should be 5" 5 dist.(4)
+
+let test_dijkstra_directed () =
+  let open Weight_graph in
+  let g = create 5 in
+  add_edge g { src = 0; dest = 1; weight = 10 } ~directed:true;
+  add_edge g { src = 0; dest = 2; weight = 5 } ~directed:true;
+  add_edge g { src = 1; dest = 3; weight = 1 } ~directed:true;
+  add_edge g { src = 2; dest = 1; weight = 3 } ~directed:true;
+  add_edge g { src = 2; dest = 3; weight = 9 } ~directed:true;
+  add_edge g { src = 3; dest = 4; weight = 4 } ~directed:true;
+  let dist = dijkstra g 0 in
+  check int "Distance to vertex 0 should be 0" 0 dist.(0);
+  check int "Distance to vertex 1 should be 8" 8 dist.(1);
+  check int "Distance to vertex 2 should be 5" 5 dist.(2);
+  check int "Distance to vertex 3 should be 9" 9 dist.(3);
+  check int "Distance to vertex 4 should be 13" 13 dist.(4)
 
 let () =
   let open Alcotest in
@@ -76,4 +87,9 @@ let () =
         [ test_case "Add and take elements" `Quick test_add_and_take ] );
       ("PriorityEmpty", [ test_case "Check empty" `Quick test_is_empty ]);
       ("Dijkstra", [ test_case "Check Dijkstra" `Quick test_dijkstra ]);
+      ( "Dijkstra Directed Graph",
+        [
+          test_case "Check Dijkstra Directed graph" `Quick
+            test_dijkstra_directed;
+        ] );
     ]
