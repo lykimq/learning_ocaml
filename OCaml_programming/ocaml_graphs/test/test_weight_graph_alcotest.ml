@@ -79,6 +79,60 @@ let test_dijkstra_directed () =
   check int "Distance to vertex 3 should be 9" 9 dist.(3);
   check int "Distance to vertex 4 should be 13" 13 dist.(4)
 
+let edge_testable =
+  let open Weight_graph in
+  let pp fmt edge =
+    Format.fprintf fmt "{src = %d; dest = %d ; weight = %d }" edge.src edge.dest
+      edge.weight
+  in
+  testable pp ( = )
+
+let test_kruskal () =
+  let open Weight_graph in
+  let g = create 4 in
+  add_edge g { src = 0; dest = 1; weight = 10 } ~directed:false;
+  add_edge g { src = 0; dest = 2; weight = 6 } ~directed:false;
+  add_edge g { src = 0; dest = 3; weight = 5 } ~directed:false;
+  add_edge g { src = 1; dest = 3; weight = 15 } ~directed:false;
+  add_edge g { src = 2; dest = 3; weight = 4 } ~directed:false;
+
+  (* Normalize the edges by sorting src and dest within each edge.
+     It ensures that the src is always smaller vertex and dest is always
+     larger vertex.
+  *)
+  let normalize_edge edge =
+    { edge with src = min edge.src edge.dest; dest = max edge.src edge.dest }
+  in
+  let normalize_edges edges =
+    List.map normalize_edge edges |> List.sort compare
+  in
+
+  let mst = normalize_edges (kruskal g) in
+
+  (* Expected MST edges *)
+  let expected_mst =
+    normalize_edges
+      [
+        { src = 2; dest = 3; weight = 4 };
+        { src = 0; dest = 3; weight = 5 };
+        { src = 0; dest = 1; weight = 10 };
+      ]
+  in
+  (* Sort both the computed MST and expected MST *)
+  let sort_edges edges =
+    List.sort
+      (fun a b ->
+        match compare a.src b.src with
+        | 0 -> (
+            match compare a.dest b.dest with
+            | 0 -> compare a.weight b.weight
+            | c -> c)
+        | c -> c)
+      edges
+  in
+  check (list edge_testable) "MST provided by Kruskal's algorithm"
+    (sort_edges mst) (sort_edges expected_mst)
+
 let () =
   let open Alcotest in
   run "Priority Queue tests"
@@ -92,4 +146,5 @@ let () =
           test_case "Check Dijkstra Directed graph" `Quick
             test_dijkstra_directed;
         ] );
+      ("Kruskal", [ test_case "Kruskal" `Quick test_kruskal ]);
     ]

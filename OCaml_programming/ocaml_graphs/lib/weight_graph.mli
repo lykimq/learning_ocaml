@@ -16,4 +16,5 @@ module Weight_graph : sig
   val neighbors : t -> int -> (int * int) list
   val vertices : t -> int list
   val dijkstra : t -> int -> int array
+  val kruskal : t -> edge list
 end

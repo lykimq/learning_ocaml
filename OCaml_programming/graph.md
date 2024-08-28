@@ -9,7 +9,16 @@
 - Floye-Warshall Algorithm: Computes shortest paths between all pairs of nodes in a weighted graph, including handling negative weights (but not negative weight cycles).
 - A search Algorith: An informed search algorithm that uses heuristics to improve search efficiency for finding the shortest path.
 ## Minimum Spanning Tree Algorithms
-- Kruskal's Algorithm: Finds the minimum spanning tree (MST) by sorting all edges and adding the smallest edge to the MST that doesn't form a cycle.
+- Kruskal's Algorithm: Finds the minimum spanning tree (MST) by sorting all edges and adding the smallest edge to the MST that doesn't form a cycle. It is a connected, undirected graph.
+
+Steps of Kruskal's Algorithm:
+1. Sort all the edges in non-decreasing order of their weight.
+2. Initialize the MST as an empty set.
+3. Iterate through the sorted edge list:
+- For each edge, if adding it to the MST does not form a cycle (i.e., the vertices of the edges belong to different sets), add it to the MST.
+- Use a Union-Find (or Dijoint-Set) data structure to efficiently manage the sets of vertices and check if an edge forms a cycle.
+4. Stop when the MST has `V-1` edges, where `V` is the number of vertices in the graph.
+
 - Prim's Algorithm: Builds the MST by starting from a single node and growing the MST one edge at a time.
 ## Network Flow Algorithms
 ## Graph Coloring Algorithms

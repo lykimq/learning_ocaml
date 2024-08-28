@@ -46,6 +46,7 @@ module Weight_graph : sig
   val neighbors : t -> int -> (int * int) list
   val vertices : t -> int list
   val dijkstra : t -> int -> int array
+  val kruskal : t -> edge list
 end = struct
   (* An edge is defined by a source vertex, a destination vertex and a weight *)
   type edge = { src : int; dest : int; weight : int }
@@ -107,4 +108,83 @@ end = struct
     process_queue prio_queue;
     (* Return the final array *)
     dist
+
+  (* Kruskal's Algorithm:
+     Use this algorithm to find the minimum spanning tree (MST) of a
+     connected, undirected graph. The MST is a subset of the edges that connects
+     all the vertices together, without any cycles, and with the minimum
+     possible total edge weight.
+        1. Retrieve all edges: gather all edges from the graph.
+        2. Sort the edges: by weight
+        3. Union-Find structure: to check for cycles.
+        4. Build the MST: iterate through the sorted edges, adding
+        them to the MST if they don't form a cycle.
+  *)
+
+  (* Retrieve all edges from the graph *)
+  let get_edges g =
+    Array.fold_left
+      (fun acc edge_list -> List.rev_append edge_list acc)
+      [] g.edges
+
+  (* Union-Find Structure *)
+  let make_set n =
+    let parent = Array.init n (fun i -> i) in
+    let rank = Array.make n 0 in
+    (parent, rank)
+
+  let find parent i =
+    let rec aux i acc =
+      if parent.(i) = i then (
+        (* Update all nodes in the path to point directly to the root *)
+        List.iter (fun x -> parent.(x) <- i) acc;
+        i)
+      else aux parent.(i) (i :: acc)
+    in
+    aux i []
+
+  (* Union two sets by rank *)
+  let union parent rank x y =
+    let root_x = find parent x in
+    let root_y = find parent y in
+    (* Only unite the trees if they have different root *)
+    if root_x <> root_y then
+      if rank.(root_x) < rank.(root_y) then
+        (* Attach the tree with the smaller rank under the
+           tree with the larger rank *)
+        parent.(root_x) <- root_y
+      else if rank.(root_x) > rank.(root_y) then
+        (* Attach the tree with the larger rank under the tree
+           with the smaller rank *)
+        parent.(root_y) <- root_x
+      else (
+        (* If ranks are the same, choose one as the new root
+           and increment its rank *)
+        parent.(root_y) <- root_x;
+        rank.(root_x) <- rank.(root_x) + 1)
+
+  (* Kruskal's alrogithm *)
+  let kruskal g =
+    let mst = ref [] in
+    (* Get all edges and sort them by weight in ascending order *)
+    let edges = get_edges g in
+    let sorted_edges = List.sort (fun a b -> compare a.weight b.weight) edges in
+    (* init the union-find structure*)
+    let parent, rank = make_set g.num_vertices in
+
+    (* Process each edge in the sorted list *)
+    List.iter
+      (fun edge ->
+        (* Find the roots of the source and destination vertices *)
+        let u_root = find parent edge.src in
+        let v_root = find parent edge.dest in
+        (* If the roots are differnt, adding this edge won't form a cycle *)
+        if u_root <> v_root then (
+          (* Add the edge in MST *)
+          mst := edge :: !mst;
+          (* union the two sets to connect the components *)
+          union parent rank u_root v_root))
+      sorted_edges;
+    (* Return the list of edges in the MST *)
+    !mst
 end
