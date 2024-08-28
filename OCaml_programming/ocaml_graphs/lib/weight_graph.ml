@@ -10,22 +10,28 @@ end = struct
 
   let create () = ref []
 
+  (* Lower numberial values represent higher priorities *)
   let add pq (priority, value) =
     let rec insert = function
       | [] -> [ (priority, value) ]
       | (p, v) :: rest as l ->
+          (* If the priority of the new element is less (higher priority)
+             insert it before the current element *)
           if priority < p then (priority, value) :: l else (p, v) :: insert rest
     in
+    (* Update the priority queue with the new list *)
     pq := insert !pq
 
+  (* The element with the highest priority (the smallest priority number) is
+     always at the front of the list *)
   let take pq =
     match !pq with
     | [] -> failwith "PriorityQueue is empty"
     | (p, v) :: rest ->
         (* Update ref pq to point to the new list *)
         pq := rest;
-        (* This is the element with the highest priority;
-           return the removed from the priority queue *)
+        (* Take the first element (highest priority) and
+           update the queue to remove it *)
         (p, v)
 
   let is_empty pq = !pq = []
@@ -39,12 +45,13 @@ module Weight_graph : sig
   val add_edge : t -> edge -> directed:bool -> unit
   val neighbors : t -> int -> (int * int) list
   val vertices : t -> int list
-  val dijkstra : t -> int -> int array
+  val dijkstra : t -> int -> int array * bool array
 end = struct
+  (* An edge is defined by a source vertex, a destination vertex and a weight *)
   type edge = { src : int; dest : int; weight : int }
   type t = { num_vertices : int; edges : edge list array }
 
-  (* Create a graph with a given number of vertices *)
+  (* Create a graph with a given number of vertices and no edges *)
   let create num_vertices = { num_vertices; edges = Array.make num_vertices [] }
 
   (* Add an edge to the graph *)
@@ -72,32 +79,35 @@ end = struct
     dist.(start) <- 0;
     let prio_queue = PriorityQueue.create () in
     PriorityQueue.add prio_queue (0, start);
-    (dist, prio_queue)
+    let visited = Array.make g.num_vertices false in
+    (dist, prio_queue, visited)
 
   (* Process a single vertex and update distances *)
-  let process_vertex g dist prio_queue u =
-    (* Iterate over all neighbors of vertex u *)
-    List.iter
-      (fun (v, weight) ->
-        (* Calculate new distance to vertex v through u *)
-        let new_dist = dist.(u) + weight in
-        (* Update the distance if a shorter path is found *)
-        if new_dist < dist.(v) then (
-          dist.(v) <- new_dist;
-          PriorityQueue.add prio_queue (new_dist, v)))
-      (neighbors g u)
+  let process_vertex g dist prio_queue visited u =
+    if not visited.(u) then (
+      visited.(u) <- true;
+      (* Iterate over all neighbors of vertex u *)
+      List.iter
+        (fun (v, weight) ->
+          (* Calculate new distance to vertex v through u *)
+          let new_dist = dist.(u) + weight in
+          (* Update the distance if a shorter path is found *)
+          if new_dist < dist.(v) then (
+            dist.(v) <- new_dist;
+            PriorityQueue.add prio_queue (new_dist, v)))
+        (neighbors g u))
 
   let dijkstra g start =
-    let dist, prio_queue = init_dijkstra g start in
+    let dist, prio_queue, visited = init_dijkstra g start in
 
     let rec process_queue prio_queue =
       if not (PriorityQueue.is_empty prio_queue) then
         let current_dist, u = PriorityQueue.take prio_queue in
         if current_dist <= dist.(u) then (
-          process_vertex g dist prio_queue u;
+          process_vertex g dist prio_queue visited u;
           process_queue prio_queue)
     in
     process_queue prio_queue;
     (* Return the final array *)
-    dist
+    (dist, visited)
 end

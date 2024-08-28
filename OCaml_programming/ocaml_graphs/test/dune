@@ -1,3 +1,7 @@
 (test
  (name test_ocaml_undirect_graph_alcotest)
  (libraries unix alcotest ocaml_graphs))
+
+(test
+ (name test_weight_graph_alcotest)
+ (libraries unix alcotest ocaml_graphs))
