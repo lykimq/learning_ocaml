@@ -52,9 +52,18 @@ end = struct
     search_chars root (List.of_seq (String.to_seq word))
 
   let rec all_words_from_node node prefix acc =
+    (* If the current node marks the end of the word,
+       add the current prefix to the accumulator *)
     let acc = if node.is_end_of_word then prefix :: acc else acc in
+    (* Iterate over all children of the current node *)
     Hashtbl.fold
-      (fun c child acc ->
+      (* For each child node, recursively collect words *)
+        (fun c child acc ->
+        (* Constructs the new prefix by appending the character 'c'
+              to the current prefix.
+           Concatenate the current character to the prefix and
+              recursive into the child node.
+        *)
         all_words_from_node child (prefix ^ String.make 1 c) acc)
       node.children acc
 
