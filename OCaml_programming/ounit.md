@@ -1,33 +1,51 @@
-# Unit testing with OUnit
+# Unit Testing with OUnit in OCaml
 
-Imagine you are building a toy car. Before you start making the car, you write a list of what the car should do:
-- Drive forward.
-- Turn left.
-- Stop.
+## Introduction
 
-Now, let's say you can magically test each part of the car before you actually build it! You write a test to see if the car can drive forward. At first, the test will fail because there is no car yet. Then, you build just enough of the car so it can drive forward, and you test it again. This time, it works. You keep doing this, one small step at a time, until the car is fully built and passed all the tests.
+Unit testing is essential in software development to ensure that individual components (units) of your code function correctly. In this document, we will explore unit testing in OCaml using the `OUnit` framework. We will cover the following:
 
-This is call **Test-Driven Developement (TDD)**, and it is just like building your toy car step by step.
+1. **Introduction to Unit Testing**
+2. **Writing and Testing a Simple Function**
+3. **Handling Test Failures**
+4. **Improving Test Output**
+5. **Reducing Repetitive Code in Tests**
+6. **Testing Exceptions**
+7. **Applying Test-Driven Development (TDD)**
 
-**Now, let's talk about code**
-You are going to write a simpel function, this function adds up all the numbers in a list. If you have the list `[1, 2, 3]`, the function should return `6` because `1 + 2 + 3 = 6`.
+## 1. Introduction to Unit Testing
 
-Here is how you would write that function:
+Unit testing involves creating tests for small units of code to validate their correctness. The process typically follows Test-Driven Development (TDD), where you write tests before implementing the corresponding code. This approach helps you build and refine your code iteratively.
+
+### Example Scenario
+
+Imagine you are building a toy car and want to ensure it performs specific actions:
+- Drive forward
+- Turn left
+- Stop
+
+You would write tests to verify each functionality before building it. This concept is analogous to writing and running unit tests for your code.
+
+## 2. Writing and Testing a Simple Function
+
+Let's start with a basic example. We will implement a function `sum` that calculates the sum of numbers in a list.
+
+### Implementing the `sum` Function
+
+Here’s the implementation of the `sum` function in OCaml:
 
 ```ocaml
 let rec sum = function
-| [] -> 0
-| x :: xs -> x + sum xs
+  | [] -> 0
+  | x :: xs -> x + sum xs
 ```
-The code says: "If the list is empty `[]`, the sum is `0`. If not, take the first number `x` and add it to the sum of the rest of the list `xs`, and return that.
 
-**Now, let's write some tests for it**
-Next, you write some tests to make sure your function works correctly. The tests will check:
-- What if the list is empty? It should return `0`.
-- What if the list has one member, like `[1]`? It should return `1`.
-- What if the list has two members, like `[1, 2]`? It should return `3`.
+This function works as follows:
+- If the list is empty, it returns `0`.
+- Otherwise, it returns the sum of the first element and the sum of the rest of the list.
 
-Here is what the tests look like:
+### Writing Tests with OUnit
+
+To ensure the correctness of the `sum` function, write tests using the `OUnit` framework:
 
 ```ocaml
 open OUnit2
@@ -36,20 +54,25 @@ open Sum
 let tests = "test suite for sum" >::: [
     "empty" >:: (fun _ -> assert_equal 0 (sum []));
     "singleton" >:: (fun _ -> assert_equal 1 (sum [1]));
-    "two_members" >:: (fun _ -> assert_equal 3 (sum [1; 2]));
+    "two_elements" >:: (fun _ -> assert_equal 3 (sum [1; 2]));
 ]
 
 let _ = run_test_tt_main tests
 ```
 
-This code does the following:
+#### Explanation of Test Code
 
-- `open OUnit2` and `open Sum`: This makes sure your tests can use the `OUnit2` testing library and the sum function you wrote.
-- `tests`: This is a list of all the tests for your function.
-- `assert_equal`: This checks if the function's output is what you expected. If it is, the test passes. If not, the test fails.
+- `open OUnit2`: Imports the OUnit2 library.
+- `open Sum`: Imports the module containing the `sum` function.
+- `tests`: Defines a test suite with multiple tests.
+  - `"empty"`: Tests if an empty list returns `0`.
+  - `"singleton"`: Tests if a list with one element `[1]` returns `1`.
+  - `"two_elements"`: Tests if a list `[1; 2]` returns `3`.
+- `run_test_tt_main tests`: Executes the test suite.
 
-**What If There's a Bug?**
-Let's say you accidentally introduced a bug in the sum function:
+## 3. Handling Test Failures
+
+If the `sum` function has a bug, the tests will fail. For example, if the function is modified incorrectly:
 
 ```ocaml
 let rec sum = function
@@ -57,9 +80,9 @@ let rec sum = function
   | x :: xs -> x + sum xs
 ```
 
-Now, if the list is empty, it returns `1` instead of `0`, which is wrong. If you run the tests, they will fail, and you'll see an output like this:
+Running the tests will produce failure messages:
 
-```ocaml
+```
 FFF
 ==============================================================================
 Error: test suite for sum:2:two_elements.
@@ -68,10 +91,11 @@ expected: 3 but got: 4
 ------------------------------------------------------------------------------
 ```
 
-The `FFF` at the top means that all three tests failed. The output tells you exactly which test failed and why. In this case, it expected `3` but got `4` instead.
+The `FFF` indicates all tests failed. The error message specifies which test failed and why, helping you identify and fix the bug.
 
-**Improving the Test Output**
-You can make the error messages clearer by using a **printer** function. This will show you what the function actually returned. Here’s how you do that:
+## 4. Improving Test Output
+
+To make test outputs more informative, use a **printer** function to show what the function returned:
 
 ```ocaml
 let tests = "test suite for sum" >::: [
@@ -81,17 +105,15 @@ let tests = "test suite for sum" >::: [
 ]
 ```
 
-Now, if something goes wrong, you’ll see a message like this:
+This will produce clearer messages if tests fail:
 
-```ocaml
+```
 expected: 3 but got: 4
 ```
 
-This makes it easier to figure out what went wrong.
+## 5. Reducing Repetitive Code in Tests
 
-**Making the Tests Less Repetitive**
-
-Instead of writing the same kind of test multiple times, you can create a function that makes the test for you:
+To avoid repetitive test code, create a function to generate tests:
 
 ```ocaml
 let make_sum_test name expected_output input =
@@ -104,55 +126,73 @@ let tests = "test suite for sum" >::: [
 ]
 ```
 
-This makes your code cleaner and easier to read.
+This approach keeps your test code clean and manageable.
 
-**Testing Exceptions**
-Sometimes, you want to test if a function correctly handles errors by throwing exceptions. But before we do that, you’ll need to learn more about exceptions in OCaml.
+## 6. Testing Exceptions
 
-**Test-Driven Development (TDD)**
-With TDD, you write your tests before you even write the function. For example, say you want to write a function that gives you the next weekday:
+Sometimes, you need to test if a function handles errors correctly by raising exceptions. Here’s how to test for exceptions:
 
-- Write a broken function
-```ocaml
-let next_weekday d = failwith "Unimplemented"
-```
+1. **Define a Function That Should Throw an Exception:**
 
-- Write a simple test
+    ```ocaml
+    let divide x y =
+      if y = 0 then failwith "Division by zero"
+      else x / y
+    ```
 
-```ocaml
-let tests = "test suite for next_weekday" >::: [
-    "tue_after_mon" >:: (fun _ -> assert_equal Tuesday (next_weekday Monday))
-]
-```
+2. **Write a Test to Check for the Expected Exception:**
 
-- Run the test, see it fail, then fix the function bit by bit:
+    ```ocaml
+    let tests = "test suite for divide" >::: [
+      "divide_by_zero" >:: (fun _ ->
+        assert_raises (Failure "Division by zero") (fun () -> divide 10 0)
+      );
+    ]
 
-```ocaml
-let next_weekday d =
-match d with
-| Monday -> Tuesday
-| _ -> failwith "Unimplemented"
-```
+    let _ = run_test_tt_main tests
+    ```
 
-- Add more tests:
+#### Explanation
 
-```ocaml
-let testes = "test suits for next_weekday" >::: [
-    "tue_after_mon" >:: (fun _ -> assert_equal Tuesday (next_weekday Monday));
-    "wed_after_tue" >:: (fun _ -> assert_equal Wednesday (next_weekday Tuesday));
-    "thu_after_wed" >:: (fun _ -> assert_equal Thursday (next_weekday Wednesday));
-]
-```
+- `assert_raises`: Asserts that the function raises the specified exception.
+- `Failure "Division by zero"`: The expected exception.
 
-- Fix the function to pass the new tests:
+## 7. Applying Test-Driven Development (TDD)
 
-```ocaml
-let next_weekday d =
-match d with
-| Monday -> Tuesday
-| Tuesday -> Wednesday
-| Wednesday -> Thursday
-| _ -> failwith "Unimplemented
-```
+TDD involves writing tests before implementing the corresponding code. Here’s how to apply TDD with a new function `next_weekday`:
 
-- Refactor your code if needed and keep repeating this cycle until your function is complete and all tests pass.
+1. **Write a Failing Test:**
+
+    ```ocaml
+    let tests = "test suite for next_weekday" >::: [
+      "tue_after_mon" >:: (fun _ -> assert_equal Tuesday (next_weekday Monday))
+    ]
+    ```
+
+2. **Implement the Function Incrementally:**
+
+    ```ocaml
+    let next_weekday d =
+      match d with
+      | Monday -> Tuesday
+      | _ -> failwith "Unimplemented"
+    ```
+
+3. **Add More Tests and Update Implementation:**
+
+    ```ocaml
+    let next_weekday d =
+      match d with
+      | Monday -> Tuesday
+      | Tuesday -> Wednesday
+      | Wednesday -> Thursday
+      | _ -> failwith "Unimplemented"
+    ```
+
+4. **Refactor and Ensure All Tests Pass.**
+
+By following TDD, you iteratively build and refine your function based on the tests, ensuring all requirements are met.
+
+## Conclusion
+
+Unit testing with OUnit helps ensure your OCaml code functions as expected. By writing tests, handling failures, improving output clarity, and applying TDD principles, you can develop robust, reliable software.
