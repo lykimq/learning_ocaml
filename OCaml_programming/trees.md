@@ -251,6 +251,8 @@ After deletion of 30:
 - Node `30` is removed.
 - The tree remains balanced without any further rotation or recoloring.
 
+---
+
 ## 5. Trie Tree
 
 ### 5.1 What is a Trie Tree?
@@ -347,6 +349,7 @@ Here's what the Trie looks like after inserting all the words:
 
 A Trie is a powerful data structure for managing strings, especially when you need efficient prefix-based searches. It's widely used in various applications from dictionary implementations to routing algorithms and beyond. Understanding how a Trie works can help you solve many string-related problems more efficiently.
 
+---
 
 ## 6 Patricia Tree
 A Patricia Tree (Practical Algorithm to Retrieve Information Coded in Alphanumeric) is a data structure used for storing and retrieving strings efficiently. It’s a type of trie (pronounced “try”), which is a tree-like structure that organizes strings by their common prefixes. Here’s a breakdown of how Patricia Trees work:
