@@ -3,14 +3,6 @@
  (libraries ounit2 ocaml_trees))
 
 (test
- (name test_binary_tree_qcheck)
- (libraries qcheck ocaml_trees))
-
-(test
- (name test_binary_tree_alcotest)
- (libraries alcotest ocaml_trees))
-
-(test
  (name test_avl_ounit)
  (libraries ounit2 ocaml_trees))
 
@@ -20,4 +12,8 @@
 
 (test
  (name test_red_black_tree_alcotest)
+ (libraries alcotest ocaml_trees))
+
+(test
+ (name test_trie_tree_alcotest)
  (libraries alcotest ocaml_trees))
