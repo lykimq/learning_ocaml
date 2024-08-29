@@ -17,3 +17,7 @@
 (test
  (name test_trie_tree_alcotest)
  (libraries alcotest ocaml_trees))
+
+(test
+ (name test_patricia_tree_alcotest)
+ (libraries alcotest ocaml_trees))
