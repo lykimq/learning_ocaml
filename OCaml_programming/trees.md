@@ -315,3 +315,99 @@ u (BB)nil  25(B)s
 ```
 
 3.3 If `u`  is root, make it single black and return.
+
+## Trie Tree
+
+### What is a Trie Tree?
+
+A **Trie Tree**, often just called a **Trie** (pronounced as "try"), is a type of data structure that is used to store a dynamic set of strings, where the keys are usually strings. Tries are particularly useful when you need to perform fast string searches, like looking up words in a dictionary, autocomplete systems, or spell checkers.
+
+### Structure of a Trie
+
+A Trie is a type of tree structure where:
+
+- Each **node** represents a single character of a string.
+- The root node represents the empty string.
+- Each path down the tree may represent a word.
+- Each edge represents the next character of the word.
+- The nodes that are connected from the root to a leaf node form a word.
+
+### Properties of a Trie
+
+1. **Each node can have multiple children**: Each child corresponds to a character in the alphabet.
+2. **Words are formed by tracing paths from the root to a leaf or a node marked as the end of a word**.
+3. **Common prefixes are stored only once**: This makes tries very space-efficient when dealing with large sets of strings that share common prefixes.
+
+### Example: Building a Trie
+
+Let's build a Trie for the words: "cat", "car", "dog", "dot".
+
+1. **Start with an empty root node**.
+2. **Insert "cat"**:
+   - The root node has no children, so we add 'c'.
+   - From 'c', add 'a'.
+   - From 'a', add 't'.
+   - Mark the node containing 't' as the end of a word.
+
+3. **Insert "car"**:
+   - 'c' already exists under the root.
+   - 'a' already exists under 'c'.
+   - 'r' is new, so add 'r' under 'a' and mark it as the end of the word.
+
+4. **Insert "dog"**:
+   - 'd' is new under the root, so add 'd'.
+   - From 'd', add 'o'.
+   - From 'o', add 'g' and mark it as the end of the word.
+
+5. **Insert "dot"**:
+   - 'd' already exists under the root.
+   - 'o' already exists under 'd'.
+   - 't' is new under 'o', so add 't' and mark it as the end of the word.
+
+Here's what the Trie looks like after inserting all the words:
+
+```
+        (root)
+         /   \
+        c     d
+       / \   / \
+      a   o o   o
+     / \    \    \
+    t   r    g    t
+```
+
+- The path `c -> a -> t` forms the word "cat".
+- The path `c -> a -> r` forms the word "car".
+- The path `d -> o -> g` forms the word "dog".
+- The path `d -> o -> t` forms the word "dot".
+
+### Operations on a Trie
+
+1. **Insert a Word**: Start from the root and follow the path corresponding to the characters of the word. If a character path doesn’t exist, create a new node. Mark the last node as the end of the word.
+
+2. **Search for a Word**: Start from the root and follow the path corresponding to the characters of the word. If you can follow the path and the last node is marked as the end of the word, then the word exists in the Trie.
+
+3. **Prefix Search**: Similar to searching for a word, but you don’t need to check if the last node is marked as the end of a word. You just need to be able to follow the path.
+
+4. **Deletion of a Word**: This is more complex because you need to ensure you don't break the paths for other words that share the same prefix. Typically, you'd only remove nodes that don't lead to any other word.
+
+### Applications of Trie
+
+1. **Autocomplete**: Tries are often used in search engines and text editors to suggest words as you type.
+2. **Spell Checking**: Fast lookup of words makes them ideal for spell checkers.
+3. **IP Routing**: Tries can be used to route internet traffic efficiently.
+4. **Prefix Matching**: Useful in many string processing algorithms, where you need to match strings that share a common prefix.
+
+### Advantages of a Trie
+
+- **Fast Search**: Searching in a Trie is fast because you are directly going to the next character without comparing it.
+- **Efficient Prefix Search**: Because common prefixes are shared, searching for a prefix is more efficient.
+
+### Disadvantages of a Trie
+
+- **Space Complexity**: While Tries can be space-efficient for shared prefixes, they can also use a lot of space when many words don't share common prefixes.
+- **Implementation Complexity**: They can be more complex to implement compared to other data structures like hash maps.
+
+### Conclusion
+
+A Trie is a powerful data structure for managing strings, especially when you need efficient prefix-based searches. It's widely used in various applications from dictionary implementations to routing algorithms and beyond. Understanding how a Trie works can help you solve many string-related problems more efficiently.
