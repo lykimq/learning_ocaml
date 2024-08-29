@@ -1,313 +1,234 @@
-## 1. Lists
-A list is like a train with cars linked together, where each car can hold a toy (a value). All the toys in the train have to be of the same type - like all cars carrying only toy dinosaurs or only toy cars, but not a mix of both.
+## 1. Lists in OCaml
 
-1.1 Building Your Train (Creating Lists)
+In OCaml, lists are a fundamental data structure that allow you to store sequences of elements of the same type. Lists are immutable, meaning that once created, they cannot be changed. Instead, operations on lists create new lists.
 
-There are a few ways to build your train:
+### 1.1 Building Lists
 
-1. Empty train: If you don't have any toys yet, your train is empty. In OCaml, this empty train is called `[]` (pronounced "nil").
+**Creating Lists:**
 
-2. Adding a toy to the train: If you have a toy and you want to add it to the front of your train, you can use the `::` operator (called "cons"). For example, `3 :: []` means you are putting the toy "3" in the first car of your train, and the rest of the train is empty.
+1. **Empty List**: An empty list is represented by `[]`. It’s a list that contains no elements.
 
-3. A whole train at once: You can also build an entire train at once using square brackets. For example, `[1; 2; 3]` is a train with three cars carrying the toys "1", "2", and "3".
+   ```ocaml
+   let empty_list = []
+   ```
 
-OCaml make it easy and pleasant to work with lists directly in the language, just like other functional programming languages do. This makes a list "first-class" part of OCaml, meaning they are really important and used often.
+2. **Single Element List**: To create a list with a single element, use the `::` operator (known as "cons"). This operator adds an element to the front of a list.
 
-1.2 How Lists Work:
-- Values in the List: when you write `[]`, it is already a complete train with no toys, so it is considered a value.
+   ```ocaml
+   let single_element_list = 1 :: []  (* Result: [1] *)
+   ```
 
-- Putting toys together: If you have a toy `e1` and another train `e2` and if `e1` becomes `v1` and `e2` becomes `v2`, then `e1 :: e2` becomes `v1 :: v2`, meaning you have added that toy to the train.
+3. **List Initialization**: You can also initialize a list with multiple elements using square brackets and semicolons.
 
-1.3 Everything Should Match (Static Semantics):
-- Same Type of Toys: Every toy in the train has to be of the same type. If the toys are numbers, the types of the train is `int list`. If they are words, it is a `string list`. Think of it like all cars of the train must carry the same kind of toy.
+   ```ocaml
+   let number_list = [1; 2; 3; 4; 5]  (* Result: [1; 2; 3; 4; 5] *)
+   ```
 
-1.4 Taking the Train Apart (Pattern Matching):
+### 1.2 Working with Lists
 
-To see what is inside your train, you can use a special tool call **pattern matching**. Pattern matching allows you to check if your train is empty or if it has toys, and then do something based on that.
+**Basic Operations:**
 
-For example:
+- **Length of List**: To find the number of elements in a list.
 
-- Summing the Toys: Here is how you sum up the toys in a train of numbers:
+   ```ocaml
+   let length lst =
+     let rec aux acc = function
+       | [] -> acc
+       | _ :: tl -> aux (acc + 1) tl
+     in aux 0 lst
+   ```
 
-```ocaml
-let rec sum lst =
-    match lst with
-    | [] -> 0
-    | hd :: tl -> hd + sum tl
-```
-If the train is empty, the sume is `0`. If it has toys, you add the first toy to the sume of the rest.
+- **Summing Elements**: To compute the sum of all elements in a list of integers.
 
-- Finding the Train Length: To count how many toys are in the train:
+   ```ocaml
+   let rec sum lst =
+     match lst with
+     | [] -> 0
+     | hd :: tl -> hd + sum tl
+   ```
 
-```ocaml
-let rec length lst =
-    match lst with
-    | [] -> 0
-    | _hd :: tl -> 1 + length tl
-```
-Again, if it is empty, the count is `0`. Otherwise, you count the first toy and keep counting the rest.
+- **Appending Lists**: To concatenate two lists.
 
-- Connecting Two Trains: To join two trains together:
+   ```ocaml
+   let rec append lst1 lst2 =
+     match lst1 with
+     | [] -> lst2
+     | hd :: tl -> hd :: append tl lst2
 
-```ocaml
-let rec append lst1 lst2 =
-    match lst1 with
-    | [] -> lst2
-    | hd :: tl -> hd :: append tl lst2
-```
-If the first train is empty, the result is just the second train. Otherwise, you attach the first car to the train made by connecting the rest of the cars.
+   (* Tail-recursive version *)
+   let append lst1 lst2 =
+     let rec aux acc = function
+       | [] -> List.rev acc @ lst2
+       | hd :: tl -> aux (hd :: acc) tl
+     in aux [] lst1
+   ```
 
-Tail-recursive function of `append`: We can make it tail-recursive, we can use an accumulator to build the result as we go along, and then reverse the accumulated list at the end:
+### 1.3 Immutability of Lists
 
-```ocaml
-let append lst1 lst2 =
-    let rec aux acc lst1 =
-        match lst1 with
-        | [] -> List.rev acc @ lst2
-        | hd :: tl -> aux (hd :: acc) tl
-    in
-    aux [] lst1
-```
+Lists in OCaml are immutable. When you perform operations on a list, you create a new list rather than modifying the existing one.
 
-**How it works**
-- Accumulator (`acc`): We use an accumulator to collect the elements of `lst1` in reverse order. This ensures that each recursive call is tail-recursive, as the last operation is just the recursive call to `aux`.
-- Base case: when `lst1` is empty, we reverse the accumulated list (`acc`) and concatenate it with `lst2`.
-- Recursive case: for each element in `lst1`, we cons it onto the accumulator and continue with the tail of the list.
-
-This tail-recursive version is more efficient for large lists because it avoids growing the stack with each recursive call.
-
-1.5 List Cannot Change (Immutable Lists)
-Once you have built your train, you can't change any of the toys inside. If you need to change something, you create a new train. This immutability means the pieces of the old train can be safely shared with the new one, without worrying about someone else chaning it behind your back.
-
-For instance, if you want to increase the first toy by one:
+**Example: Incrementing the First Element:**
 
 ```ocaml
 let inc_first lst =
-    match lst with
-    | [] -> []
-    | hd :: tl -> hd + 1 :: tl
+  match lst with
+  | [] -> []
+  | hd :: tl -> (hd + 1) :: tl
 ```
-This create a new train where only the first toy is changed, but the rest of the train stay exactly the same.
 
-1.6 What is pattern matching?
-Imagine pattern matching like a game where you have a toy box (this is your list) and you want to find out what is inside it by checking different shapes of toys (these are patterns). If the shape of the toy you see in the box matches the shape you are looking for, you know what you have. If it does not match, you try the next shape.
+### 1.4 Pattern Matching with Lists
 
-**Syntax of pattern matching**
-Here is the basic way to use pattern matching in OCaml:
+Pattern matching allows you to destructure lists and perform operations based on their structure.
+
+**Examples:**
+
+- **Summing the Elements:**
+
+   ```ocaml
+   let rec sum = function
+     | [] -> 0
+     | hd :: tl -> hd + sum tl
+   ```
+
+- **Finding Length:**
+
+   ```ocaml
+   let rec length = function
+     | [] -> 0
+     | _ :: tl -> 1 + length tl
+   ```
+
+- **Concatenating Lists (Tail-Recursive):**
+
+   ```ocaml
+   let append lst1 lst2 =
+     let rec aux acc = function
+       | [] -> List.rev acc @ lst2
+       | hd :: tl -> aux (hd :: acc) tl
+     in aux [] lst1
+   ```
+
+**Pattern Matching Syntax:**
 
 ```ocaml
-match e with
-| p1 -> e1
-| p2 -> e2
-| ...
-| pn -> en
+match expression with
+| pattern1 -> result1
+| pattern2 -> result2
+...
+| patternN -> resultN
 ```
 
-- `e` is the toy box (or list) you are checking.
-- `p1, p2, ..., pn`: are the shapes of toys you are looking for (patterns).
-- `e1, e2, ..., en`: are what you get if the toy matches the shape.
+**Pattern Types:**
 
-**Types of patterns**
-a. Variable pattern (`x`): matches any toys and gives you that toy.
+- **Variable Pattern**: Matches any value and binds it to a variable.
+
+   ```ocaml
+   match [1; 2; 3] with
+   | x -> x  (* x will be [1; 2; 3] *)
+   ```
+
+- **Wildcard Pattern**: Matches any value but does not bind it to a variable.
+
+   ```ocaml
+   match [1; 2; 3] with
+   | _ -> "whatever"
+   ```
+
+- **Empty List Pattern**: Matches an empty list.
+
+   ```ocaml
+   match [] with
+   | [] -> "Empty list"
+   ```
+
+- **Cons Pattern**: Matches a list with at least one element, separating the head and tail.
+
+   ```ocaml
+   match [1; 2; 3] with
+   | hd :: tl -> (hd, tl)  (* hd is 1, tl is [2; 3] *)
+   ```
+
+**Deep Pattern Matching Example:**
 
 ```ocaml
 match [1; 2; 3] with
-| x -> x (* x will be [1; 2; 3] *)
+| _ :: _ :: [] -> "List with exactly two elements"
+| _ :: _ -> "List with at least two elements"
+| [] -> "Empty list"
 ```
 
-b. Wildcard pattern (`_`): matches any toys but does not tell you what it is.
+### 1.5 Tail Recursion
 
-```ocaml
-match [1; 2; 3] with
-| _ -> "whatever"
-```
+Tail recursion is a form of recursion where the recursive call is the final operation in the function. It allows the compiler to optimize the recursion to prevent stack overflow.
 
-c. Empty list pattern (`[]`): matches an empty toy box.
-
-```ocaml
-match [] with
-| [] -> "Empty box"
-```
-
-d. Cons pattern (`p1 :: p2`): matches a toy box with at least one toy and separates the first toy `p1` from the rest `p2`
-
-```ocaml
-match [1; 2; 3] with
-| [1; 2; 3] -> "Match found!"
-```
-
-**How pattern matching works**
-a. Check the toy box: find out what is inside the box (`e`).
-b. Try each shape: see if the toy fits the first pattern (`p1`). If not, try the next one (`p2`) and so on.
-c. Get the result: if you find a match, use the associated result (`e1, e2`, etc.). If not match, it raise an error.
-
-**Example in action**
-
-```ocaml
-match 1 :: [] with
-| [] -> false
-| hd :: tl -> hd = 1 && tl = []
-```
-
-- `1 :: []`: is a toy box with one toy: `1`.
-- `[]` does not match `1 :: []`.
-- `hd :: tl` matches `1 :: []`. Here, `hd` is `1` and `tl` is `[]`
-
-Substitue these into the result part:
-- `hd = 1 && tl = []` becomes `1 = 1 && [] = []`, which is `true`.
-
-So, so the result is `true`.
-
-**Static checks**
-OCaml checks two things with patterns:
-
-a. Exhaustiveness: Make sure you have patterns to cover all possibilites. For example, if you write a function that only handles some cases of a list, OCaml warns you.
-
-```ocaml
-let head lst =
-    match lst with
-    | hd :: _ -> hd
-```
-
-**Warning**: This does not handle the empty list `[]`
-
-b. Unused branches: Checks if some patterns are unneccessary because eariler ones already cover those cases.
+**Non-Tail Recursive Sum:**
 
 ```ocaml
 let rec sum lst =
-    match lst with
-        | hd :: tl = hd + sum tl
-        | [hd] -> hd
-        | [] -> 0
+  match lst with
+  | [] -> 0
+  | hd :: tl -> hd + sum tl
 ```
 
-**Warning**: The `[hd]` case will never be reached because `hd :: tl` already covers all cases with at least one element.
-
-**Deep pattern matching**
-You can look inside lists deeply:
-- `_ :: []`: matches lists with exactly one toy.
-- `_ :: _`: matches lists with at least one toy.
-- `_ :: _ :: []`: matches lists with exactly two toy.
-
-**Immediate matches**
-
-If your function immediately patterns the argument, you can simplify it:
-
-Instead of:
-
-```ocaml
-let rec sum lst =
-    match lst with
-    | [] -> 0
-    | hd :: tl -> hd + sum tl
-```
-
-You can write:
-
-```ocaml
-let rec sum = function
-    | [] -> 0
-    | hd :: tl -> hd + sum tl
-```
-
-Here, `function` replaces `match` and you don't need to name the argument.
-
-1.7 OCamldoc and List syntax
-
-OCamldoc is a tool that automatically generates documentation from comments in OCaml source code, similar to Javadoc in Java. It helps create HTML (or other formats) documentation for OCaml code. For isntance, the documentation for the `List` module in OCaml is created using OCamldoc.
-
-**Warning about square brackets in OCamldoc**:
-In OCamldoc commets, square brackets are used to format code snippets, not to denote lists. This can be confusing when discussing lists. For example, if you see:
-
-```ocaml
-(** Return the first element of the given list. Raise
-    [Failure "hd"] if the list is empty. *)
-```
-
-Here `[Failure "hd"]` is not a list but a formatted piece of code.
-
-To avoid confusion, when talking about lists in documentation, square brackets inside the comment denote lists, while square brackets outside are for formatting code. For example:
-
-```ocaml
-(** [hd lst] returns the first element of [lst].
-    Raise [Failure "hd"] if [lst = []] *)
-```
-
-In this comment:
-- `[hd lst]` is formatted as code.
-- `[lst = []]` refers to the empty list, with the outer brackets used for formatting.
-
-1.8 List comprehensions
-
-List comprehensions are a way to create lists based on existing lists, often using a syntax similar to mathematical set notation. For example, in Python, you might right:
-
-```python
-[x * 2 for x in range (10) if x % 2 == 0]
-```
-
-This creates a list of even numbers from 0 to 18
-
-OCaml does not have built-in list comprehensions. Instead, OCaml provides a way to achieve similar results, such as using higher-order functions (liek `List.map` and `List.filter`) and the pipeline operator. Because these techniques are powerful and sufficient, OCaml does not include separate syntax for list comprehensions.
-
-1.9 Tail recursion
-
-Tail recursion is a specific type of recursion where the recursive call is the last action in the function. This is important for performance because it allows the OCaml compiler to optimize the function to use less memory.
-
-Consider these two implementations of summing a list:
-
-a. Non-tail recursive function
-
-```ocaml
-let rec sum lst =
-    match lst with
-    | [] -> 0
-    | hd :: tl -> hd + (sum tl)
-```
-
-In this function, after calling `sum tl`, it adds `hd` to the result. The addition happens after the recursive call returns, making this function non-tail recursive.
-
-b. Tail recursive function
+**Tail Recursive Sum:**
 
 ```ocaml
 let sum lst =
-    let rec aux acc l =
-        match l with
-        | [] -> acc
-        | hd :: tl -> aux (hd + acc) tl
-    in aux 0 lst
+  let rec aux acc = function
+    | [] -> acc
+    | hd :: tl -> aux (hd + acc) tl
+  in aux 0 lst
 ```
 
-Here `aux` accumulates the sum in the `acc` parameter and immediately returns the result of the recursive call without any further computation. This make `aux` a tail-recursive function.
+**Tail Recursion Importance:**
 
-**Why tail recursive matters**:
-Tail-recursive functions are more memory efficient because they are reuse the current function's stack frame for the next call. This is particularly useful for functions that handle large lists.
+Tail-recursive functions are more efficient because they reuse the current function’s stack frame, reducing memory usage and stack overflow risks for large lists.
 
-**Example of tail recursive list creation**:
+**Example of Tail Recursive List Creation:**
 
 ```ocaml
-(** [from i j l] is the list containing the integers from [i] to [j],
-    inclusive, followed by the list [l].
-    Example: [from 1 3 [0] = [1; 2; 3; 0]] *)
+let rec from i j l =
+  if i > j then l
+  else from i (j - 1) (j :: l)
 
-    let rec from i j l =
-        if i > j
-        then l
-        else from i (j - 1) (j :: l)
-
-    (** [i -- j] is the list contatining the integers from [i] to [j],
-    inclusive. *)
-
-    let long_list = 0 -- 1_000_000
+let range_list = from 1 10 []  (* Creates a list [1; 2; 3; 4; 5; 6; 7; 8; 9; 10] *)
 ```
 
-In this example:
-- `from` generates a list of integer from `i` to `j` adn then appends list `l`.
-- `( -- )` is a custom operator to create a list of integers from `i` to `j`.
-
-Using `List.init` to create a large list:
+Using `List.init` to create a large list efficiently:
 
 ```ocaml
-List.init 1_000_000 Fun.id
+(* Create a list from 0 to 999,999 *)
+let large_list = List.init 1_000_000 Fun.id
 ```
 
-This creates a list from `0` to `1_000_000` using the built-in `List.init` function, which is optimized for performance and tail-recursive for large lists.
+### 1.6 OCamldoc and List Syntax
+
+**OCamldoc** is a documentation tool that generates HTML or other formats from comments in OCaml code. When documenting lists, be mindful of how square brackets are used.
+
+**Example OCamldoc Comment:**
+
+```ocaml
+(** [hd lst] returns the first element of [lst].
+    Raises [Failure "hd"] if [lst = []]. *)
+```
+
+In the comment:
+- `[hd lst]` is formatted as code.
+- `[lst = []]` refers to the empty list, with square brackets used for formatting.
+
+**Note:** Square brackets in OCamldoc comments denote code formatting and should not be confused with actual list syntax.
+
+### 1.7 List Comprehensions
+
+OCaml does not have built-in list comprehensions like some other languages (e.g., Python). Instead, it uses higher-order functions such as `List.map` and `List.filter` for similar purposes.
+
+**Example Using `List.map` and `List.filter`:**
+
+```ocaml
+(* Create a list of even numbers from 0 to 18 *)
+let evens = List.filter (fun x -> x mod 2 = 0) (List.map (fun x -> x * 2) (List.init 10 Fun.id))
+```
+
+### Summary
+
+Lists are a versatile and essential data structure in OCaml, allowing you to work with sequences of elements efficiently. Understanding their immutability, how to manipulate them with pattern matching, and the importance of tail recursion are crucial for effective functional programming in OCaml.
