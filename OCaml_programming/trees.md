@@ -346,3 +346,49 @@ Here's what the Trie looks like after inserting all the words:
 ### 5.9 Conclusion
 
 A Trie is a powerful data structure for managing strings, especially when you need efficient prefix-based searches. It's widely used in various applications from dictionary implementations to routing algorithms and beyond. Understanding how a Trie works can help you solve many string-related problems more efficiently.
+
+
+## 6 Patricia Tree
+A Patricia Tree (Practical Algorithm to Retrieve Information Coded in Alphanumeric) is a data structure used for storing and retrieving strings efficiently. It’s a type of trie (pronounced “try”), which is a tree-like structure that organizes strings by their common prefixes. Here’s a breakdown of how Patricia Trees work:
+
+### 6.1 Key Concepts
+
+1. **Trie Basics:**
+   - A trie is a tree where each node represents a common prefix of some strings. For example, the strings “cat”, “cap”, and “car” would share common prefixes in the trie structure.
+
+2. **Patricia Tree:**
+   - Patricia Trees, also known as Patricia Tries, are a compressed version of tries. In a standard trie, each node represents a single character, but in a Patricia Tree, nodes can represent strings (substrings) instead of single characters. This compression reduces the number of nodes and edges in the tree.
+
+### 6.2 Structure
+
+- **Nodes:**
+  - In a Patricia Tree, each node represents a string that may be several characters long. Nodes are usually labeled with the string they represent.
+
+- **Edges:**
+  - Edges between nodes represent the remaining part of the string after accounting for the string in the node. For example, if one node represents “ca” and another represents “cat”, the edge between them might be “t”.
+
+### 6.3 Insertion
+
+- To insert a string into a Patricia Tree:
+  1. Start at the root.
+  2. Traverse down the tree, comparing the string with the labels of the nodes along the path.
+  3. If a mismatch is found, split the existing edge and add the new string accordingly, updating the tree structure.
+
+### 6.4 Searching
+
+- To search for a string:
+  1. Start at the root.
+  2. Traverse down the tree following the labels and edges, checking if the string matches the labels along the path.
+  3. If you find a matching path from the root to a node, the string exists in the tree.
+
+### 6.5 Advantages
+
+- **Space Efficiency:** Patricia Trees are more space-efficient compared to standard tries because they compress common prefixes.
+- **Faster Lookups:** They can provide faster search times compared to standard tries, especially when the number of nodes is reduced through compression.
+
+### 6.6 Applications
+
+- **IP Routing:** Patricia Trees are often used in network routing algorithms to efficiently store and retrieve IP addresses.
+- **Text Processing:** They are used in applications requiring efficient string matching and storage, like autocomplete features and dictionary implementations.
+
+In summary, a Patricia Tree is a space-optimized version of a trie that efficiently handles string storage and retrieval by compressing nodes and reducing redundancy in common prefixes.
