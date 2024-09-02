@@ -2,4 +2,4 @@
  (name file_system)
  (public_name file_system)
  (libraries)
- (modules file_directory))
+ (modules file_directory file_system_simple_balance))

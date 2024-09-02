@@ -1,3 +1,7 @@
 (test
  (name test_file_directory)
  (libraries alcotest file_system))
+
+(test
+ (name test_file_system_simple_balance)
+ (libraries alcotest file_system))
