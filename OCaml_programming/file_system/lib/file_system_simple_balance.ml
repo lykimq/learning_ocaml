@@ -15,9 +15,9 @@ end = struct
   type directory = { name : string; children : node list }
   and node = File of file | Directory of directory
 
-  (* A helper function that calculates the current depth of a directory.
-     It recursively traverses the directory structure and returns the
-     maximum depth *)
+  (* A helper function that calculates the current depth of a directory. It
+     recursively traverses the directory structure and returns the maximum depth
+  *)
   let rec calculate_depth dir =
     match dir with
     | File _ -> 0
@@ -63,8 +63,8 @@ end = struct
                       children = part;
                     }
                 in
-                (* Add the new directory to the result and continue
-                   to process the rest *)
+                (* Add the new directory to the result and continue to process
+                   the rest *)
                 split_list rest (new_dir :: acc)
           in
           let new_dirs = split_list children [] in
