@@ -98,8 +98,17 @@ end = struct
             (function Directory d -> d.name = p | _ -> false)
             d.children
         in
-        match next_dir with Some d -> find_directory ps d | None -> None)
-    | _ -> None
+        match next_dir with
+        | Some (Directory d) -> find_directory ps (Directory d)
+        | Some (File f) ->
+            Printf.eprintf "Error: '%s' is a file, not a directory.\n" f.name;
+            None
+        | None ->
+            Printf.eprintf "Error: Directory '%s' not found.\n" p;
+            None)
+    | _ ->
+        Printf.eprintf "Error: Invalid path.\n";
+        None
 
   let rec remove_node name dir =
     match dir with
