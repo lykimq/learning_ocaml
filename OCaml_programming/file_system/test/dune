@@ -5,3 +5,7 @@
 (test
  (name test_file_system_simple_balance)
  (libraries alcotest file_system))
+
+(test
+ (name test_file_system_avl_qcheck)
+ (libraries qcheck file_system ocaml_trees))
