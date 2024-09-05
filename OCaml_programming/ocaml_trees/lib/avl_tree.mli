@@ -16,7 +16,7 @@ module AVL_Tree : sig
   val rotate_left : 'a avl_tree -> 'a avl_tree
   val rotate_left_right : 'a avl_tree -> 'a avl_tree
   val rotate_right_left : 'a avl_tree -> 'a avl_tree
-  val insert : 'a -> 'a avl_tree -> 'a avl_tree
-  val delete : 'a -> 'a avl_tree -> 'a avl_tree
-  val search : 'a -> 'a avl_tree -> bool
+  val insert : cmp:('a -> 'a -> int) -> 'a -> 'a avl_tree -> 'a avl_tree
+  val delete : cmp:('a -> 'a -> int) -> 'a -> 'a avl_tree -> 'a avl_tree
+  val search : cmp:('a -> 'a -> int) -> 'a -> 'a avl_tree -> bool
 end

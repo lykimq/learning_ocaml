@@ -16,9 +16,9 @@ module AVL_Tree : sig
   val rotate_left : 'a avl_tree -> 'a avl_tree
   val rotate_left_right : 'a avl_tree -> 'a avl_tree
   val rotate_right_left : 'a avl_tree -> 'a avl_tree
-  val insert : 'a -> 'a avl_tree -> 'a avl_tree
-  val delete : 'a -> 'a avl_tree -> 'a avl_tree
-  val search : 'a -> 'a avl_tree -> bool
+  val insert : cmp:('a -> 'a -> int) -> 'a -> 'a avl_tree -> 'a avl_tree
+  val delete : cmp:('a -> 'a -> int) -> 'a -> 'a avl_tree -> 'a avl_tree
+  val search : cmp:('a -> 'a -> int) -> 'a -> 'a avl_tree -> bool
 end = struct
   type 'a avl_tree =
     | Empty
@@ -154,11 +154,13 @@ end = struct
       | _ -> node
     else node
 
-  let rec insert x = function
+  let rec insert ~cmp x = function
     | Empty -> make_node x Empty Empty
     | Node { value; left; right; _ } as node ->
-        if x < value then rebalance (make_node value (insert x left) right)
-        else if x > value then rebalance (make_node value left (insert x right))
+        if cmp x value < 0 then
+          rebalance (make_node value (insert ~cmp x left) right)
+        else if cmp x value > 0 then
+          rebalance (make_node value left (insert ~cmp x right))
         else node
 
   let find_min tree =
@@ -177,7 +179,7 @@ end = struct
     | Node { value; left; right; _ } ->
         rebalance (make_node value (delete_min left) right)
 
-  let rec delete x = function
+  let rec delete ~cmp x = function
     (*
              50
             /  \
@@ -198,8 +200,10 @@ end = struct
    *)
     | Empty -> Empty
     | Node { value; left; right; _ } -> (
-        if x < value then rebalance (make_node value (delete x left) right)
-        else if x > value then rebalance (make_node value left (delete x right))
+        if cmp x value < 0 then
+          rebalance (make_node value (delete ~cmp x left) right)
+        else if cmp x value > 0 then
+          rebalance (make_node value left (delete ~cmp x right))
         else
           (* if it match the current node *)
           match right with
@@ -210,11 +214,13 @@ end = struct
               let min = find_min right in
               rebalance (make_node min left (delete_min right)))
 
-  let search x tree =
+  let search ~cmp x tree =
     let rec aux = function
       | Empty -> false
       | Node { value; left; right; _ } ->
-          if x = value then true else if x < value then aux left else aux right
+          if cmp x value = 0 then true
+          else if cmp x value < 0 then aux left
+          else aux right
     in
     aux tree
 end

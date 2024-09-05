@@ -44,9 +44,9 @@ let test_left_rotate _ =
 let test_insert _ =
   let open AVL_Tree in
   let tree = empty in
-  let tree = insert 10 tree in
-  let tree = insert 20 tree in
-  let tree = insert 30 tree in
+  let tree = insert ~cmp:compare 10 tree in
+  let tree = insert ~cmp:compare 20 tree in
+  let tree = insert ~cmp:compare 30 tree in
   let expected_tree =
     make_node 20 (make_node 10 empty empty) (make_node 30 empty empty)
   in
@@ -54,17 +54,23 @@ let test_insert _ =
 
 let test_search _ =
   let open AVL_Tree in
-  let tree = insert 10 (insert 20 (insert 30 empty)) in
-  assert_equal true (search 20 tree);
-  assert_equal false (search 40 tree)
+  let tree =
+    insert ~cmp:compare 10
+      (insert ~cmp:compare 20 (insert ~cmp:compare 30 empty))
+  in
+  assert_equal true (search ~cmp:compare 20 tree);
+  assert_equal false (search ~cmp:compare 40 tree)
 
 let test_delete _ =
   let open AVL_Tree in
-  let tree = insert 10 (insert 20 (insert 30 empty)) in
-  let tree = delete 20 tree in
+  let tree =
+    insert ~cmp:compare 10
+      (insert ~cmp:compare 20 (insert ~cmp:compare 30 empty))
+  in
+  let tree = delete ~cmp:compare 20 tree in
   let expected_tree = make_node 30 (make_node 10 empty empty) empty in
   assert_equal expected_tree tree;
-  assert_equal false (search 20 tree)
+  assert_equal false (search ~cmp:compare 20 tree)
 
 let suite =
   "AVL Tree tests"

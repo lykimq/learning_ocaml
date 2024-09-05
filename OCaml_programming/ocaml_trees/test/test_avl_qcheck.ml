@@ -9,8 +9,8 @@ let test_insert =
     ~name:"insearch and search" (* Abitrary generator for integer elements *)
     QCheck2.Gen.int (* Define the test property *) (fun x ->
       let tree = empty in
-      let tree' = insert x tree in
-      search x tree')
+      let tree' = insert ~cmp:compare x tree in
+      search ~cmp:compare x tree')
 
 (* Test insertion preserves search
    - After insearting an element, all previously inserted elements should still be
@@ -23,8 +23,10 @@ let test_insertion_search =
   Test.make ~name:"insertion preserves search"
     (Gen.list_size (Gen.return 10) Gen.int)
     (fun xs ->
-      let tree = List.fold_left (fun acc x -> insert x acc) empty xs in
-      List.for_all (fun x -> search x tree) xs)
+      let tree =
+        List.fold_left (fun acc x -> insert ~cmp:compare x acc) empty xs
+      in
+      List.for_all (fun x -> search ~cmp:compare x tree) xs)
 
 (* Test the deletion property:
    - When the element is deleted it cannot be found by using search
@@ -36,9 +38,13 @@ let test_delete =
   Test.make ~name:"delete and search"
     (Gen.list_size (Gen.return 10) Gen.int)
     (fun xs ->
-      let tree = List.fold_left (fun acc x -> insert x acc) empty xs in
-      let tree' = List.fold_left (fun acc x -> delete x acc) tree xs in
-      List.for_all (fun x -> not (search x tree')) xs)
+      let tree =
+        List.fold_left (fun acc x -> insert ~cmp:compare x acc) empty xs
+      in
+      let tree' =
+        List.fold_left (fun acc x -> delete ~cmp:compare x acc) tree xs
+      in
+      List.for_all (fun x -> not (search ~cmp:compare x tree')) xs)
 
 (* Check if the tree is still balance or not *)
 let is_balanced tree =
@@ -67,7 +73,9 @@ let test_avl_property =
   Test.make ~name:"AVL property"
     (Gen.list_size (Gen.return 10) Gen.int)
     (fun xs ->
-      let tree = List.fold_left (fun acc x -> insert x acc) empty xs in
+      let tree =
+        List.fold_left (fun acc x -> insert ~cmp:compare x acc) empty xs
+      in
       is_balanced tree)
 
 let _ =
