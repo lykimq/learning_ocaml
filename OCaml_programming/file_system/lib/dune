@@ -5,4 +5,5 @@
  (modules
   file_directory
   file_system_simple_balance
-  file_system_avl_tree_balance))
+  file_system_avl_tree_balance
+  string_conversion))
