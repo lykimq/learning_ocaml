@@ -7,9 +7,10 @@ module File_System_Avl_Tree_Balance : sig
   and node = File of file | Directory of directory
 
   val string_of_node : node -> string
+  val compare_nodes : node -> node -> int
+  val insert_node : directory -> node -> node
   val print_node_avl_tree : node AVL_Tree.avl_tree -> string -> unit
   val add_file : node -> file -> node
   val print_filesystem : node -> string -> unit
   val find_directory : string list -> node -> node option
-  val remove_node : string -> node -> node
 end

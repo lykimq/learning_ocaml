@@ -9,3 +9,7 @@
 (test
  (name test_file_system_avl_qcheck)
  (libraries qcheck file_system ocaml_trees))
+
+(test
+ (name test_file_system_avl_alcotest)
+ (libraries alcotest file_system ocaml_trees))
