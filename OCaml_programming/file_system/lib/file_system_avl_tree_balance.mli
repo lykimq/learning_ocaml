@@ -8,9 +8,10 @@ module File_System_Avl_Tree_Balance : sig
 
   val string_of_node : node -> string
   val compare_nodes : node -> node -> int
-  val insert_node : directory -> node -> node
+  val insert_node : node -> node -> node
   val print_node_avl_tree : node AVL_Tree.avl_tree -> string -> unit
   val add_file : node -> file -> node
   val print_filesystem : node -> string -> unit
   val find_directory : string list -> node -> node option
+  val remove_node : node -> node -> node
 end

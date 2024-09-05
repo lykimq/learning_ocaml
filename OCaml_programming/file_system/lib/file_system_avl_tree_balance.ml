@@ -8,11 +8,12 @@ module File_System_Avl_Tree_Balance : sig
 
   val string_of_node : node -> string
   val compare_nodes : node -> node -> int
-  val insert_node : directory -> node -> node
+  val insert_node : node -> node -> node
   val print_node_avl_tree : node AVL_Tree.avl_tree -> string -> unit
   val add_file : node -> file -> node
   val print_filesystem : node -> string -> unit
   val find_directory : string list -> node -> node option
+  val remove_node : node -> node -> node
 end = struct
   type file = { name : string; content : string }
 
@@ -26,18 +27,19 @@ end = struct
     | File _, Directory _ -> -1
     | Directory _, File _ -> 1
 
-  let insert_node directory node =
-    let new_children =
-      AVL_Tree.insert ~cmp:compare_nodes node directory.children
-    in
-    Directory { directory with children = new_children }
+  let insert_node node1 node2 =
+    match node1 with
+    | File _ -> failwith "Cannot insert a node into a file"
+    | Directory d ->
+        let new_children =
+          AVL_Tree.insert ~cmp:compare_nodes node2 d.children
+        in
+        Directory { d with children = new_children }
 
   let add_file dir file =
     match dir with
     | File _ -> failwith "Cannot add a file to a file"
-    | Directory d ->
-        let new_file = File file in
-        insert_node d new_file
+    | Directory _ as node -> insert_node node (File file)
 
   let rec print_filesystem node indent =
     match node with
@@ -205,4 +207,13 @@ end = struct
     | _ ->
         Printf.eprintf "Error: Invalid path.\n";
         None
+
+  let remove_node node node_to_remove =
+    match node with
+    | Directory d ->
+        let new_children =
+          AVL_Tree.delete ~cmp:compare_nodes node_to_remove d.children
+        in
+        Directory { d with children = new_children }
+    | _ -> failwith "Cannot remove a node from a file"
 end

@@ -36,13 +36,7 @@ let test_add_file () =
 let test_find_directory () =
   let root = create_directory "root" in
   let sub_dir = create_directory "sub" in
-  let root_with_subdir =
-    insert_node
-      (match root with
-      | Directory d -> d
-      | File _ -> fail "Expected a directory")
-      sub_dir
-  in
+  let root_with_subdir = insert_node root sub_dir in
   match find_directory [ "sub" ] root_with_subdir with
   | Some (Directory { name; _ }) -> check string "Directory is found" "sub" name
   | _ -> fail "Expected to find 'sub' directory"
@@ -67,19 +61,9 @@ let test_complex_file_struture () =
 
   let file = create_file "test.txt" "Hello, World!" in
 
-  let root_subdir1 =
-    insert_node
-      (match root with Directory d -> d | _ -> fail "Expected a directory")
-      sub_dir1
-  in
+  let root_subdir1 = insert_node root sub_dir1 in
 
-  let root_subdir2 =
-    insert_node
-      (match root_subdir1 with
-      | Directory d -> d
-      | _ -> fail "Expected a directory")
-      sub_dir2
-  in
+  let root_subdir2 = insert_node root_subdir1 sub_dir2 in
 
   let root_subdir2_with_file = add_file root_subdir2 file in
 
@@ -101,6 +85,55 @@ let test_complex_file_struture () =
               (match d with Directory d -> d.name | _ -> "File"))))
     "Found subdir" (Some sub_dir2) found
 
+let test_remove_node () =
+  let root = create_directory "root" in
+  let file1 = create_file "file1" "content1" in
+  let file2 = create_file "file2" "content2" in
+  let dir1 = create_directory "dir1" in
+  let dir2 = create_directory "dir2" in
+
+  let root = add_file root file1 in
+  let root = add_file root file2 in
+  let root = insert_node root dir1 in
+  let root = insert_node root dir2 in
+  let dir1 =
+    match find_directory [ "dir1" ] root with
+    | Some (Directory d) -> d
+    | _ -> failwith "Directory dir1 should exists"
+  in
+  check string "Directory is found" "dir1" dir1.name;
+
+  (* Remove file1 from root directory *)
+  let root_after_removal = remove_node root (File file1) in
+  let root_after_removal =
+    match root_after_removal with
+    | Directory d -> d
+    | _ -> failwith "Expected Directory after removal"
+  in
+
+  (* Check that file1 has been removed *)
+  let file1_removed =
+    not
+      (AVL_Tree.search ~cmp:compare_nodes (File file1)
+         root_after_removal.children)
+  in
+  check bool "file1 should be removed" true file1_removed;
+
+  (* Check that other nodes are still present *)
+  let file2_exists =
+    AVL_Tree.search ~cmp:compare_nodes (File file2) root_after_removal.children
+  in
+  let dir1_exists =
+    AVL_Tree.search ~cmp:compare_nodes (Directory dir1)
+      root_after_removal.children
+  in
+  let dir2_exists =
+    AVL_Tree.search ~cmp:compare_nodes dir2 root_after_removal.children
+  in
+  check bool "file2 should exists" true file2_exists;
+  check bool "dir1 should exists" true dir1_exists;
+  check bool "dir2 should exists" true dir2_exists
+
 let () =
   let open Alcotest in
   run "File System AVL Tree Balance"
@@ -112,5 +145,6 @@ let () =
           test_case "Find Non-Existing Directory" `Quick
             test_find_non_existing_directory;
           test_case "Complex File Structure" `Quick test_complex_file_struture;
+          test_case "Remove node" `Quick test_remove_node;
         ] );
     ]
