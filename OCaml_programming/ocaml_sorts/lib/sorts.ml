@@ -1,5 +1,6 @@
 module Sorts : sig
   val bubble_sort : 'a list -> 'a list
+  val insert_sort : 'a list -> 'a list
 end = struct
   (* Performs one pass of bublle sort *)
   let bubble_pass lst =
@@ -25,4 +26,22 @@ end = struct
         sort sorted (sorted = lst)
     in
     sort lst false
+
+  (* Insertion sort is a simple, comparision-based sorting algorithm that builds
+     the sorted array one element at a time. It works by picking an element from
+     the unsorted portion of the list and inserting it into the correct position
+     in the sorted portion. *)
+
+  (* Insert element x into a sorted list in the correct position *)
+  let rec insert x sorted =
+    match sorted with
+    | [] -> [ x ]
+    | hd :: tl -> if x <= hd then x :: sorted else hd :: insert x tl
+
+  let insert_sort lst =
+    let rec aux acc = function
+      | [] -> List.rev acc
+      | hd :: tl -> aux (insert hd acc) tl
+    in
+    aux [] lst
 end
