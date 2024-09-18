@@ -1,6 +1,7 @@
 module Sorts : sig
   val bubble_sort : 'a list -> 'a list
   val insert_sort : 'a list -> 'a list
+  val quick_sort : 'a list -> 'a list
 end = struct
   (* Performs one pass of bublle sort *)
   let bubble_pass lst =
@@ -42,6 +43,28 @@ end = struct
     let rec aux acc = function
       | [] -> List.rev acc
       | hd :: tl -> aux (insert hd acc) tl
+    in
+    aux [] lst
+
+  (* Quick-sort is a divide-and-conquer algorithm that selects a pivot element
+     from the array and partitions the other elements into two sub-arrays:
+     - those less than or equal to the pivot, and
+     - those greater than the pivot. It is then recursively applies the same
+       logic to the sub-arrays until the base case of an empty or single-element
+       array is reached. *)
+
+  let partition_pivot pivot lst =
+    List.fold_right
+      (fun x (left, right) ->
+        if x <= pivot then (x :: left, right) else (left, x :: right))
+      lst ([], [])
+
+  let quick_sort lst =
+    let rec aux acc = function
+      | [] -> acc
+      | pivot :: rest ->
+          let left, right = partition_pivot pivot rest in
+          aux (pivot :: aux acc right) left
     in
     aux [] lst
 end

@@ -51,10 +51,21 @@ let test_insertion_sort () =
       check (list int) desc (Sorts.insert_sort input) (List.rev expected))
     test_cases
 
+let test_quick_sort () =
+  let sorted_equal lst sorted =
+    check (list int) "same lists" sorted (Sorts.quick_sort lst)
+  in
+  (* Test cases *)
+  sorted_equal [ 5; 3; 8; 1; 2 ] [ 1; 2; 3; 5; 8 ];
+  sorted_equal [] [];
+  sorted_equal [ 7; 6; 8; 4; 5; 3; 2; 1 ] [ 1; 2; 3; 4; 5; 6; 7; 8 ];
+  sorted_equal [ 1; 1; 1; 1; 1 ] [ 1; 1; 1; 1; 1 ]
+
 let () =
   run "Sorts"
     [
       ("Bubble sort", [ test_case "Bubble sort tests" `Quick test_bubble_sort ]);
       ( "Insertion sort",
         [ test_case "Insertion sort test" `Quick test_insertion_sort ] );
+      ("Quick sort", [ test_case "Quick sort test" `Quick test_quick_sort ]);
     ]
