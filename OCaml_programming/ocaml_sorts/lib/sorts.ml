@@ -2,6 +2,7 @@ module Sorts : sig
   val bubble_sort : 'a list -> 'a list
   val insert_sort : 'a list -> 'a list
   val quick_sort : 'a list -> 'a list
+  val merge_sort : 'a list -> 'a list
 end = struct
   (* Performs one pass of bublle sort *)
   let bubble_pass lst =
@@ -67,4 +68,41 @@ end = struct
           aux (pivot :: aux acc right) left
     in
     aux [] lst
+
+  (* Merge sort is a divide-and-conquer algorithm that splits
+     the list into halves. Recursively sorts each half, and then
+     merges the two halves together in sorted order. *)
+
+  let rec merge left right acc =
+    match (left, right) with
+    | [], ys -> List.rev_append acc ys
+    | xs, [] -> List.rev_append acc xs
+    | x :: xs, y :: ys ->
+        if x <= y then merge xs right (x :: acc) else merge left ys (y :: acc)
+
+  let rec split lst acc1 acc2 toggle =
+    match lst with
+    | [] -> (List.rev acc1, List.rev acc2)
+    | x :: xs ->
+        if toggle then
+          (* If toggle is true, add the current element 'x' to acc1,
+             and continue recursively with the rest of the list 'xs'.
+             Toggle is set to false for the next recursion so that the next
+             element goes to acc2. *)
+          split xs (x :: acc1) acc2 (not toggle)
+        else
+          (* If toggle is false, add the current element 'x' to acc2,
+             and continue recursively with the rest of the list 'xs'.
+             Toggle is set to true for the next recursion so that the next
+             element goes to acc1. *)
+          split xs acc1 (x :: acc2) (not toggle)
+
+  let rec merge_sort lst =
+    match lst with
+    | [] | [ _ ] -> lst
+    | _ ->
+        let left, right = split lst [] [] true in
+        let sorted_left = merge_sort left in
+        let sorted_right = merge_sort right in
+        merge sorted_left sorted_right []
 end

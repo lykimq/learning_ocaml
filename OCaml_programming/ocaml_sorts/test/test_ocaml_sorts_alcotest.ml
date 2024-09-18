@@ -51,15 +51,23 @@ let test_insertion_sort () =
       check (list int) desc (Sorts.insert_sort input) (List.rev expected))
     test_cases
 
+let sorted_equal_fn sort_fn lst sorted =
+  check (list int) "same lists" sorted (sort_fn lst)
+
 let test_quick_sort () =
-  let sorted_equal lst sorted =
-    check (list int) "same lists" sorted (Sorts.quick_sort lst)
-  in
   (* Test cases *)
-  sorted_equal [ 5; 3; 8; 1; 2 ] [ 1; 2; 3; 5; 8 ];
-  sorted_equal [] [];
-  sorted_equal [ 7; 6; 8; 4; 5; 3; 2; 1 ] [ 1; 2; 3; 4; 5; 6; 7; 8 ];
-  sorted_equal [ 1; 1; 1; 1; 1 ] [ 1; 1; 1; 1; 1 ]
+  sorted_equal_fn Sorts.quick_sort [ 5; 3; 8; 1; 2 ] [ 1; 2; 3; 5; 8 ];
+  sorted_equal_fn Sorts.quick_sort [] [];
+  sorted_equal_fn Sorts.quick_sort [ 7; 6; 8; 4; 5; 3; 2; 1 ]
+    [ 1; 2; 3; 4; 5; 6; 7; 8 ];
+  sorted_equal_fn Sorts.quick_sort [ 1; 1; 1; 1; 1 ] [ 1; 1; 1; 1; 1 ]
+
+let test_merge_sort () =
+  sorted_equal_fn Sorts.merge_sort [ 5; 3; 8; 1; 2 ] [ 1; 2; 3; 5; 8 ];
+  sorted_equal_fn Sorts.merge_sort [] [];
+  sorted_equal_fn Sorts.merge_sort [ 1; 1; 1; 1; 1 ] [ 1; 1; 1; 1; 1 ];
+  sorted_equal_fn Sorts.merge_sort [ 7; 6; 5; 4; 3; 2; 1 ]
+    [ 1; 2; 3; 4; 5; 6; 7 ]
 
 let () =
   run "Sorts"
@@ -68,4 +76,5 @@ let () =
       ( "Insertion sort",
         [ test_case "Insertion sort test" `Quick test_insertion_sort ] );
       ("Quick sort", [ test_case "Quick sort test" `Quick test_quick_sort ]);
+      ("Merge sort", [ test_case "Merge sort test" `Quick test_merge_sort ]);
     ]
