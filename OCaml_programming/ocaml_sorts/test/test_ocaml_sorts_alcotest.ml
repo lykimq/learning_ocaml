@@ -69,6 +69,21 @@ let test_merge_sort () =
   sorted_equal_fn Sorts.merge_sort [ 7; 6; 5; 4; 3; 2; 1 ]
     [ 1; 2; 3; 4; 5; 6; 7 ]
 
+let test_heap_sort () =
+  let test_cases =
+    [
+      ([||], [||]);
+      ([| 1 |], [| 1 |]);
+      ([| 3; 1; 2; 4 |], [| 1; 2; 3; 4 |]);
+      ([| 12; 11; 13; 5; 6; 7 |], [| 5; 6; 7; 11; 12; 13 |]);
+    ]
+  in
+  List.iter
+    (fun (input, expected) ->
+      let sorted = Sorts.heap_sort input in
+      check (array int) "heap_sort test " expected sorted)
+    test_cases
+
 let () =
   run "Sorts"
     [
@@ -77,4 +92,5 @@ let () =
         [ test_case "Insertion sort test" `Quick test_insertion_sort ] );
       ("Quick sort", [ test_case "Quick sort test" `Quick test_quick_sort ]);
       ("Merge sort", [ test_case "Merge sort test" `Quick test_merge_sort ]);
+      ("Heap sort", [ test_case "Heap sort test" `Quick test_heap_sort ]);
     ]

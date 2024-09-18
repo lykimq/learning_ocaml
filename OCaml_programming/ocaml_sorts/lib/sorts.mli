@@ -3,4 +3,5 @@ module Sorts : sig
   val insert_sort : 'a list -> 'a list
   val quick_sort : 'a list -> 'a list
   val merge_sort : int list -> int list
+  val heap_sort : 'a array -> 'a array
 end

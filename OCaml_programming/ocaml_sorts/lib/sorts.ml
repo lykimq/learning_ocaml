@@ -3,6 +3,7 @@ module Sorts : sig
   val insert_sort : 'a list -> 'a list
   val quick_sort : 'a list -> 'a list
   val merge_sort : 'a list -> 'a list
+  val heap_sort : 'a array -> 'a array
 end = struct
   (* Performs one pass of bublle sort *)
   let bubble_pass lst =
@@ -105,4 +106,115 @@ end = struct
         let sorted_left = merge_sort left in
         let sorted_right = merge_sort right in
         merge sorted_left sorted_right []
+
+  (* Heap sort is a comparison-based sorting algorithm that works by using a
+      binary heap data structure. Typically a max heap and a min heap. It has 2
+      steps:
+     - Build a heap: from the input data. In a max heap, the largest element is
+        at the root, while in the min heap, the smallest element is at the root.
+     - Extract elements from the heap: one by one, swapping the root with the
+       last element of the heap and then restoring the heap property
+       ('heapify').
+  *)
+
+  (* Swap two elements in an array *)
+  let swap arr i j =
+    let temp = arr.(i) in
+    arr.(i) <- arr.(j);
+    arr.(j) <- temp
+
+  (* Heapify a subtree with root at index 1 in array of size n *)
+  let rec heapify arr n i =
+    let largest = ref i in
+    (* It is a binary tree
+            0
+          /  \
+         1    2
+        /\   / \
+       3 4   5 6
+
+       At index i = 0 (root)
+       - Left child: 2 * 0 + 1 = 1
+       - Right child: 2 * 0 + 2 = 2
+
+       At index i = 1:
+       - Left child: 2 * 1 + 1 = 3
+       - Right child: 2 * 1 + 2 = 4
+
+       and so on
+    *)
+    let left = (2 * i) + 1 in
+    let right = (2 * i) + 2 in
+
+    (* check if the left child is larger than the root *)
+    if left < n && arr.(left) > arr.(!largest) then largest := left;
+
+    (* Check if the right child is larger than the largest so far *)
+    if right < n && arr.(right) > arr.(!largest) then largest := right;
+
+    (* If the largest is not root, swap it with the largest element *)
+    if !largest <> i then (
+      swap arr i !largest;
+      (* Recursively heapify the affected subtree *)
+      heapify arr n !largest)
+
+  (* Build the heap *)
+  let build_heap arr n =
+    (* Index the last non-leaf node, this node is the parent of the last two
+       leaf nodes. Ex: 3
+                      / \
+                     9   2
+                    /\   /
+                   1  4  8
+       - The last non-leaf node is at index:  i = (6 / 2) - 1 = 2
+       - Heapify the subtree rooted at index 2. After heapify, the element at
+          index 2 swaps with its child 8 (because 8 > 2)
+
+              3
+             / \
+            9   8
+           / \  /
+           1 4  2
+
+       - Move up to the next non-leaf node (i = 1) Heapify the subtree rooted
+            at index 1 (element 9). In this case, no swap is needed because 9 >
+            1 and 9 > 4.
+
+       - Move up to the root node (i = 0) Heapify the subtree rooted at index
+            0. The element 3 swaps with 9 (the largest of its children):
+
+                9
+               / \
+             3    8
+            / \   /
+            1 4   2
+    *)
+    let start_idx = (n / 2) - 1 in
+    (* Work bottom-up start from the last non-leaf node and moving up
+       to the root *)
+    for i = start_idx downto 0 do
+      heapify arr n i
+    done
+
+  (* Heap sort *)
+  let heap_sort arr =
+    let n = Array.length arr in
+    (* Step 1 : build the max heap, ensuring that the maximum element is always
+       at the root of the heap. *)
+    build_heap arr n;
+    (* Step 2 : Extract the maximum element (root of the heap), place it at the
+       end of the array, and then reduced the heap size, maintaining the heap
+       property through heapify. (i = n - 1) is the last element of the array
+       goes down to (i = 1) (the second element of the array)
+    *)
+    for i = n - 1 downto 1 do
+      (* Move current root to end of the array
+         The root element arry.(0) which is the largest element in the heap,
+         is swapped with the element at index i (the last element of the heap).
+      *)
+      swap arr 0 i;
+      (* Call heapify on the reduced heap *)
+      heapify arr i 0
+    done;
+    arr
 end
