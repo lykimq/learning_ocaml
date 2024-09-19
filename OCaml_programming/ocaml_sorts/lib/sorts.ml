@@ -264,6 +264,10 @@ end = struct
   let flatten lst = flatten_aux lst []
 
   let timsort lst =
+    (* min_run = 32 is a commonly used default chosen in the Python TimSort
+       implementation. If sorting a much larger dataset, we might adjust the
+       min_run to a slightly larger value (e.g., 64 or 128) to reduce the number
+       of merges. *)
     let min_run = 32 in
     (* Step 1: divide the list into runs *)
     let runs = flatten (find_runs lst min_run) in
