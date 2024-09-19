@@ -65,7 +65,7 @@ estimates, redesign your benchmark to have a shorter execution time.
 ```
 
 Summary of Results:
-```
+
 | Algorithm       | n=100      | n=1000     | n=5000      | n=10000    |
 | --------------- | ---------- | ---------- | ----------- | ---------- |
 | **Bubble Sort** | 741.94 µs  | 17.47 ms   | 604.27 ms   | 3.09 s     |
@@ -74,7 +74,7 @@ Summary of Results:
 | **Merge Sort**  | 647.09 µs  | 1.37 ms    | 3.11 ms     | 5.37 ms    |
 | **Tim Sort**    | 586.01 µs  | 1.63 ms    | 3.95 ms     | 6.81 ms    |
 | **Heap Sort**   | 412.05 µs  | 722.90 µs  | 2.21 ms     | 4.21 ms    |
-```
+
 
 ## Key Observations:
 1. Best Performance on Small Lists (n = 100):
