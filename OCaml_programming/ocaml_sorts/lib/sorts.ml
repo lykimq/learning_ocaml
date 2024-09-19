@@ -4,6 +4,7 @@ module Sorts : sig
   val quick_sort : 'a list -> 'a list
   val merge_sort : 'a list -> 'a list
   val heap_sort : 'a array -> 'a array
+  val timsort : 'a list -> 'a list
 end = struct
   (* Performs one pass of bublle sort *)
   let bubble_pass lst =
@@ -217,4 +218,55 @@ end = struct
       heapify arr i 0
     done;
     arr
+
+  (* TimSort is a hybrid sorting function derived from merge sort and insertion
+     sort. It is optimized for real-world data and works exceptionally well on
+     data that is already partially sorted. It divides the array into small
+     chunks called 'runs', sorts them individually using insertion sort, and
+     then merges them using a merge sort strategy.
+
+     Steps of TimSort:
+     - Divide the array into runs: A run is a sequence of elements that is
+       either already sorted or reversed. If the size of the run is too small,
+       insertion sort is used to make it sorted.
+     - Insertion sort on small array.
+     - Merge runs: after sorting the runs, they are merged together using a
+       merge sort.
+  *)
+
+  let find_runs lst min_run =
+    let rec aux lst current_run acc_run acc_all =
+      match lst with
+      | [] ->
+          let sorted_run = insert_sort current_run in
+          List.rev (sorted_run :: acc_all)
+      | [ x ] ->
+          let sorted_run = insert_sort (x :: current_run) in
+          List.rev (sorted_run :: acc_all)
+      | x :: y :: xs ->
+          if List.length current_run < min_run then
+            aux (y :: xs) (x :: current_run) acc_run acc_all
+          else
+            let sorted_run = insert_sort (x :: current_run) in
+            aux (y :: xs) [ y ] acc_run (sorted_run :: acc_all)
+    in
+    aux lst [] [] []
+
+  (* Using tail-recursive flatten instead of [List.flatten] for the performance
+     or deep recursion. Prevents from stack overflow for very deeply nested
+     lists.
+  *)
+  let rec flatten_aux lst acc =
+    match lst with
+    | [] -> List.rev acc
+    | l :: ls -> flatten_aux ls (List.rev_append l acc)
+
+  let flatten lst = flatten_aux lst []
+
+  let timsort lst =
+    let min_run = 32 in
+    (* Step 1: divide the list into runs *)
+    let runs = flatten (find_runs lst min_run) in
+    (* Step 2: merge runs *)
+    merge_sort runs
 end

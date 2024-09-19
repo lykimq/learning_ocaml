@@ -51,23 +51,27 @@ let test_insertion_sort () =
       check (list int) desc (Sorts.insert_sort input) (List.rev expected))
     test_cases
 
-let sorted_equal_fn sort_fn lst sorted =
-  check (list int) "same lists" sorted (sort_fn lst)
+let sorted_equal_fn sort_fn ~input ~expected =
+  check (list int) "same lists" expected (sort_fn input)
 
 let test_quick_sort () =
   (* Test cases *)
-  sorted_equal_fn Sorts.quick_sort [ 5; 3; 8; 1; 2 ] [ 1; 2; 3; 5; 8 ];
-  sorted_equal_fn Sorts.quick_sort [] [];
-  sorted_equal_fn Sorts.quick_sort [ 7; 6; 8; 4; 5; 3; 2; 1 ]
-    [ 1; 2; 3; 4; 5; 6; 7; 8 ];
-  sorted_equal_fn Sorts.quick_sort [ 1; 1; 1; 1; 1 ] [ 1; 1; 1; 1; 1 ]
+  sorted_equal_fn Sorts.quick_sort ~input:[ 5; 3; 8; 1; 2 ]
+    ~expected:[ 1; 2; 3; 5; 8 ];
+  sorted_equal_fn Sorts.quick_sort ~input:[] ~expected:[];
+  sorted_equal_fn Sorts.quick_sort ~input:[ 7; 6; 8; 4; 5; 3; 2; 1 ]
+    ~expected:[ 1; 2; 3; 4; 5; 6; 7; 8 ];
+  sorted_equal_fn Sorts.quick_sort ~input:[ 1; 1; 1; 1; 1 ]
+    ~expected:[ 1; 1; 1; 1; 1 ]
 
 let test_merge_sort () =
-  sorted_equal_fn Sorts.merge_sort [ 5; 3; 8; 1; 2 ] [ 1; 2; 3; 5; 8 ];
-  sorted_equal_fn Sorts.merge_sort [] [];
-  sorted_equal_fn Sorts.merge_sort [ 1; 1; 1; 1; 1 ] [ 1; 1; 1; 1; 1 ];
-  sorted_equal_fn Sorts.merge_sort [ 7; 6; 5; 4; 3; 2; 1 ]
-    [ 1; 2; 3; 4; 5; 6; 7 ]
+  sorted_equal_fn Sorts.merge_sort ~input:[ 5; 3; 8; 1; 2 ]
+    ~expected:[ 1; 2; 3; 5; 8 ];
+  sorted_equal_fn Sorts.merge_sort ~input:[] ~expected:[];
+  sorted_equal_fn Sorts.merge_sort ~input:[ 1; 1; 1; 1; 1 ]
+    ~expected:[ 1; 1; 1; 1; 1 ];
+  sorted_equal_fn Sorts.merge_sort ~input:[ 7; 6; 5; 4; 3; 2; 1 ]
+    ~expected:[ 1; 2; 3; 4; 5; 6; 7 ]
 
 let test_heap_sort () =
   let test_cases =
@@ -84,6 +88,18 @@ let test_heap_sort () =
       check (array int) "heap_sort test " expected sorted)
     test_cases
 
+let test_tim_sort () =
+  sorted_equal_fn Sorts.timsort ~input:[] ~expected:[];
+  sorted_equal_fn Sorts.timsort ~input:[ 1 ] ~expected:[ 1 ];
+  sorted_equal_fn Sorts.timsort ~input:[ 1; 2; 3; 4; 5 ]
+    ~expected:[ 1; 2; 3; 4; 5 ];
+  sorted_equal_fn Sorts.timsort ~input:[ 5; 4; 3; 2; 1 ]
+    ~expected:[ 1; 2; 3; 4; 5 ];
+  sorted_equal_fn Sorts.timsort ~input:[ 5; 1; 4; 2; 3 ]
+    ~expected:[ 1; 2; 3; 4; 5 ];
+  sorted_equal_fn Sorts.timsort ~input:[ 3; 1; 2; 3; 2; 1 ]
+    ~expected:[ 1; 1; 2; 2; 3; 3 ]
+
 let () =
   run "Sorts"
     [
@@ -93,4 +109,5 @@ let () =
       ("Quick sort", [ test_case "Quick sort test" `Quick test_quick_sort ]);
       ("Merge sort", [ test_case "Merge sort test" `Quick test_merge_sort ]);
       ("Heap sort", [ test_case "Heap sort test" `Quick test_heap_sort ]);
+      ("Tim sort", [ test_case "Tim sort test" `Quick test_tim_sort ]);
     ]
