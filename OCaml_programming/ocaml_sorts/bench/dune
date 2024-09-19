@@ -1,0 +1,4 @@
+(executable
+ (name benchmark_sorts)
+ (public_name benchmark_sorts)
+ (libraries core_bench ocaml_sorts))

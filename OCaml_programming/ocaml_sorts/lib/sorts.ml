@@ -18,9 +18,9 @@ end = struct
     in
     pass [] lst
 
-  (* Bubble sort is a simple sorting algorithm that repeatedly steps through the
-     list, compares adjacent elements, and swaps them if they are in the wrong
-     order. The process is repeated until the list is sorted *)
+  (** Bubble sort is a simple sorting algorithm that repeatedly steps through
+       the list, compares adjacent elements, and swaps them if they are in the
+       wrong order. The process is repeated until the list is sorted *)
   let bubble_sort lst =
     let rec sort lst is_sorted =
       if is_sorted then lst
@@ -31,10 +31,10 @@ end = struct
     in
     sort lst false
 
-  (* Insertion sort is a simple, comparision-based sorting algorithm that builds
-     the sorted array one element at a time. It works by picking an element from
-     the unsorted portion of the list and inserting it into the correct position
-     in the sorted portion. *)
+  (** Insertion sort is a simple, comparision-based sorting algorithm that
+       builds the sorted array one element at a time. It works by picking an
+       element from the unsorted portion of the list and inserting it into the
+       correct position in the sorted portion. *)
 
   (* Insert element x into a sorted list in the correct position *)
   let rec insert x sorted =
@@ -49,8 +49,8 @@ end = struct
     in
     aux [] lst
 
-  (* Quick-sort is a divide-and-conquer algorithm that selects a pivot element
-     from the array and partitions the other elements into two sub-arrays:
+  (** Quick-sort is a divide-and-conquer algorithm that selects a pivot element
+       from the array and partitions the other elements into two sub-arrays:
      - those less than or equal to the pivot, and
      - those greater than the pivot. It is then recursively applies the same
        logic to the sub-arrays until the base case of an empty or single-element
@@ -71,9 +71,9 @@ end = struct
     in
     aux [] lst
 
-  (* Merge sort is a divide-and-conquer algorithm that splits
-     the list into halves. Recursively sorts each half, and then
-     merges the two halves together in sorted order. *)
+  (** Merge sort is a divide-and-conquer algorithm that splits the list into
+       halves. Recursively sorts each half, and then merges the two halves
+       together in sorted order. *)
 
   let rec merge left right acc =
     match (left, right) with
@@ -108,9 +108,9 @@ end = struct
         let sorted_right = merge_sort right in
         merge sorted_left sorted_right []
 
-  (* Heap sort is a comparison-based sorting algorithm that works by using a
-      binary heap data structure. Typically a max heap and a min heap. It has 2
-      steps:
+  (** Heap sort is a comparison-based sorting algorithm that works by using a
+       binary heap data structure. Typically a max heap and a min heap. It has 2
+       steps:
      - Build a heap: from the input data. In a max heap, the largest element is
         at the root, while in the min heap, the smallest element is at the root.
      - Extract elements from the heap: one by one, swapping the root with the
@@ -219,11 +219,11 @@ end = struct
     done;
     arr
 
-  (* TimSort is a hybrid sorting function derived from merge sort and insertion
-     sort. It is optimized for real-world data and works exceptionally well on
-     data that is already partially sorted. It divides the array into small
-     chunks called 'runs', sorts them individually using insertion sort, and
-     then merges them using a merge sort strategy.
+  (** TimSort is a hybrid sorting function derived from merge sort and insertion
+       sort. It is optimized for real-world data and works exceptionally well on
+       data that is already partially sorted. It divides the array into small
+       chunks called 'runs', sorts them individually using insertion sort, and
+       then merges them using a merge sort strategy.
 
      Steps of TimSort:
      - Divide the array into runs: A run is a sequence of elements that is
