@@ -5,3 +5,7 @@
 (test
  (name test_password_storage)
  (libraries alcotest ocaml_digestif_hash))
+
+(test
+ (name test_uids)
+ (libraries alcotest ocaml_digestif_hash))
