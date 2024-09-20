@@ -2,4 +2,4 @@
  (name ocaml_digestif_hash)
  (public_name ocaml_digestif_hash)
  (libraries digestif.ocaml)
- (modules file_integrity))
+ (modules file_integrity password_storage))
