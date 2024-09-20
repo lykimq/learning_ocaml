@@ -18,8 +18,11 @@ let test_jump_search () =
 
 let test_interpolation_search () =
   let lst = [ 10; 20; 30; 40; 50; 60; 70; 80; 90; 100 ] in
-  check bool "Found target" true (Searchs.interpolation_search lst 70);
-  check bool "Target not found" false (Searchs.interpolation_search lst 25)
+  let to_int a = a in
+  check bool "Found target" true
+    (Searchs.interpolation_search ~compare:Int.compare ~to_int lst 70);
+  check bool "Target not found" false
+    (Searchs.interpolation_search ~compare:Int.compare ~to_int lst 25)
 
 let test_fibonacci_search () =
   let lst = [ 1; 2; 3; 5; 8; 13; 21; 34; 55; 89 ] in

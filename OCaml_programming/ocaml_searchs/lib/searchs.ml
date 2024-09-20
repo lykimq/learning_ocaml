@@ -3,7 +3,10 @@ module Searchs : sig
   val binary_search : 'a list -> 'a -> bool
   val jump_search : 'a list -> 'a -> bool
   val exponential_search : 'a list -> 'a -> bool
-  val interpolation_search : int list -> int -> bool
+
+  val interpolation_search :
+    compare:('a -> 'a -> int) -> to_int:('a -> int) -> 'a list -> 'a -> bool
+
   val fibonacci_search : 'a list -> 'a -> bool
 end = struct
   (** Linear search: checks each element sequentially until the target is found. *)
@@ -102,22 +105,24 @@ end = struct
            The estimated position is 5, meaning we expect the target to be
            around index 5 in the list.
   *)
-  let interpolation_search lst target =
+  let interpolation_search ~compare ~to_int lst target =
     let n = List.length lst in
     let rec aux low high =
       if
-        low <= high && target >= List.nth lst low && target <= List.nth lst high
+        low <= high
+        && compare target (List.nth lst low) >= 0
+        && compare target (List.nth lst high) <= 0
       then
         let low_val = List.nth lst low in
         let high_val = List.nth lst high in
-        let diff_target_low = target - low_val in
-        let diff_range = high_val - low_val in
-        if diff_range = 0 then low_val = target
+        let diff_target_low = to_int target - to_int low_val in
+        let diff_range = to_int high_val - to_int low_val in
+        if diff_range = 0 then compare low_val target = 0
         else
           let pos = low + (diff_target_low * (high - low) / diff_range) in
           let pos = min (max low pos) high in
-          if List.nth lst pos = target then true
-          else if List.nth lst pos < target then aux (pos + 1) high
+          if compare (List.nth lst pos) target = 0 then true
+          else if compare (List.nth lst pos) target < 0 then aux (pos + 1) high
           else aux low (pos - 1)
       else false
     in
