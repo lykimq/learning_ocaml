@@ -1,4 +1,4 @@
-open Ocaml_digestif_hash.Uids
+open Ocaml_digestif_hash.Uids_blake2b
 open Alcotest
 
 let test_generate_uid () =

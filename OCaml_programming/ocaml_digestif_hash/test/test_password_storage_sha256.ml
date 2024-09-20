@@ -1,4 +1,4 @@
-open Ocaml_digestif_hash.Password_storage
+open Ocaml_digestif_hash.Password_storage_sha256
 open Alcotest
 
 let test_hash_password () =

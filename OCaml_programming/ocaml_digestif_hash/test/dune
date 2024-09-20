@@ -1,11 +1,11 @@
 (test
- (name test_file_integrity)
+ (name test_file_integrity_sha256)
  (libraries alcotest ocaml_digestif_hash))
 
 (test
- (name test_password_storage)
+ (name test_password_storage_sha256)
  (libraries alcotest ocaml_digestif_hash))
 
 (test
- (name test_uids)
+ (name test_uids_blake2b)
  (libraries alcotest ocaml_digestif_hash))

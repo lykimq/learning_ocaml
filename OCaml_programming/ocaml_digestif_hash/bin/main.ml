@@ -1,4 +1,4 @@
-open Ocaml_digestif_hash.File_integrity
+open Ocaml_digestif_hash.File_integrity_sha256
 
 let () =
   let file_to_check = "bin/example.txt" in

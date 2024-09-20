@@ -1,4 +1,4 @@
-open Ocaml_digestif_hash.File_integrity
+open Ocaml_digestif_hash.File_integrity_sha256
 open Alcotest
 
 let create_test_file filename content =
