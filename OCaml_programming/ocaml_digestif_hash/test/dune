@@ -9,3 +9,7 @@
 (test
  (name test_uids_blake2b)
  (libraries alcotest ocaml_digestif_hash))
+
+(test
+ (name test_simple_blockchain_protocol_ripmd160)
+ (libraries alcotest ocaml_digestif_hash))

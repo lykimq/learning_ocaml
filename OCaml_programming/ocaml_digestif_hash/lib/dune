@@ -2,4 +2,8 @@
  (name ocaml_digestif_hash)
  (public_name ocaml_digestif_hash)
  (libraries digestif.ocaml)
- (modules file_integrity_sha256 password_storage_sha256 uids_blake2b))
+ (modules
+  file_integrity_sha256
+  password_storage_sha256
+  uids_blake2b
+  simple_blockchain_protocol_ripemd160))
