@@ -2,3 +2,8 @@
  (name benchmark_sorts)
  (public_name benchmark_sorts)
  (libraries core_bench core_unix.command_unix unix ocaml_sorts))
+
+(executable
+ (name benchmark_sorts_bechamel)
+ (public_name benchmark_sorts_bechamel)
+ (libraries bechamel bechamel-notty notty.unix fmt unix ocaml_sorts))
