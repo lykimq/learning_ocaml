@@ -1,5 +1,5 @@
 (test
- (name test_ocaml_digestif_hash)
+ (name test_file_integrity)
  (libraries alcotest ocaml_digestif_hash))
 
 (test
