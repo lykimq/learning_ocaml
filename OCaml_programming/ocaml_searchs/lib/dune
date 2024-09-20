@@ -1,0 +1,5 @@
+(library
+ (name ocaml_searchs)
+ (public_name ocaml_searchs)
+ (libraries)
+ (modules searchs))
