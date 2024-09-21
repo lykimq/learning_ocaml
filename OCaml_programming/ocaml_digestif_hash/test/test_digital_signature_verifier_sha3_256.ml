@@ -16,7 +16,7 @@ let test_hash_document () =
   let document = "Hello, world!" in
   let expected_hash = DigitalSignatureVerifier.hash_document document in
   check string "hash is correct length"
-    (Cstruct.to_string expected_hash |> String.length |> string_of_int)
+    (expected_hash |> String.length |> string_of_int)
     "32" (* SHA3_256 hash length *)
 
 let test_sign_document () =
@@ -34,8 +34,7 @@ let test_verify_signature () =
     DigitalSignatureVerifier.sign_document private_key document
   in
   let result =
-    DigitalSignatureVerifier.verify_signature public_key document
-      (Cstruct.of_string signature)
+    DigitalSignatureVerifier.verify_signature public_key document signature
   in
   check bool "signature is valid" true result
 
@@ -48,7 +47,7 @@ let test_tampered_document () =
   let tampered_document = "Goodbye, world!" in
   let result =
     DigitalSignatureVerifier.verify_signature public_key tampered_document
-      (Cstruct.of_string signature)
+      signature
   in
   check bool "signature is invalid for tampered document" false result
 
@@ -61,7 +60,7 @@ let test_invalid_public_key () =
   in
   let result =
     DigitalSignatureVerifier.verify_signature wrong_public_key document
-      (Cstruct.of_string signature)
+      signature
   in
   check bool "signature is invalid for wrong public key" false result
 

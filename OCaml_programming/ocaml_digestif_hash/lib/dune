@@ -1,12 +1,7 @@
 (library
  (name ocaml_digestif_hash)
  (public_name ocaml_digestif_hash)
- (libraries
-  digestif.ocaml
-  mirage-crypto
-  mirage-crypto-pk
-  cstruct
-  mirage-crypto-ec)
+ (libraries digestif.ocaml mirage-crypto mirage-crypto-pk mirage-crypto-ec)
  (modules
   file_integrity_sha256
   password_storage_sha256
