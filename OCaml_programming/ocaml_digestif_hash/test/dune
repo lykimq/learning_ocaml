@@ -13,3 +13,11 @@
 (test
  (name test_simple_blockchain_protocol_ripmd160)
  (libraries alcotest ocaml_digestif_hash))
+
+(test
+ (name test_digital_signature_verifier_sha3_256)
+ (libraries
+  alcotest
+  mirage-crypto-rng
+  mirage-crypto-rng.unix
+  ocaml_digestif_hash))
