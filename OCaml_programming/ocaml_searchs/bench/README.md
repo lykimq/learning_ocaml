@@ -48,6 +48,19 @@ Exponential search (small) 214191/s                186%                   28%   
      Linear search (small) 271482/s                262%                   62%                        27%                    --
 ```
 
+Notice: A negative percentage means one algorithm is slower than another, while
+a positive percentage means it is faster. The `--` indicates that the percentage
+difference between an algorithm and itself is not applicable (or is exactly 0%).
+
+For example:
+- Jump search (small) is 55% slower than Binary search (because it has a -55% value).
+- Exponential search (small) is 28% faster than Binary search.
+- Linear search (small) is 62% faster than Binary search.
+- Jump search (small) is being compared to itself in the first column. Since
+  there's no difference between an algorithm and itself, the `--` appears to
+  represent "no comparison" or "not applicable."
+
+
 | Algorithm                | Throughput (operations/sec) | Relative Performance Compared to Slowest |
 |--------------------------|-----------------------------|------------------------------------------|
 | **Linear Search (small)**    | 271,482 ops/sec             | +262% faster than Jump Search            |
@@ -117,6 +130,7 @@ Exponential search (large) 12303/s                296%                      31% 
 - Fastest: Linear Search outperforms others for the large list size, achieving
   25,428 ops/sec.
 - Slowest: Jump Search is again the slowest, performing only 3,103 ops/sec.
+
 
 ## Overall Observations:
 1. Linear Search:
