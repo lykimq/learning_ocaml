@@ -1,0 +1,4 @@
+(executable
+ (name bench_searchs)
+ (public_name bench_searchs)
+ (libraries benchmark ocaml_searchs))
