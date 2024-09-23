@@ -56,6 +56,7 @@ let benchmark_large () =
       ("Fibonacci search (large)", Searchs.fibonacci_search large_list, target);
     ]
   in
+  (* Runs each benchmark in suite for at least 3 CPU seconds. *)
   let results = Benchmark.throughputN 3 suite in
   Benchmark.tabulate results
 
