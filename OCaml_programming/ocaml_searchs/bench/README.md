@@ -41,6 +41,11 @@ Throughputs for "Linear search (small)", "Binary search (small)", "Jump search (
      Binary search (small):  3.07 WALL ( 3.07 usr +  0.00 sys =  3.07 CPU) @ 167192.39/s (n=513287)
        Jump search (small):  3.14 WALL ( 3.14 usr +  0.00 sys =  3.14 CPU) @ 74995.31/s (n=235511)
 Exponential search (small):  3.14 WALL ( 3.14 usr +  0.00 sys =  3.14 CPU) @ 214190.59/s (n=671969)
+Rate Jump search (small) Binary search (small) Exponential search (small) Linear search (small)
+       Jump search (small)  74995/s                  --                  -55%                       -65%                  -72%
+     Binary search (small) 167192/s                123%                    --                       -22%                  -38%
+Exponential search (small) 214191/s                186%                   28%                         --                  -21%
+     Linear search (small) 271482/s                262%                   62%                        27%                    --
 ```
 
 | Algorithm                | Throughput (operations/sec) | Relative Performance Compared to Slowest |
@@ -64,6 +69,13 @@ Throughputs for "Fibonacci search (medium)", "Linear search (medium)", "Binary s
        Jump search (medium):  3.14 WALL ( 3.14 usr +  0.00 sys =  3.14 CPU) @ 7564.87/s (n=23720)
 Exponential search (medium):  3.10 WALL ( 3.10 usr +  0.00 sys =  3.10 CPU) @ 28209.24/s (n=87402)
   Fibonacci search (medium):  3.16 WALL ( 3.16 usr +  0.00 sys =  3.16 CPU) @ 69293.56/s (n=218898)
+  Rate Jump search (medium) Binary search (medium) Exponential search (medium) Linear search (medium) Fibonacci search (medium) Fibonacci search (medium)
+       Jump search (medium)  7565/s                   --                   -73%                        -73%                   -85%                      -89%                      -89%
+     Binary search (medium) 27676/s                 266%                     --                         -2%                   -45%                      -60%                      -60%
+Exponential search (medium) 28209/s                 273%                     2%                          --                   -44%                      -59%                      -59%
+     Linear search (medium) 50675/s                 570%                    83%                         80%                     --                      -26%                      -27%
+  Fibonacci search (medium) 68875/s                 810%                   149%                        144%                    36%                        --                       -1%
+  Fibonacci search (medium) 69294/s                 816%                   150%                        146%                    37%                        1%                        --
 ```
 | Algorithm                | Throughput (operations/sec) | Relative Performance Compared to Slowest |
 |--------------------------|-----------------------------|------------------------------------------|
@@ -86,6 +98,12 @@ Throughputs for "Linear search (large)", "Binary search (large)", "Jump search (
        Jump search (large):  3.14 WALL ( 3.14 usr +  0.00 sys =  3.14 CPU) @ 3103.25/s (n=9747)
 Exponential search (large):  3.21 WALL ( 3.21 usr +  0.00 sys =  3.21 CPU) @ 12302.85/s (n=39435)
   Fibonacci search (large):  3.11 WALL ( 3.11 usr +  0.00 sys =  3.11 CPU) @ 9372.01/s (n=29152)
+Rate Jump search (large) Fibonacci search (large) Binary search (large) Exponential search (large) Linear search (large)
+       Jump search (large)  3103/s                  --                     -67%                  -74%                       -75%                  -88%
+  Fibonacci search (large)  9372/s                202%                       --                  -20%                       -24%                  -63%
+     Binary search (large) 11740/s                278%                      25%                    --                        -5%                  -54%
+Exponential search (large) 12303/s                296%                      31%                    5%                         --                  -52%
+     Linear search (large) 25428/s                719%                     171%                  117%                       107%                    --
 ```
 
 | Algorithm                | Throughput (operations/sec) | Relative Performance Compared to Slowest |
