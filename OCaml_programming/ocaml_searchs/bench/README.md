@@ -35,6 +35,14 @@ Performance counter stats for 'dune exe ./bench/bench_searchs.exe':
 
 ### Small List (1000 elements)
 
+```
+Throughputs for "Linear search (small)", "Binary search (small)", "Jump search (small)", "Exponential search (small)" each running for at least 3 CPU seconds:
+     Linear search (small):  3.23 WALL ( 3.23 usr +  0.00 sys =  3.23 CPU) @ 271481.52/s (n=877570)
+     Binary search (small):  3.07 WALL ( 3.07 usr +  0.00 sys =  3.07 CPU) @ 167192.39/s (n=513287)
+       Jump search (small):  3.14 WALL ( 3.14 usr +  0.00 sys =  3.14 CPU) @ 74995.31/s (n=235511)
+Exponential search (small):  3.14 WALL ( 3.14 usr +  0.00 sys =  3.14 CPU) @ 214190.59/s (n=671969)
+```
+
 | Algorithm                | Throughput (operations/sec) | Relative Performance Compared to Slowest |
 |--------------------------|-----------------------------|------------------------------------------|
 | **Linear Search (small)**    | 271,482 ops/sec             | +262% faster than Jump Search            |
@@ -48,6 +56,15 @@ Performance counter stats for 'dune exe ./bench/bench_searchs.exe':
 
 ### Medium List (5000 elmenents)
 
+```
+Throughputs for "Fibonacci search (medium)", "Linear search (medium)", "Binary search (medium)", "Jump search (medium)", "Exponential search (medium)", "Fibonacci search (medium)" each running for at least 3 CPU seconds:
+  Fibonacci search (medium):  3.11 WALL ( 3.11 usr +  0.00 sys =  3.11 CPU) @ 68875.46/s (n=214337)
+     Linear search (medium):  3.17 WALL ( 3.17 usr +  0.00 sys =  3.17 CPU) @ 50674.51/s (n=160822)
+     Binary search (medium):  3.15 WALL ( 3.15 usr +  0.00 sys =  3.15 CPU) @ 27676.01/s (n=87131)
+       Jump search (medium):  3.14 WALL ( 3.14 usr +  0.00 sys =  3.14 CPU) @ 7564.87/s (n=23720)
+Exponential search (medium):  3.10 WALL ( 3.10 usr +  0.00 sys =  3.10 CPU) @ 28209.24/s (n=87402)
+  Fibonacci search (medium):  3.16 WALL ( 3.16 usr +  0.00 sys =  3.16 CPU) @ 69293.56/s (n=218898)
+```
 | Algorithm                | Throughput (operations/sec) | Relative Performance Compared to Slowest |
 |--------------------------|-----------------------------|------------------------------------------|
 | **Fibonacci Search (medium)** | 69,294 ops/sec              | +816% faster than Jump Search            |
@@ -61,6 +78,15 @@ Performance counter stats for 'dune exe ./bench/bench_searchs.exe':
 - Slowest: Jump Search perfoms the worst, with only 7,565 ops/sec.
 
 ### Large List (10000 elements)
+
+```
+Throughputs for "Linear search (large)", "Binary search (large)", "Jump search (large)", "Exponential search (large)", "Fibonacci search (large)" each running for at least 3 CPU seconds:
+     Linear search (large):  3.14 WALL ( 3.14 usr +  0.00 sys =  3.14 CPU) @ 25428.07/s (n=79810)
+     Binary search (large):  3.10 WALL ( 3.10 usr +  0.00 sys =  3.10 CPU) @ 11739.83/s (n=36350)
+       Jump search (large):  3.14 WALL ( 3.14 usr +  0.00 sys =  3.14 CPU) @ 3103.25/s (n=9747)
+Exponential search (large):  3.21 WALL ( 3.21 usr +  0.00 sys =  3.21 CPU) @ 12302.85/s (n=39435)
+  Fibonacci search (large):  3.11 WALL ( 3.11 usr +  0.00 sys =  3.11 CPU) @ 9372.01/s (n=29152)
+```
 
 | Algorithm                | Throughput (operations/sec) | Relative Performance Compared to Slowest |
 |--------------------------|-----------------------------|------------------------------------------|
