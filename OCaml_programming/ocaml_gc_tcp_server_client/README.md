@@ -27,6 +27,8 @@ transmission.
 - Safeguard against common networking issues, such as server overload and
   connection failure, by handling error gracefully.
 
+---
+
 ## System Components
 
 ### TCP Server
@@ -92,6 +94,8 @@ To ensure secure communication, each message follows a well-defined structure:
 }
 ```
 
+---
+
 ## Message Security Mechanisms
 ### Encoding and Decoding
 - Encoding:
@@ -115,6 +119,8 @@ To ensure secure communication, each message follows a well-defined structure:
     - The receiver (client or server) verifies the message signature using the
       sender's public key to ensure the message was not tampered with.
 
+---
+
 ## Concurrency Management
 
 ### Handle Multiple Clients Simultaneously
@@ -132,6 +138,8 @@ To ensure secure communication, each message follows a well-defined structure:
   (configurable via `max_clients`). When this limit is reached, new client
   connections are rejected gracefully.
 
+---
+
 ## Garbage Collection Benefits
 ### Automatic Memory Management
 - OCaml's garbage collection automatically reclaims memory for connection
@@ -144,6 +152,8 @@ To ensure secure communication, each message follows a well-defined structure:
   leaks even in long-running server applications, where clients connect and
   disconnect frequently.
 
+---
+
 ## Error Handling
 ### Client Connection Failure
 - If the client attempts to connect to the server when it is not running, the
@@ -153,6 +163,7 @@ To ensure secure communication, each message follows a well-defined structure:
 - If the server exceeds the allowed number of concurrent clients (`max_clients`)
   it gracefully rejects new connection attempts and logs a message.
 
+---
 ## Command-Line Interface
 ### TCP Server CLI
 - Start the Server: `./tcp_server start`
