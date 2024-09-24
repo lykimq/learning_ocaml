@@ -1,6 +1,6 @@
 (library
  (name ocaml_gc_tcp_server_client)
- (libraries ocaml_digestif_hash)
+ (libraries ocaml_digestif_hash yojson base64)
  (modules tcp_server tcp_client messages errors))
 
 (executable
