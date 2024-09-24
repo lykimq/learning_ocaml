@@ -1,2 +1,14 @@
 (library
- (name ocaml_gc_tcp_server_client))
+ (name ocaml_gc_tcp_server_client)
+ (libraries ocaml_digestif_hash)
+ (modules tcp_server tcp_client messages errors))
+
+(executable
+ (name tcp_server_cli)
+ (modules tcp_server_cli)
+ (libraries ocaml_gc_tcp_server_client))
+
+(executable
+ (name tcp_client_cli)
+ (modules tcp_client_cli)
+ (libraries ocaml_gc_tcp_server_client))
