@@ -7,4 +7,5 @@
   password_storage_sha256
   uids_blake2b
   simple_blockchain_protocol_ripemd160
-  digital_signature_verifier_sha3_256))
+  digital_signature_verifier_sha3_256
+  digital_signature_common))
