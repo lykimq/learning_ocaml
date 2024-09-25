@@ -15,6 +15,11 @@ let handle_client client_socket =
     Lwt_io.read_line_opt (Lwt_io.of_fd ~mode:Lwt_io.input client_socket)
     >>= function
     | None ->
+        (* Remove the client from the list *)
+        client_sockets :=
+          List.filter
+            (fun (socket, _) -> socket != client_socket)
+            !client_sockets;
         (* Close the client socket *)
         Lwt_io.close (Lwt_io.of_fd ~mode:Lwt_io.input client_socket)
     | Some message_str ->
@@ -64,6 +69,8 @@ let server_start () =
     Lwt_unix.accept server_socket >>= fun (client_socket, client_addr) ->
     (* Increase counter of connected clients *)
     incr connected_clients;
+    (* Add client socket and address to the list *)
+    client_sockets := (client_socket, client_addr) :: !client_sockets;
     (* Print the IP address of the connected client *)
     Lwt_io.printf "Client connected: %s\n"
       (Unix.string_of_inet_addr
@@ -90,7 +97,7 @@ let stop_server server_socket =
   Lwt_unix.close server_socket >>= fun () ->
   (* Close all active client connections *)
   Lwt_list.iter_p
-    (fun client_socket ->
+    (fun (client_socket, _) ->
       Lwt_io.printf "Closing connection for a client...\n" >>= fun () ->
       Lwt_unix.close client_socket)
     !client_sockets
@@ -98,3 +105,17 @@ let stop_server server_socket =
   (* Clear the client socket lists *)
   client_sockets := [];
   Lwt_io.printf "Server stopped.\n"
+
+(* Check the status of the server *)
+let status_server () =
+  Lwt_io.printf "Server Status:\n" >>= fun () ->
+  Lwt_io.printf "Active Connections: %d\n" (List.length !client_sockets)
+  >>= fun () ->
+  Lwt_list.iter_p
+    (fun (_, client_addr) ->
+      Lwt_io.printf "Client: %s\n"
+        (Unix.string_of_inet_addr
+           (match client_addr with
+           | Lwt_unix.ADDR_INET (addr, _) -> addr
+           | _ -> failwith "Invalid address")))
+    !client_sockets
