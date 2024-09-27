@@ -1,4 +1,5 @@
 open Lwt.Infix
+open Ocaml_digestif_hash.Digital_signature_common
 
 module TCP_Server : sig
   val max_clients : int
@@ -20,66 +21,128 @@ end = struct
   (* List to track active client sockets *)
   let client_sockets = ref []
 
-  (* Handle each client connection, read their message, and response *)
+  (* Private and public keys *)
+  let server_private_key = Digital_signature_common.generate_keys ()
 
-  let handle_client client_socket =
+  (* Store client public key *)
+  let client_public_key_ref = ref None
+
+  let handshake client_socket =
+    let input_channel = Lwt_io.of_fd ~mode:Lwt_io.input client_socket in
+    Lwt_io.read_line_opt input_channel >>= function
+    | None -> Lwt_io.printf "Client disconnected during handshake.\n"
+    | Some client_public_key_str ->
+        client_public_key_ref := Some client_public_key_str;
+        Lwt_io.printf "Received client public key.\n" >>= fun () ->
+        Lwt_io.printf "Handshake successful.\n"
+
+  (* Handles client messages after handshake *)
+  let handle_messages client_socket =
     let input_channel = Lwt_io.of_fd ~mode:Lwt_io.input client_socket in
     let output_channel = Lwt_io.of_fd ~mode:Lwt_io.output client_socket in
-    let loop () =
-      Lwt.catch
-        (fun () ->
-          (* Read a line of input from the client, non-blocking *)
-          Lwt_io.read_line_opt (Lwt_io.of_fd ~mode:Lwt_io.input client_socket)
-          >>= function
-          | None ->
-              (* Remove the client from the list *)
-              client_sockets :=
-                List.filter
-                  (fun (socket, _) -> socket != client_socket)
-                  !client_sockets;
-              (* Client disconnected, clean up the socket *)
-              Lwt_io.printf "Client disconnected.\n" >>= fun () ->
-              Lwt_io.close input_channel >>= fun () ->
-              Lwt_io.close output_channel
-          | Some message_str ->
-              (* Handle the client's message *)
-              Lwt.catch
-                (fun () ->
-                  (* Simulate message decoding *)
-                  let message = Messages.Message.decode_message message_str in
-                  Lwt_io.printf "Invalid message from client: %s\n"
-                    message.payload
-                  >>= fun () ->
-                  Lwt_io.printf "Received_message: %s\n" message.payload
-                  >>= fun () ->
-                  let response_message =
-                    {
-                      message with
-                      msg_type = "Response";
-                      payload = "Echo: " ^ message.payload;
-                    }
-                  in
-                  let encoded_response =
-                    Messages.Message.encode_message response_message
-                  in
-                  (* Send the encoded response back to the client, writing the message
-                     over the socket *)
-                  Lwt_io.write_line
-                    (Lwt_io.of_fd ~mode:Lwt_io.output client_socket)
-                    encoded_response)
-                (fun exn ->
-                  Lwt_io.printf "Error handling client: %s\n"
-                    (Printexc.to_string exn)
-                  >>= fun () ->
-                  Lwt_io.close (Lwt_io.of_fd ~mode:Lwt_io.input client_socket)))
-        (fun exn ->
-          Lwt_io.printf "Error handling client: %s\n" (Printexc.to_string exn)
-          >>= fun () ->
-          Lwt_io.close input_channel >>= fun () ->
-          Lwt_io.close output_channel >>= fun () ->
-          Lwt.fail (Errors.ConnectionError "Client connection error"))
-    in
-    loop ()
+    Lwt.catch
+      (fun () ->
+        (* Read a line of input from the client, non-blocking *)
+        Lwt_io.read_line_opt (Lwt_io.of_fd ~mode:Lwt_io.input client_socket)
+        >>= function
+        | None ->
+            (* Remove the client from the list *)
+            client_sockets :=
+              List.filter
+                (fun (socket, _) -> socket != client_socket)
+                !client_sockets;
+            (* Client disconnected, clean up the socket *)
+            Lwt_io.printf "Client disconnected.\n" >>= fun () ->
+            Lwt_io.close input_channel >>= fun () -> Lwt_io.close output_channel
+        | Some message_str ->
+            (* Handle the client's message *)
+            Lwt.catch
+              (fun () ->
+                (* Simulate message decoding *)
+                let message = Messages.Message.decode_message message_str in
+
+                (* Verify the client message if it is signed *)
+                let verify_result =
+                  match message.signature with
+                  | Some _ -> (
+                      (* Verify the signature using the client's public key *)
+                      match !client_public_key_ref with
+                      | Some client_public_key_str -> (
+                          match
+                            Mirage_crypto_ec.Ed25519.pub_of_octets
+                              client_public_key_str
+                          with
+                          | Ok client_public_key ->
+                              if
+                                Messages.Message.verify_signature
+                                  (module Messages.Message.Blak2b)
+                                  client_public_key message
+                              then
+                                Lwt_io.printf
+                                  "Signature verification successful.\n"
+                              else
+                                Lwt_io.printf "Invalid signature.\n"
+                                >>= fun () ->
+                                Lwt.fail (Failure "Invalid signature")
+                          | Error _ ->
+                              Lwt_io.printf
+                                "Failed to deserialized public key.\n"
+                              >>= fun () ->
+                              Lwt.fail (Failure "Invalid public key"))
+                      | None ->
+                          Lwt_io.printf "No client public key available.\n")
+                  | None -> Lwt_io.printf "Message is not signed.\n"
+                in
+                (* Log the received message *)
+                verify_result >>= fun () ->
+                Lwt_io.printf "Invalid message from client: %s\n"
+                  message.payload
+                >>= fun () ->
+                Lwt_io.printf "Received_message: %s\n" message.payload
+                >>= fun () ->
+                let response_message =
+                  {
+                    Messages.Message.msg_type = Response;
+                    payload = "Acknowledge: " ^ message.payload;
+                    timestamp = string_of_float (Unix.time ());
+                    hash = "";
+                    signature = None;
+                  }
+                in
+                (* For this application only sign message that is critical *)
+                let signed_response =
+                  match response_message.msg_type with
+                  | Critical ->
+                      (* Sign the response message using the server's private key *)
+                      let server_private_key, _ = server_private_key in
+                      Messages.Message.sign_message
+                        (module Messages.Message.Blak2b)
+                        server_private_key response_message
+                  | _ -> response_message
+                in
+                let encoded_response =
+                  Messages.Message.encode_message signed_response
+                in
+                (* Send the encoded response back to the client, writing the message
+                   over the socket *)
+                Lwt_io.write_line
+                  (Lwt_io.of_fd ~mode:Lwt_io.output client_socket)
+                  encoded_response)
+              (fun exn ->
+                Lwt_io.printf "Error handling client: %s\n"
+                  (Printexc.to_string exn)
+                >>= fun () ->
+                Lwt_io.close (Lwt_io.of_fd ~mode:Lwt_io.input client_socket)))
+      (fun exn ->
+        Lwt_io.printf "Error handling client: %s\n" (Printexc.to_string exn)
+        >>= fun () ->
+        Lwt_io.close input_channel >>= fun () ->
+        Lwt_io.close output_channel >>= fun () ->
+        Lwt.fail (Errors.ConnectionError "Client connection error"))
+
+  (* First does handshake, then handles messages *)
+  let handle_client client_socket =
+    handshake client_socket >>= fun () -> handle_messages client_socket
 
   (* Server listens for incoming connections and process requests *)
   let server_start () =
