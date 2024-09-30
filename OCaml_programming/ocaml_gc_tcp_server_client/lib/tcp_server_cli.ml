@@ -42,8 +42,8 @@ let start_server () =
       let ip, port = get_ip_port args in
       Lwt_io.printf "Starting the server on %s:%d...\n" ip port >>= fun () ->
       let socket =
-        Ocaml_gc_tcp_server_client.Tcp_server.TCP_Server.start_server ~ip ~port
-          ()
+        Ocaml_gc_tcp_server_client.Tcp_server.TCP_Server.server_connect ~ip
+          ~port ()
       in
       server_socket := Some socket;
       Lwt_io.printf "Server started on %s:%d.\n" ip port
@@ -56,7 +56,7 @@ let stop_server () =
       Lwt_io.printf "Stopping the server...\n" >>= fun () ->
       (* Unwrapping the Lwt promise to get the actual socket *)
       socket_promise >>= fun socket ->
-      Ocaml_gc_tcp_server_client.Tcp_server.TCP_Server.stop_server socket
+      Ocaml_gc_tcp_server_client.Tcp_server.TCP_Server.server_disconnect socket
       >>= fun () ->
       server_socket := None;
       Lwt_io.printf "Server stopped.\n"
@@ -84,7 +84,7 @@ let status_check () =
   match !server_socket with
   | None -> Lwt_io.printf "Server is not running.\n"
   | Some _ ->
-      Ocaml_gc_tcp_server_client.Tcp_server.TCP_Server.status_server ()
+      Ocaml_gc_tcp_server_client.Tcp_server.TCP_Server.server_status ()
       >>= fun () -> Lwt_io.printf "Server status checked.\n"
 
 let main () =
