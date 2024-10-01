@@ -1,7 +1,7 @@
 (library
  (name ocaml_gc_tcp_server_client)
  (libraries ocaml_digestif_hash yojson base64 lwt lwt.unix cstruct)
- (modules tcp_server tcp_client messages errors tcp_cli_utils))
+ (modules tcp_server tcp_client messages errors tcp_cli_utils logs))
 
 (executable
  (name tcp_server_cli)

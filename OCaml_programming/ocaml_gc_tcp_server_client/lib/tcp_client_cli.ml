@@ -18,34 +18,37 @@ let start_client () =
       client_socket := Some socket;
       Lwt_io.printf "Client started on %s:%d.\n" ip port
 
+let valid_message_type msg_type_str =
+  match msg_type_str with
+  | "Request" -> Ok Messages.Message.Request
+  | "Critical" -> Ok Critical
+  | "Info" -> Ok Info
+  | "Warning" -> Ok Warning
+  | "Debug" -> Ok Debug
+  | "Error" -> Ok Error
+  | _ -> Error ("Invalid message type " ^ msg_type_str)
+
 let send_message () =
   if Array.length Sys.argv < 4 then
     failwith "Usage: ./tcp_client send <message_type> <message>"
   else
-    let msg_type =
-      match Sys.argv.(2) with
-      | "Request" -> Messages.Message.Request
-      | "Critical" -> Critical
-      | "Info" -> Info
-      | "Warning" -> Warning
-      | "Debug" -> Debug
-      | "Error" -> Error
-      | _ -> failwith "Invalid message type"
-    in
-    let payload = Sys.argv.(3) in
-    Tcp_client.TCP_Client.client_send_message ~msg_type payload
+    match valid_message_type Sys.argv.(2) with
+    | Error err -> failwith err
+    | Ok msg_type ->
+        let payload = Sys.argv.(3) in
+        Tcp_client.TCP_Client.client_send_message ~msg_type payload
 
 let sign_message () =
-  if Array.length Sys.argv < 3 then
+  if Array.length Sys.argv < 4 then
     failwith "Usage: ./tcp_client sign <message_type:Critical> <message>"
   else
-    let msg_type =
-      match Sys.argv.(2) with
-      | "Critical" -> Messages.Message.Critical
-      | _ -> failwith "Only Critical message type is allowed for sign"
-    in
-    let payload = Sys.argv.(2) in
-    Tcp_client.TCP_Client.client_send_message ~msg_type payload
+    let msg_type_str = Sys.argv.(2) in
+    match msg_type_str with
+    | "Critical" ->
+        let payload = Sys.argv.(3) in
+        Tcp_client.TCP_Client.client_send_message
+          ~msg_type:Messages.Message.Critical payload
+    | _ -> failwith "Only Critical message type is allowed for sign"
 
 let stop_client () = Tcp_client.TCP_Client.client_disconnect ()
 let status_client () = Tcp_client.TCP_Client.client_status ()

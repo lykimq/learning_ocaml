@@ -11,38 +11,36 @@ let print_usage program_type =
   let usage_msg =
     match program_type with
     | "client" ->
-        "Usage: ./tcp_client <start|send|sign|response|stop|status> [-ip <IP>] \
-         [-port <Port>] [-v] [<args>]\n\n\
-        \       Available commands:\n\
-        \       start  - Start the client with optional IP and port (defaults \
-         to localhost:8080).\n\
-        \       send   - Send a message to the server. Usage: ./tcp_client \
-         send <message_type><message>.\n\
-        \       sign   - Send a critical message. Usage ./tcp_client sign \
-         <message_type><message>.\n\
-        \       stop   - Stop the client.\n\
-        \       status - Check the client's connection status.\n\n\
-        \      Message types:\n\
-        \        Request, Critical, Info, Warning, Debug, Error\n\
-         -v     - Enable verbose mode (for more detailed logging).\n\
-        \        "
-    | "sever" ->
+        "Usage: ./tcp_client <start|send|sign|stop|status> [-ip <IP>] [-port \
+         <Port>] [-v] [<args>]\n\n\
+         Available commands:\n\
+         start  - Start the client with optional IP and port (defaults to \
+         localhost:8080).\n\
+         send   - Send a message to the server. Usage: ./tcp_client send \
+         <message_type> <message>.\n\
+         sign   - Send a critical message. Usage: ./tcp_client sign \
+         <message_type> <message>.\n\
+         stop   - Stop the client.\n\
+         status - Check the client's connection status.\n\n\
+         Message types:\n\
+         Request, Critical, Info, Warning, Debug, Error\n\n\
+         Optional Arguments:\n\
+         -ip <IP>     - Specify the IP address (default: 127.0.0.1).\n\
+         -port <Port> - Specify the port (default: 8080).\n\
+         -v           - Enable verbose mode (detailed logging).\n"
+    | "server" ->
         "Usage: ./tcp_server <start|stop|status|connections> [-ip <IP>] [-port \
          <Port>] [-v]\n\n\
-        \     Available commands:\n\
-        \     start  - Start the server with optional IP and port (defaults to \
+         Available commands:\n\
+         start       - Start the server with optional IP and port (defaults to \
          localhost:8080).\n\
-        \     stop   - Stop the server if it is running.\n\
-        \     status - Check the status of the server.\n\
-        \     connections - View active client connections.\n\n\
-        \     Optional Arguments:\n\
-        \     -ip <IP>     - Specify the IP address to bind to (default is \
-         127.0.0.1).\n\
-        \     -port <Port> - Specify the port number to bind to (default is \
-         8080).\n\n\
-        \         \n\
-         -v           - Enable verbose mode (for more detailed logging).\n\
-        \        "
+         stop        - Stop the server if it is running.\n\
+         status      - Check the status of the server.\n\
+         connections - View active client connections.\n\n\
+         Optional Arguments:\n\
+         -ip <IP>     - Specify the IP address to bind to (default: 127.0.0.1).\n\
+         -port <Port> - Specify the port number to bind to (default: 8080).\n\
+         -v           - Enable verbose mode (detailed logging).\n"
     | _ -> "Unknown program type"
   in
   Lwt_io.printl usage_msg

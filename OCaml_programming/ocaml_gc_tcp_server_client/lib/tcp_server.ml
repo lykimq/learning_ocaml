@@ -26,44 +26,56 @@ end = struct
 
   (* Store client public key *)
   let client_public_key_ref = ref None
-  let log msg = Lwt_io.printf "[SERVER] %s\n" msg
+  let log_attemp level msg = Logs.log_to_console_and_file level msg
 
   (* Server handshake: Receives client's public key and sends server's public
      key *)
   let server_handshake client_socket =
+    log_attemp Logs.Level.INFO "Starting handshake with client" >>= fun () ->
     let input_channel = Lwt_io.of_fd ~mode:Lwt_io.input client_socket in
     let output_channel = Lwt_io.of_fd ~mode:Lwt_io.output client_socket in
     Lwt.catch
       (fun () ->
         (* Receive client's public key *)
         Lwt_io.read_line_opt input_channel >>= function
-        | None -> Lwt_io.printf "Client disconnected during handshake.\n"
+        | None ->
+            log_attemp Logs.Level.ERROR
+              "Client disconnected during handshake.\n"
+            >>= fun () ->
+            Lwt.fail
+              (Errors.ConnectionError "Client disconnected during handshake")
         | Some client_public_key_str -> (
             match
               Mirage_crypto_ec.Ed25519.pub_of_octets client_public_key_str
             with
             | Ok client_public_key ->
                 client_public_key_ref := Some client_public_key;
-                Lwt_io.printf "Received client public key.\n" >>= fun () ->
+                log_attemp Logs.Level.INFO "Received client public key.\n"
+                >>= fun () ->
                 (* Send server's public key to the client *)
                 let server_public_key_str =
                   Mirage_crypto_ec.Ed25519.pub_to_octets server_public_key
                 in
                 Lwt_io.write_line output_channel server_public_key_str
                 >>= fun () ->
-                log "Sent server public key to client." >>= fun () ->
-                Lwt.return_unit
-            | Error _ -> Lwt.fail_with "Failed to deserialize client public key"
-            ))
+                log_attemp Logs.Level.INFO "Sent server public key to client."
+                >>= fun () -> Lwt.return_unit
+            | Error _ ->
+                log_attemp Logs.Level.ERROR
+                  "Failed to deserialize client public key"
+                >>= fun () ->
+                Lwt.fail
+                  (Errors.MessageError "Invalid client public key format.")))
       (fun exn ->
-        Lwt_io.printf "Handshake failed: %s\n" (Printexc.to_string exn)
+        log_attemp Logs.Level.ERROR
+          ("Handshake failed: %s\n" ^ Printexc.to_string exn)
         >>= fun () -> Lwt.fail exn)
 
   (* Remove a client from the active connections and close its socket *)
   let remove_client client_socket input_channel output_channel =
     client_sockets :=
       List.filter (fun (socket, _) -> socket != client_socket) !client_sockets;
-    Lwt_io.printf "Client disconnected.\n" >>= fun () ->
+    log_attemp Logs.Level.INFO "Client disconnected.\n" >>= fun () ->
     Lwt_io.close input_channel >>= fun () -> Lwt_io.close output_channel
 
   (* Process the message received from the client *)
@@ -75,8 +87,11 @@ end = struct
     match (message.signature, !client_public_key_ref) with
     | Some _, Some client_public_key ->
         if verify_signature (module Blak2b) client_public_key message then
-          log "Signature verificaiton successful.\n" >>= fun () ->
-          log ("Received message : %s\n" ^ message.payload) >>= fun () ->
+          log_attemp Logs.Level.INFO "Signature verificaiton successful.\n"
+          >>= fun () ->
+          log_attemp Logs.Level.INFO
+            ("Received message : %s\n" ^ message.payload)
+          >>= fun () ->
           let response_message =
             {
               msg_type = Response;
@@ -101,9 +116,15 @@ end = struct
           let encoded_message = encode_message signed_response in
           (* Send the encoded response back to the client *)
           Lwt_io.write_line output_channel encoded_message
-        else Lwt.fail (Errors.MessageError "Invalid client signature")
-    | None, _ -> log "Message is not signed.\n" >>= fun () -> Lwt.return_unit
-    | _, None -> Lwt.fail_with "No client public key available."
+        else
+          log_attemp Logs.Level.ERROR "Invalid client signature." >>= fun () ->
+          Lwt.fail (Errors.MessageError "Invalid client signature")
+    | None, _ ->
+        log_attemp Logs.Level.INFO "Message is not signed.\n" >>= fun () ->
+        Lwt.return_unit
+    | _, None ->
+        log_attemp Logs.Level.ERROR "No client public key available"
+        >>= fun () -> Lwt.fail_with "No client public key available."
 
   let received_message_with_timeout input_channel timeout_duration =
     Lwt_unix.with_timeout timeout_duration (fun () ->
@@ -111,6 +132,7 @@ end = struct
 
   (* After successful handshakes, handle client messages *)
   let server_receive_messages client_socket =
+    log_attemp Logs.Level.DEBUG "Receving message from client" >>= fun () ->
     let input_channel = Lwt_io.of_fd ~mode:Lwt_io.input client_socket in
     let output_channel = Lwt_io.of_fd ~mode:Lwt_io.output client_socket in
     let timeout_duration = 10.0 (* seconds *) in
@@ -127,6 +149,9 @@ end = struct
             process_message message_str output_channel >>= fun () ->
             Lwt_io.close input_channel)
       (fun exn ->
+        log_attemp Logs.Level.ERROR
+          ("Error handling client message: " ^ Printexc.to_string exn)
+        >>= fun () ->
         Lwt_io.close input_channel >>= fun () ->
         Lwt_io.close output_channel >>= fun () ->
         Lwt.fail
@@ -139,10 +164,16 @@ end = struct
       (fun () ->
         server_handshake client_socket >>= fun () ->
         server_receive_messages client_socket)
-      (fun exn -> log ("Client error: %s\n" ^ Printexc.to_string exn))
+      (fun exn ->
+        log_attemp Logs.Level.ERROR
+          ("Client error: %s\n" ^ Printexc.to_string exn)
+        >>= fun () -> Lwt.fail exn)
 
   (* Create a new TCP server socket and bind it to the specifed IP and port *)
   let create_server_socket ip port =
+    log_attemp Logs.Level.INFO
+      (Printf.sprintf "Creating server socket on %s:%d" ip port)
+    >>= fun () ->
     (* Create a new TCP socket using Lwt_unix.socket
        - PF_INET: using IPv4 protocol
        - SOCK_STREAM: this will be a TCP connection (not UDP)
@@ -197,31 +228,38 @@ end = struct
 
   (* Server listens for incoming connections and process requests *)
   let server_connect ?(ip = "127.0.0.1") ?(port = 8080) () =
+    log_attemp Logs.Level.INFO
+      (Printf.sprintf "Starting server on %s:%d" ip port)
+    >>= fun () ->
     Lwt.catch
       (fun () ->
         create_server_socket ip port >>= fun server_socket ->
         Lwt.async (fun () -> accept_clients server_socket);
         Lwt.return server_socket)
       (fun exn ->
+        log_attemp Logs.Level.ERROR
+          ("Server start error: " ^ Printexc.to_string exn)
+        >>= fun () ->
         Lwt.fail
           (Errors.ConnectionError
              ("Server start error: " ^ Printexc.to_string exn)))
 
   (* Stop the server and close all connections *)
   let server_disconnect server_socket =
+    log_attemp Logs.Level.INFO "Disconneting server" >>= fun () ->
     shutdown_flag := true;
     (* Close the listening socket to stop accepting new connections *)
     Lwt_unix.close server_socket >>= fun () ->
     (* Close all active client connections *)
     Lwt_list.iter_p
       (fun (client_socket, _) ->
-        Lwt_io.printf "Closing connection for a client...\n" >>= fun () ->
-        Lwt_unix.close client_socket)
+        log_attemp Logs.Level.INFO "Closing connection for a client...\n"
+        >>= fun () -> Lwt_unix.close client_socket)
       !client_sockets
     >>= fun () ->
     (* Clear the client socket lists *)
     client_sockets := [];
-    log "Server stopped.\n"
+    log_attemp Logs.Level.INFO "Server stopped.\n"
 
   let get_active_connections () =
     List.map
@@ -235,9 +273,11 @@ end = struct
   (* Check the status of the server *)
   let server_status () =
     let client_count = List.length !client_sockets in
-    Lwt_io.printf "Active connections: %d\n" client_count >>= fun () ->
+    log_attemp Logs.Level.INFO
+      (Printf.sprintf "Active connections: %d\n" client_count)
+    >>= fun () ->
     if client_count > 0 then
-      Lwt_io.printf "Server Status:\n" >>= fun () ->
+      log_attemp Logs.Level.INFO "Server Status:\n" >>= fun () ->
       Lwt_list.iter_p
         (fun (_, client_addr) ->
           Lwt_io.printf "Client: %s\n"
@@ -246,5 +286,5 @@ end = struct
                | Lwt_unix.ADDR_INET (addr, _) -> addr
                | _ -> raise (Errors.MessageError "Invalid client address"))))
         !client_sockets
-    else Lwt_io.printf "No active connections.\n"
+    else log_attemp Logs.Level.INFO "No active connections.\n"
 end
