@@ -59,88 +59,77 @@ end = struct
         Lwt_io.printf "Handshake failed: %s\n" (Printexc.to_string exn)
         >>= fun () -> Lwt.fail exn)
 
+  (* Remove a client from the active connections and close its socket *)
+  let remove_client client_socket input_channel output_channel =
+    client_sockets :=
+      List.filter (fun (socket, _) -> socket != client_socket) !client_sockets;
+    Lwt_io.printf "Client disconnected.\n" >>= fun () ->
+    Lwt_io.close input_channel >>= fun () -> Lwt_io.close output_channel
+
+  (* Process the message received from the client *)
+  let process_message message_str output_channel =
+    let open Messages.Message in
+    (* Decode and process the message *)
+    let message = decode_message message_str in
+    (* Verify the client message if it is signed *)
+    match (message.signature, !client_public_key_ref) with
+    | Some _, Some client_public_key ->
+        if verify_signature (module Blak2b) client_public_key message then
+          log "Signature verificaiton successful.\n" >>= fun () ->
+          log ("Received message : %s\n" ^ message.payload) >>= fun () ->
+          let response_message =
+            {
+              msg_type = Response;
+              payload = "Acknowledge " ^ message.payload;
+              timestamp = string_of_float (Unix.time ());
+              hash = "";
+              signature = None;
+            }
+          in
+          let response_message_hash =
+            hash_message (module Blak2b) response_message
+          in
+          let response_message =
+            { response_message with hash = response_message_hash }
+          in
+          let signed_response =
+            match response_message.msg_type with
+            | Critical ->
+                sign_message (module Blak2b) server_private_key response_message
+            | _ -> response_message
+          in
+          let encoded_message = encode_message signed_response in
+          (* Send the encoded response back to the client *)
+          Lwt_io.write_line output_channel encoded_message
+        else Lwt.fail (Errors.MessageError "Invalid client signature")
+    | None, _ -> log "Message is not signed.\n" >>= fun () -> Lwt.return_unit
+    | _, None -> Lwt.fail_with "No client public key available."
+
+  let received_message_with_timeout input_channel timeout_duration =
+    Lwt_unix.with_timeout timeout_duration (fun () ->
+        Lwt_io.read_line_opt input_channel)
+
   (* After successful handshakes, handle client messages *)
   let server_receive_messages client_socket =
     let input_channel = Lwt_io.of_fd ~mode:Lwt_io.input client_socket in
     let output_channel = Lwt_io.of_fd ~mode:Lwt_io.output client_socket in
+    let timeout_duration = 10.0 (* seconds *) in
     Lwt.catch
       (fun () ->
-        (* Read client message *)
-        Lwt_io.read_line_opt input_channel >>= function
+        (* set timeout for reading the client message *)
+        received_message_with_timeout input_channel timeout_duration
+        >>= function
         | None ->
             (* Handle client disconnection *)
-            client_sockets :=
-              List.filter
-                (fun (socket, _) -> socket != client_socket)
-                !client_sockets;
-            (* Client disconnected, clean up the socket *)
-            Lwt_io.printf "Client disconnected.\n" >>= fun () ->
-            Lwt_io.close input_channel >>= fun () -> Lwt_io.close output_channel
+            remove_client client_socket input_channel output_channel
         | Some message_str ->
-            (* Handle the client's message *)
-            Lwt.catch
-              (fun () ->
-                (* Decode and process the message *)
-                let message = Messages.Message.decode_message message_str in
-                (* Verify the client message if it is signed *)
-                let verify_result =
-                  match (message.signature, !client_public_key_ref) with
-                  | Some _, Some client_public_key ->
-                      if
-                        Messages.Message.verify_signature
-                          (module Messages.Message.Blak2b)
-                          client_public_key message
-                      then log "Signature verification successful.\n"
-                      else
-                        raise (Errors.MessageError "Invalid client signature")
-                  | None, _ -> log "Message is not signed.\n"
-                  | _, None -> Lwt.fail_with "No client public key available."
-                in
-                (* Log the received message *)
-                verify_result >>= fun () ->
-                log ("Received_message: %s\n" ^ message.payload) >>= fun () ->
-                let response_message =
-                  {
-                    Messages.Message.msg_type = Response;
-                    payload = "Acknowledge: " ^ message.payload;
-                    timestamp = string_of_float (Unix.time ());
-                    hash = "";
-                    signature = None;
-                  }
-                in
-                let response_message_hash =
-                  Messages.Message.hash_message
-                    (module Messages.Message.Blak2b)
-                    response_message
-                in
-                let response_message =
-                  { message with hash = response_message_hash }
-                in
-                (* For this application only sign message that is critical *)
-                let signed_response =
-                  match response_message.msg_type with
-                  | Critical ->
-                      (* Sign the response message using the server's private key *)
-                      Messages.Message.sign_message
-                        (module Messages.Message.Blak2b)
-                        server_private_key response_message
-                  | _ -> response_message
-                in
-                let encoded_response =
-                  Messages.Message.encode_message signed_response
-                in
-                (* Send the encoded response back to the client, writing the message
-                   over the socket *)
-                Lwt_io.write_line output_channel encoded_response)
-              (fun exn ->
-                raise
-                  (Errors.MessageError
-                     ("Error handling client message: " ^ Printexc.to_string exn)))
-            >>= fun () -> Lwt_io.close input_channel)
+            (* Process the client's message *)
+            process_message message_str output_channel >>= fun () ->
+            Lwt_io.close input_channel)
       (fun exn ->
         Lwt_io.close input_channel >>= fun () ->
         Lwt_io.close output_channel >>= fun () ->
-        raise
+        Lwt.fail
           (Errors.ConnectionError
              ("Client handling error: " ^ Printexc.to_string exn)))
 
@@ -152,79 +141,69 @@ end = struct
         server_receive_messages client_socket)
       (fun exn -> log ("Client error: %s\n" ^ Printexc.to_string exn))
 
+  (* Create a new TCP server socket and bind it to the specifed IP and port *)
+  let create_server_socket ip port =
+    (* Create a new TCP socket using Lwt_unix.socket
+       - PF_INET: using IPv4 protocol
+       - SOCK_STREAM: this will be a TCP connection (not UDP)
+    *)
+    let server_socket = Lwt_unix.socket PF_INET SOCK_STREAM 0 in
+    (* Create an address to bind to the socket to
+       - ADDR_INET: binds the socket to an IPv4 address and a specific port
+       - Unix.inet_addr_loop_back: represents the localhost IP address (127.0.0.1)
+       - 8080: is the port we are binding to
+    *)
+    let addr = Lwt_unix.ADDR_INET (Unix.inet_addr_of_string ip, port) in
+    Lwt_unix.bind server_socket addr >>= fun () ->
+    Lwt_unix.listen server_socket max_clients;
+    Lwt_io.printf "Server started on %s:%d\n" ip port >>= fun () ->
+    Lwt.return server_socket
+
+  (* Handle case where maximum clients are reached: reject new client *)
+  let handle_max_clients server_socket =
+    Lwt_io.printf "Max client reached, rejecting new client.\n" >>= fun () ->
+    Lwt_unix.accept server_socket >>= fun (client_socket, _) ->
+    let output_channel = Lwt_io.of_fd ~mode:Lwt_io.output client_socket in
+    (* Send rejection message to the client *)
+    Lwt_io.write_line output_channel "Server is at capacity, try again later."
+    >>= fun () ->
+    Lwt_io.close output_channel >>= fun () -> Lwt_unix.close client_socket
+
+  (* Accept new clients and handle connections *)
+
+  let rec accept_clients server_socket =
+    if !shutdown_flag then
+      Lwt_io.printf "Server is shutting down, no new connections.\n"
+    else if !connected_clients >= max_clients then
+      handle_max_clients server_socket >>= fun () ->
+      (* Retry accepting clients after a short delay *)
+      Lwt_unix.sleep 5.0 >>= fun () -> accept_clients server_socket
+    else
+      (* Accept new incoming connections *)
+      Lwt_unix.accept server_socket >>= fun (client_socket, client_addr) ->
+      incr connected_clients;
+      client_sockets := (client_socket, client_addr) :: !client_sockets;
+      (* Print the IP address of the connected client *)
+      let client_ip =
+        match client_addr with
+        | Lwt_unix.ADDR_INET (addr, _) -> Unix.string_of_inet_addr addr
+        | _ -> failwith "Invalid address"
+      in
+      Lwt_io.printf "Client connected: %s\n" client_ip >>= fun () ->
+      (* Lauch client handling in an asynchronous task *)
+      Lwt.async (fun () -> handle_client client_socket);
+      (* Continue accepting new clients *)
+      accept_clients server_socket
+
   (* Server listens for incoming connections and process requests *)
   let server_connect ?(ip = "127.0.0.1") ?(port = 8080) () =
     Lwt.catch
       (fun () ->
-        (* Create a new TCP socket using Lwt_unix.socket
-           - PF_INET: using IPv4 protocol
-           - SOCK_STREAM: this will be a TCP connection (not UDP)
-        *)
-        let server_socket = Lwt_unix.socket PF_INET SOCK_STREAM 0 in
-        (* Create an address to bind to the socket to
-           - ADDR_INET: binds the socket to an IPv4 address and a specific port
-           - Unix.inet_addr_loop_back: represents the localhost IP address (127.0.0.1)
-           - 8080: is the port we are binding to
-        *)
-        let addr = Lwt_unix.ADDR_INET (Unix.inet_addr_loopback, 8080) in
-        (* Bind the server to the address: localhost:8080 Lwt_unix.bind associates the
-           socket with the address so it can listen for connections
-        *)
-        Lwt_unix.bind server_socket addr >>= fun () ->
-        (* Listening on the socket for incoming connections *)
-        Lwt_unix.listen server_socket max_clients;
-        Lwt_io.printf "Server started on %s:%d\n" ip port >>= fun () ->
-        (* Define a recursive function to continuously accept client connections *)
-        let rec accept_clients () =
-          (* Check shutdown flag to prevent accepting new clients during shutdown *)
-          if !shutdown_flag then
-            Lwt_io.printf "Server is shutting down, no new connections.\n"
-          else if !connected_clients >= max_clients then
-            (* Reject the client because max clients have been reached *)
-            Lwt_io.printf "Max client reached, rejecting new client.\n"
-            >>= fun () ->
-            Lwt_unix.accept server_socket >>= fun (client_socket, _) ->
-            (* Send a rejection message to the client and close the connection *)
-            let output_channel =
-              Lwt_io.of_fd ~mode:Lwt_io.output client_socket
-            in
-            Lwt_io.write_line output_channel
-              "Server is at capacity, try again later."
-            >>= fun () ->
-            Lwt_io.close output_channel >>= fun () ->
-            Lwt_unix.close client_socket >>= fun () ->
-            (* Retry accepting clients after a short delay *)
-            Lwt_unix.sleep 5.0 >>= fun () -> accept_clients ()
-          else
-            (* Accept incoming connection (blocks until a connection is made)*)
-            Lwt_unix.accept server_socket
-            >>= fun (client_socket, client_addr) ->
-            (* Increase counter of connected clients *)
-            incr connected_clients;
-            (* Add client socket and address to the list *)
-            client_sockets := (client_socket, client_addr) :: !client_sockets;
-            (* Print the IP address of the connected client *)
-            Lwt_io.printf "Client connected: %s\n"
-              (Unix.string_of_inet_addr
-                 (match client_addr with
-                 (* Extract the IP address from the client address: IPv4 address *)
-                 | Lwt_unix.ADDR_INET (addr, _) -> addr
-                 | _ -> failwith "Invalid address"))
-            >>= fun () ->
-            (* Launch the client handle asynchrounously, allowing the server to accept
-               more clients. Lwt.async runs the client handling function without
-               blocking the accept loop
-            *)
-            Lwt.async (fun () -> handle_client client_socket);
-            (* Recursively call accept_clients to keep accepting new connections *)
-            accept_clients ()
-        in
-        (* Start accepting clients *)
-        Lwt.async accept_clients;
-        (* Return the server socket *)
+        create_server_socket ip port >>= fun server_socket ->
+        Lwt.async (fun () -> accept_clients server_socket);
         Lwt.return server_socket)
       (fun exn ->
-        raise
+        Lwt.fail
           (Errors.ConnectionError
              ("Server start error: " ^ Printexc.to_string exn)))
 
