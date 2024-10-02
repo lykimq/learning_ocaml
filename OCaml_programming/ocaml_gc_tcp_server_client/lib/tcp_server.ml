@@ -85,63 +85,66 @@ end = struct
   (* Server handshake: Receives client's public key and sends server's public
      key *)
   let server_handshake client_socket =
-    let client_ip = Hashtbl.find_opt client_sockets client_socket in
-    log_attemp Logs.Level.INFO
-      (Printf.sprintf "Starting handshake with client: %s"
-         (Option.value ~default:"Unknown" client_ip))
-    >>= fun () ->
-    let input_channel = Lwt_io.of_fd ~mode:Lwt_io.input client_socket in
-    let output_channel = Lwt_io.of_fd ~mode:Lwt_io.output client_socket in
-    Lwt.catch
-      (fun () ->
-        (* Receive client's public key *)
-        Lwt_io.read_line_opt input_channel >>= function
-        | None ->
-            log_attemp Logs.Level.ERROR
-              (Printf.sprintf "Client %s disconnected during handshake.\n"
-                 (Option.value ~default:"Unknown" client_ip))
-            >>= fun () ->
-            cleanup_resources client_socket input_channel output_channel
-            >>= fun () ->
-            Lwt.fail
-              (Errors.ConnectionError "Client disconnected during handshake")
-        | Some client_public_key_str -> (
-            match
-              Mirage_crypto_ec.Ed25519.pub_of_octets client_public_key_str
-            with
-            | Ok client_public_key ->
-                client_public_key_ref := Some client_public_key;
-                log_attemp Logs.Level.INFO
-                  (Printf.sprintf "Received client public key from %s.\n"
-                     (Option.value ~default:"Unknown" client_ip))
-                >>= fun () ->
-                (* Send server's public key to the client *)
-                let server_public_key_str =
-                  Mirage_crypto_ec.Ed25519.pub_to_octets server_public_key
-                in
-                Lwt_io.write_line output_channel server_public_key_str
-                >>= fun () ->
-                log_attemp Logs.Level.INFO
-                  (Printf.sprintf "Sent server public key to client %s."
-                     (Option.value ~default:"Unknown" client_ip))
-                >>= fun () -> Lwt.return_unit
-            | Error _ ->
-                log_attemp Logs.Level.ERROR
-                  (Printf.sprintf
-                     "Failed to deserialize client public key from %s."
-                     (Option.value ~default:"Unknown" client_ip))
-                >>= fun () ->
-                cleanup_resources client_socket input_channel output_channel
-                >>= fun () ->
-                Lwt.fail
-                  (Errors.MessageError "Invalid client public key format.")))
-      (fun exn ->
-        log_attemp Logs.Level.ERROR
-          (Printf.sprintf "Handshake failed for client %s: %s\n"
-             (Option.value ~default:"Unknown" client_ip)
-             (Printexc.to_string exn))
-        >>= fun () ->
-        cleanup_resources client_socket input_channel output_channel)
+    if !shutdown_flag then
+      Lwt.fail_with "Server is shutting down, handshake aborted."
+    else
+      let client_ip = Hashtbl.find_opt client_sockets client_socket in
+      log_attemp Logs.Level.INFO
+        (Printf.sprintf "Starting handshake with client: %s"
+           (Option.value ~default:"Unknown" client_ip))
+      >>= fun () ->
+      let input_channel = Lwt_io.of_fd ~mode:Lwt_io.input client_socket in
+      let output_channel = Lwt_io.of_fd ~mode:Lwt_io.output client_socket in
+      Lwt.catch
+        (fun () ->
+          (* Receive client's public key *)
+          Lwt_io.read_line_opt input_channel >>= function
+          | None ->
+              log_attemp Logs.Level.ERROR
+                (Printf.sprintf "Client %s disconnected during handshake.\n"
+                   (Option.value ~default:"Unknown" client_ip))
+              >>= fun () ->
+              cleanup_resources client_socket input_channel output_channel
+              >>= fun () ->
+              Lwt.fail
+                (Errors.ConnectionError "Client disconnected during handshake")
+          | Some client_public_key_str -> (
+              match
+                Mirage_crypto_ec.Ed25519.pub_of_octets client_public_key_str
+              with
+              | Ok client_public_key ->
+                  client_public_key_ref := Some client_public_key;
+                  log_attemp Logs.Level.INFO
+                    (Printf.sprintf "Received client public key from %s.\n"
+                       (Option.value ~default:"Unknown" client_ip))
+                  >>= fun () ->
+                  (* Send server's public key to the client *)
+                  let server_public_key_str =
+                    Mirage_crypto_ec.Ed25519.pub_to_octets server_public_key
+                  in
+                  Lwt_io.write_line output_channel server_public_key_str
+                  >>= fun () ->
+                  log_attemp Logs.Level.INFO
+                    (Printf.sprintf "Sent server public key to client %s."
+                       (Option.value ~default:"Unknown" client_ip))
+                  >>= fun () -> Lwt.return_unit
+              | Error _ ->
+                  log_attemp Logs.Level.ERROR
+                    (Printf.sprintf
+                       "Failed to deserialize client public key from %s."
+                       (Option.value ~default:"Unknown" client_ip))
+                  >>= fun () ->
+                  cleanup_resources client_socket input_channel output_channel
+                  >>= fun () ->
+                  Lwt.fail
+                    (Errors.MessageError "Invalid client public key format.")))
+        (fun exn ->
+          log_attemp Logs.Level.ERROR
+            (Printf.sprintf "Handshake failed for client %s: %s\n"
+               (Option.value ~default:"Unknown" client_ip)
+               (Printexc.to_string exn))
+          >>= fun () ->
+          cleanup_resources client_socket input_channel output_channel)
 
   (* Process the message received from the client *)
   let process_message message_str output_channel client_socket =
@@ -317,21 +320,25 @@ end = struct
 
   (* Server listens for incoming connections and process requests *)
   let start_server ?(ip = "127.0.0.1") ?(port = 8080) () =
-    log_attemp Logs.Level.INFO
-      (Printf.sprintf "Starting server on %s:%d" ip port)
-    >>= fun () ->
-    Lwt.catch
-      (fun () ->
-        create_server_socket ip port >>= fun server_socket ->
-        Lwt.async (fun () -> accept_clients server_socket);
-        Lwt.return server_socket)
-      (fun exn ->
-        log_attemp Logs.Level.ERROR
-          ("Server start error: " ^ Printexc.to_string exn)
-        >>= fun () ->
-        Lwt.fail
-          (Errors.ConnectionError
-             ("Server start error: " ^ Printexc.to_string exn)))
+    if !shutdown_flag then
+      log_attemp Logs.Level.ERROR "Sever is shutting down, cannot start"
+      >>= fun () -> Lwt.fail_with "Server is shutting down, cannot start"
+    else
+      log_attemp Logs.Level.INFO
+        (Printf.sprintf "Starting server on %s:%d" ip port)
+      >>= fun () ->
+      Lwt.catch
+        (fun () ->
+          create_server_socket ip port >>= fun server_socket ->
+          Lwt.async (fun () -> accept_clients server_socket);
+          Lwt.return server_socket)
+        (fun exn ->
+          log_attemp Logs.Level.ERROR
+            ("Server start error: " ^ Printexc.to_string exn)
+          >>= fun () ->
+          Lwt.fail
+            (Errors.ConnectionError
+               ("Server start error: " ^ Printexc.to_string exn)))
 
   (* Stop the server and close all connections *)
   let stop_server server_socket =
