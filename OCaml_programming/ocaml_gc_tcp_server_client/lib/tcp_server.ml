@@ -44,14 +44,41 @@ end = struct
 
   (* Clean up resources after a client disconnects and notify the server *)
   let cleanup_resources client_socket input_channel output_channel =
+    let close_input () =
+      Lwt.catch
+        (fun () -> Lwt_io.close input_channel)
+        (fun exn ->
+          log_attemp Logs.Level.ERROR
+            ("Failed to close input channel: " ^ Printexc.to_string exn)
+          >>= fun () -> Lwt.return_unit)
+    in
+    let close_output () =
+      Lwt.catch
+        (fun () -> Lwt_io.close output_channel)
+        (fun exn ->
+          log_attemp Logs.Level.ERROR
+            ("Failed to close output channel: " ^ Printexc.to_string exn)
+          >>= fun () -> Lwt.return_unit)
+    in
+    let close_socket () =
+      Lwt.catch
+        (fun () -> Lwt_unix.close client_socket)
+        (fun exn ->
+          log_attemp Logs.Level.ERROR
+            ("Failed to close socket: " ^ Printexc.to_string exn)
+          >>= fun () -> Lwt.return_unit)
+    in
+    (* Remove client from the hash table and decrease the count *)
     Hashtbl.remove client_sockets client_socket;
     decr connected_clients;
+
     (* Notify that a client slot is free now *)
     Lwt_condition.signal client_disconnect_condition ();
+
     (* Explicitly close channels and socket to release resources *)
-    Lwt_io.close input_channel >>= fun () ->
-    Lwt_io.close output_channel >>= fun () ->
-    Lwt_unix.close client_socket >>= fun () ->
+    close_input () >>= fun () ->
+    close_output () >>= fun () ->
+    close_socket () >>= fun () ->
     log_attemp Logs.Level.INFO
       "Cleaned up resources and closed client connection."
 
