@@ -17,8 +17,8 @@ end = struct
   (* Flag to indicate server is shutting down *)
   let shutdown_flag = ref false
 
-  (* List to track active client sockets *)
-  let client_sockets = ref []
+  (* Initial size of 100 slots *)
+  let client_sockets = Hashtbl.create 100
 
   (* Private and public keys *)
   let server_private_key, server_public_key =
@@ -28,10 +28,26 @@ end = struct
   let client_public_key_ref = ref None
   let log_attemp level msg = Logs.log_to_console_and_file level msg
 
-  (* Ensure memory management for socket and buffers after disconnected. *)
+  (* Condition to notify the server when a client disconnects *)
+  let client_disconnect_condition = Lwt_condition.create ()
+
+  (* Add a new client to the hash table *)
+  let add_client client_socket client_addr =
+    let client_ip =
+      match client_addr with
+      | Lwt_unix.ADDR_INET (addr, _) -> Unix.string_of_inet_addr addr
+      | _ -> "Unknown"
+    in
+    Hashtbl.add client_sockets client_socket client_ip;
+    incr connected_clients;
+    Lwt_io.printf "Client connected: %s\n" client_ip
+
+  (* Clean up resources after a client disconnects and notify the server *)
   let cleanup_resources client_socket input_channel output_channel =
-    client_sockets :=
-      List.filter (fun (socket, _) -> socket != client_socket) !client_sockets;
+    Hashtbl.remove client_sockets client_socket;
+    decr connected_clients;
+    (* Notify that a client slot is free now *)
+    Lwt_condition.signal client_disconnect_condition ();
     (* Explicitly close channels and socket to release resources *)
     Lwt_io.close input_channel >>= fun () ->
     Lwt_io.close output_channel >>= fun () ->
@@ -166,14 +182,20 @@ end = struct
 
   (* First does handshake, then handles messages *)
   let handle_client client_socket =
+    let input_channel = Lwt_io.of_fd ~mode:Lwt_io.input client_socket in
+    let output_channel = Lwt_io.of_fd ~mode:Lwt_io.output client_socket in
     Lwt.catch
       (fun () ->
         server_handshake client_socket >>= fun () ->
-        server_receive_messages client_socket)
+        server_receive_messages client_socket >>= fun () ->
+        (* After messages are handled, clean up resources *)
+        cleanup_resources client_socket input_channel output_channel)
       (fun exn ->
+        (* In case of error, log it and clean up resources *)
         log_attemp Logs.Level.ERROR
           ("Client error: %s\n" ^ Printexc.to_string exn)
-        >>= fun () -> Lwt.fail exn)
+        >>= fun () ->
+        cleanup_resources client_socket input_channel output_channel)
 
   (* Create a new TCP server socket and bind it to the specifed IP and port *)
   let create_server_socket ip port =
@@ -196,15 +218,27 @@ end = struct
     Lwt_io.printf "Server started on %s:%d\n" ip port >>= fun () ->
     Lwt.return server_socket
 
-  (* Handle case where maximum clients are reached: reject new client *)
+  (* Handle max clients by waiting for a free slot *)
   let handle_max_clients server_socket =
-    Lwt_io.printf "Max client reached, rejecting new client.\n" >>= fun () ->
+    log_attemp Logs.Level.INFO "Max client reached, waiting for a free slot.\n"
+    >>= fun () ->
+    (* Wait for the condition to be triggered when a client disconnects *)
+    Lwt_condition.wait client_disconnect_condition >>= fun () ->
+    log_attemp Logs.Level.INFO "Client slot freed, retrying connection."
+    >>= fun () ->
     Lwt_unix.accept server_socket >>= fun (client_socket, _) ->
     let output_channel = Lwt_io.of_fd ~mode:Lwt_io.output client_socket in
     (* Send rejection message to the client *)
-    Lwt_io.write_line output_channel "Server is at capacity, try again later."
-    >>= fun () ->
-    Lwt_io.close output_channel >>= fun () -> Lwt_unix.close client_socket
+    Lwt.catch
+      (fun () ->
+        Lwt_io.write_line output_channel
+          "Server is at capacity, try again later."
+        >>= fun () ->
+        Lwt_io.close output_channel >>= fun () -> Lwt_unix.close client_socket)
+      (fun exn ->
+        log_attemp Logs.Level.ERROR
+          ("Error sending rejection message: " ^ Printexc.to_string exn)
+        >>= fun () -> Lwt_unix.close client_socket)
 
   (* Accept new clients and handle connections *)
 
@@ -212,21 +246,11 @@ end = struct
     if !shutdown_flag then
       Lwt_io.printf "Server is shutting down, no new connections.\n"
     else if !connected_clients >= max_clients then
-      handle_max_clients server_socket >>= fun () ->
-      (* Retry accepting clients after a short delay *)
-      Lwt_unix.sleep 5.0 >>= fun () -> accept_clients server_socket
+      handle_max_clients server_socket
     else
       (* Accept new incoming connections *)
       Lwt_unix.accept server_socket >>= fun (client_socket, client_addr) ->
-      incr connected_clients;
-      client_sockets := (client_socket, client_addr) :: !client_sockets;
-      (* Print the IP address of the connected client *)
-      let client_ip =
-        match client_addr with
-        | Lwt_unix.ADDR_INET (addr, _) -> Unix.string_of_inet_addr addr
-        | _ -> failwith "Invalid address"
-      in
-      Lwt_io.printf "Client connected: %s\n" client_ip >>= fun () ->
+      add_client client_socket client_addr >>= fun () ->
       (* Lauch client handling in an asynchronous task *)
       Lwt.async (fun () -> handle_client client_socket);
       (* Continue accepting new clients *)
@@ -257,40 +281,35 @@ end = struct
     (* Close the listening socket to stop accepting new connections *)
     Lwt_unix.close server_socket >>= fun () ->
     (* Close all active client connections *)
-    Lwt_list.iter_p
-      (fun (client_socket, _) ->
-        log_attemp Logs.Level.INFO "Closing connection for a client...\n"
-        >>= fun () -> Lwt_unix.close client_socket)
-      !client_sockets
-    >>= fun () ->
-    (* Clear the client socket lists *)
-    client_sockets := [];
+    let close_client_sockets () =
+      Hashtbl.fold
+        (fun client_socket _ acc ->
+          acc >>= fun () ->
+          log_attemp Logs.Level.INFO "Closing connection for a client...\n"
+          >>= fun () -> Lwt_unix.close client_socket)
+        client_sockets Lwt.return_unit
+    in
+    close_client_sockets () >>= fun () ->
+    (* Clear the client sockets hash table *)
+    Hashtbl.reset client_sockets;
     log_attemp Logs.Level.INFO "Server stopped.\n"
 
   let get_active_connections () =
-    List.map
-      (fun (client_socket, client_addr) ->
-        match client_addr with
-        | Lwt_unix.ADDR_INET (addr, _) ->
-            (client_socket, Unix.string_of_inet_addr addr)
-        | _ -> (client_socket, "Unknown"))
-      !client_sockets
+    Hashtbl.fold
+      (fun client_socket client_ip acc -> (client_socket, client_ip) :: acc)
+      client_sockets []
 
   (* Check the status of the server *)
   let server_status () =
-    let client_count = List.length !client_sockets in
+    let client_count = Hashtbl.length client_sockets in
     log_attemp Logs.Level.INFO
       (Printf.sprintf "Active connections: %d\n" client_count)
     >>= fun () ->
     if client_count > 0 then
       log_attemp Logs.Level.INFO "Server Status:\n" >>= fun () ->
-      Lwt_list.iter_p
-        (fun (_, client_addr) ->
-          Lwt_io.printf "Client: %s\n"
-            (Unix.string_of_inet_addr
-               (match client_addr with
-               | Lwt_unix.ADDR_INET (addr, _) -> addr
-               | _ -> raise (Errors.MessageError "Invalid client address"))))
-        !client_sockets
+      Hashtbl.fold
+        (fun _ client_ip acc ->
+          acc >>= fun () -> Lwt_io.printf "Client: %s\n" client_ip)
+        client_sockets Lwt.return_unit
     else log_attemp Logs.Level.INFO "No active connections.\n"
 end
