@@ -277,11 +277,16 @@ end = struct
     else
       (* Accept new incoming connections *)
       Lwt_unix.accept server_socket >>= fun (client_socket, client_addr) ->
-      add_client client_socket client_addr >>= fun () ->
-      (* Lauch client handling in an asynchronous task *)
-      Lwt.async (fun () -> handle_client client_socket);
-      (* Continue accepting new clients *)
-      accept_clients server_socket
+      if !shutdown_flag then
+        (* If shutdown started after accepting, immediately reject *)
+        Lwt_io.printf "Rejecting connection due to server shutdown.\n"
+        >>= fun () -> Lwt_unix.close client_socket
+      else
+        add_client client_socket client_addr >>= fun () ->
+        (* Lauch client handling in an asynchronous task *)
+        Lwt.async (fun () -> handle_client client_socket);
+        (* Continue accepting new clients *)
+        accept_clients server_socket
 
   (* Server listens for incoming connections and process requests *)
   let start_server ?(ip = "127.0.0.1") ?(port = 8080) () =
@@ -307,6 +312,23 @@ end = struct
     shutdown_flag := true;
     (* Close the listening socket to stop accepting new connections *)
     Lwt_unix.close server_socket >>= fun () ->
+    log_attemp Logs.Level.INFO
+      "Server socket closed, no new connection will be accepted."
+    >>= fun () ->
+    (* Wait for active clients to finish their work *)
+    let rec wait_for_clients () =
+      if !connected_clients > 0 then
+        log_attemp Logs.Level.INFO
+          (Printf.sprintf "Waiting for %d active client(s) to disconnect..."
+             !connected_clients)
+        >>= fun () ->
+        (* Wait for a client to disconnect, then check again *)
+        Lwt_condition.wait client_disconnect_condition >>= fun () ->
+        wait_for_clients ()
+      else Lwt.return_unit
+    in
+
+    wait_for_clients () >>= fun () ->
     (* Close all active client connections *)
     let close_client_sockets () =
       Hashtbl.fold
