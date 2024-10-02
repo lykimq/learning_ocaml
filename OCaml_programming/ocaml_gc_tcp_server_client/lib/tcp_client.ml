@@ -56,53 +56,56 @@ end = struct
     log_attempt Logs.Level.INFO
       "Client socket and channels closed and resources cleaned up."
 
-  let client_handshake socket =
+  let client_handshake ?(attempts = 3) socket =
     (* Add shutdown_flag check *)
-    if !shutdown_flag then
-      log_attempt Logs.Level.ERROR "Client is shutting down, handshake aborted."
-      >>= fun () -> Lwt.fail_with "Client is shutting down, handshake aborted."
-    else
-      let in_channel = Lwt_io.of_fd ~mode:Lwt_io.input socket in
-      let out_channel = Lwt_io.of_fd ~mode:Lwt_io.output socket in
-      Lwt.catch
-        (fun () ->
-          (* Send client's public key to the server *)
-          let client_public_key_str =
-            Mirage_crypto_ec.Ed25519.pub_to_octets client_public_key
-          in
-          Lwt_io.write_line out_channel client_public_key_str >>= fun () ->
-          log_attempt Logs.Level.INFO "Send client public key to server."
-          >>= fun () ->
-          (* Receive the server's public key *)
-          Lwt_io.read_line_opt in_channel >>= function
-          | None ->
-              log_attempt Logs.Level.ERROR
-                "Handshake failed: Server disconnected"
-              >>= fun () ->
-              cleanup_resources () >>= fun () ->
-              Lwt.fail_with "Handshake failed: Server disconnected."
-          | Some server_public_key_str -> (
-              match
-                Mirage_crypto_ec.Ed25519.pub_of_octets server_public_key_str
-              with
-              | Ok pub_key ->
-                  server_public_key := Some pub_key;
-                  log_attempt Logs.Level.INFO
-                    "Received and stored server public key.\n"
-              | Error _ ->
-                  log_attempt Logs.Level.ERROR
-                    "Handshake failed: Incorrect public key format"
-                  >>= fun () ->
-                  cleanup_resources () >>= fun () ->
-                  Lwt.fail_with "Handshake failed: Incorrect public key format"))
-        (fun exn ->
-          (* Using Lwt.fail for handling errors in asynchronous, [raise] is used
-             for synchronous code *)
-          log_attempt Logs.Level.ERROR
-            ("Error during handshake: " ^ Printexc.to_string exn)
-          >>= fun () ->
-          cleanup_resources () >>= fun () ->
-          Lwt.fail_with ("Error during handshake: " ^ Printexc.to_string exn))
+    let in_channel = Lwt_io.of_fd ~mode:Lwt_io.input socket in
+    let out_channel = Lwt_io.of_fd ~mode:Lwt_io.output socket in
+    let rec attempts_handshake remaining_attempts =
+      if remaining_attempts = 0 || !shutdown_flag then
+        Lwt.fail_with "Handshake failed after maximum attempts."
+      else
+        Lwt.catch
+          (fun () ->
+            (* Send client's public key to the server *)
+            let client_public_key_str =
+              Mirage_crypto_ec.Ed25519.pub_to_octets client_public_key
+            in
+            Lwt_io.write_line out_channel client_public_key_str >>= fun () ->
+            log_attempt Logs.Level.INFO "Send client public key to server."
+            >>= fun () ->
+            (* Receive the server's public key *)
+            Lwt_io.read_line_opt in_channel >>= function
+            | None ->
+                log_attempt Logs.Level.ERROR
+                  "Handshake failed: Server disconnected"
+                >>= fun () ->
+                cleanup_resources () >>= fun () ->
+                Lwt.fail_with "Handshake failed: Server disconnected."
+            | Some server_public_key_str -> (
+                match
+                  Mirage_crypto_ec.Ed25519.pub_of_octets server_public_key_str
+                with
+                | Ok pub_key ->
+                    server_public_key := Some pub_key;
+                    log_attempt Logs.Level.INFO
+                      "Received and stored server public key.\n"
+                | Error _ ->
+                    log_attempt Logs.Level.ERROR
+                      "Handshake failed: Incorrect public key format"
+                    >>= fun () ->
+                    (* Unrecoverable, incorrect format, cleanup resources *)
+                    cleanup_resources () >>= fun () ->
+                    Lwt.fail_with
+                      "Handshake failed: Incorrect public key format"))
+          (fun exn ->
+            log_attempt Logs.Level.ERROR
+              ("Error during handshake: " ^ Printexc.to_string exn)
+            >>= fun () ->
+            log_attempt Logs.Level.INFO "Retrying handshake..." >>= fun () ->
+            Lwt_unix.sleep 1.0 >>= fun () ->
+            attempts_handshake (remaining_attempts - 1))
+    in
+    attempts_handshake attempts
 
   (* Open a connection to the server *)
   let start_client ~ip ~port () =
@@ -121,7 +124,7 @@ end = struct
         (fun () ->
           Lwt_unix.connect socket addr >>= fun () ->
           (* Perform the handshake to receive the server's public key *)
-          client_handshake socket >>= fun () ->
+          client_handshake ~attempts:3 socket >>= fun () ->
           (* Store the connected socket *)
           client_socket := Some socket;
           stored_ip := Some ip;
@@ -323,6 +326,8 @@ end = struct
                  ^ Printexc.to_string exn)
                 >>= fun () ->
                 cleanup_resources () >>= fun () ->
+                (* Using Lwt.fail for handling errors in asynchronous, [raise] is used
+                   for synchronous code *)
                 Lwt.fail
                   (Errors.ConnectionError
                      ("Communication or timeout error: "
