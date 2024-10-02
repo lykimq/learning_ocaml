@@ -85,7 +85,11 @@ end = struct
   (* Server handshake: Receives client's public key and sends server's public
      key *)
   let server_handshake client_socket =
-    log_attemp Logs.Level.INFO "Starting handshake with client" >>= fun () ->
+    let client_ip = Hashtbl.find_opt client_sockets client_socket in
+    log_attemp Logs.Level.INFO
+      (Printf.sprintf "Starting handshake with client: %s"
+         (Option.value ~default:"Unknown" client_ip))
+    >>= fun () ->
     let input_channel = Lwt_io.of_fd ~mode:Lwt_io.input client_socket in
     let output_channel = Lwt_io.of_fd ~mode:Lwt_io.output client_socket in
     Lwt.catch
@@ -94,7 +98,8 @@ end = struct
         Lwt_io.read_line_opt input_channel >>= function
         | None ->
             log_attemp Logs.Level.ERROR
-              "Client disconnected during handshake.\n"
+              (Printf.sprintf "Client %s disconnected during handshake.\n"
+                 (Option.value ~default:"Unknown" client_ip))
             >>= fun () ->
             cleanup_resources client_socket input_channel output_channel
             >>= fun () ->
@@ -106,7 +111,9 @@ end = struct
             with
             | Ok client_public_key ->
                 client_public_key_ref := Some client_public_key;
-                log_attemp Logs.Level.INFO "Received client public key.\n"
+                log_attemp Logs.Level.INFO
+                  (Printf.sprintf "Received client public key from %s.\n"
+                     (Option.value ~default:"Unknown" client_ip))
                 >>= fun () ->
                 (* Send server's public key to the client *)
                 let server_public_key_str =
@@ -114,11 +121,15 @@ end = struct
                 in
                 Lwt_io.write_line output_channel server_public_key_str
                 >>= fun () ->
-                log_attemp Logs.Level.INFO "Sent server public key to client."
+                log_attemp Logs.Level.INFO
+                  (Printf.sprintf "Sent server public key to client %s."
+                     (Option.value ~default:"Unknown" client_ip))
                 >>= fun () -> Lwt.return_unit
             | Error _ ->
                 log_attemp Logs.Level.ERROR
-                  "Failed to deserialize client public key"
+                  (Printf.sprintf
+                     "Failed to deserialize client public key from %s."
+                     (Option.value ~default:"Unknown" client_ip))
                 >>= fun () ->
                 cleanup_resources client_socket input_channel output_channel
                 >>= fun () ->
@@ -126,20 +137,30 @@ end = struct
                   (Errors.MessageError "Invalid client public key format.")))
       (fun exn ->
         log_attemp Logs.Level.ERROR
-          ("Handshake failed: %s\n" ^ Printexc.to_string exn)
+          (Printf.sprintf "Handshake failed for client %s: %s\n"
+             (Option.value ~default:"Unknown" client_ip)
+             (Printexc.to_string exn))
         >>= fun () ->
         cleanup_resources client_socket input_channel output_channel)
 
   (* Process the message received from the client *)
-  let process_message message_str output_channel =
+  let process_message message_str output_channel client_socket =
+    let client_ip = Hashtbl.find_opt client_sockets client_socket in
     let open Messages.Message in
     (* Decode and process the message *)
     let message = decode_message message_str in
+    log_attemp Logs.Level.INFO
+      (Printf.sprintf "Processing message from %s:%s"
+         (Option.value ~default:"Unknown" client_ip)
+         message.payload)
+    >>= fun () ->
     (* Verify the client message if it is signed *)
     match (message.signature, !client_public_key_ref) with
     | Some _, Some client_public_key ->
         if verify_signature (module Blak2b) client_public_key message then
-          log_attemp Logs.Level.INFO "Signature verificaiton successful.\n"
+          log_attemp Logs.Level.INFO
+            (Printf.sprintf "Signature verificaiton successful for client %s.\n"
+               (Option.value ~default:"Unknown" client_ip))
           >>= fun () ->
           log_attemp Logs.Level.INFO
             ("Received message : %s\n" ^ message.payload)
@@ -169,13 +190,18 @@ end = struct
           (* Send the encoded response back to the client *)
           Lwt_io.write_line output_channel encoded_message
         else
-          log_attemp Logs.Level.ERROR "Invalid client signature." >>= fun () ->
+          log_attemp Logs.Level.ERROR
+            (Printf.sprintf "Invalid signature from client %s."
+               (Option.value ~default:"Unknown" client_ip))
+          >>= fun () ->
           Lwt.fail (Errors.MessageError "Invalid client signature")
     | None, _ ->
         log_attemp Logs.Level.INFO "Message is not signed.\n" >>= fun () ->
         Lwt.return_unit
     | _, None ->
-        log_attemp Logs.Level.ERROR "No client public key available"
+        log_attemp Logs.Level.ERROR
+          (Printf.sprintf "No client public key available for client %s"
+             (Option.value ~default:"Unknown" client_ip))
         >>= fun () -> Lwt.fail_with "No client public key available."
 
   let received_message_with_timeout input_channel timeout_duration =
@@ -199,7 +225,8 @@ end = struct
             cleanup_resources client_socket input_channel output_channel
         | Some message_str ->
             (* Process the client's message *)
-            process_message message_str output_channel >>= fun () ->
+            process_message message_str output_channel client_socket
+            >>= fun () ->
             cleanup_resources client_socket input_channel output_channel)
       (fun exn ->
         log_attemp Logs.Level.ERROR
