@@ -2,11 +2,11 @@ open Lwt.Infix
 open Ocaml_digestif_hash.Digital_signature_common
 
 module TCP_Server : sig
-  val server_connect :
+  val start_server :
     ?ip:string -> ?port:int -> unit -> Lwt_unix.file_descr Lwt.t
 
   val server_receive_messages : Lwt_unix.file_descr -> unit Lwt.t
-  val server_disconnect : Lwt_unix.file_descr -> unit Lwt.t
+  val stop_server : Lwt_unix.file_descr -> unit Lwt.t
   val get_active_connections : unit -> (Lwt_unix.file_descr * string) list
   val server_status : unit -> unit Lwt.t
 end = struct
@@ -28,6 +28,17 @@ end = struct
   let client_public_key_ref = ref None
   let log_attemp level msg = Logs.log_to_console_and_file level msg
 
+  (* Ensure memory management for socket and buffers after disconnected. *)
+  let cleanup_resources client_socket input_channel output_channel =
+    client_sockets :=
+      List.filter (fun (socket, _) -> socket != client_socket) !client_sockets;
+    (* Explicitly close channels and socket to release resources *)
+    Lwt_io.close input_channel >>= fun () ->
+    Lwt_io.close output_channel >>= fun () ->
+    Lwt_unix.close client_socket >>= fun () ->
+    log_attemp Logs.Level.INFO
+      "Cleaned up resources and closed client connection."
+
   (* Server handshake: Receives client's public key and sends server's public
      key *)
   let server_handshake client_socket =
@@ -41,6 +52,8 @@ end = struct
         | None ->
             log_attemp Logs.Level.ERROR
               "Client disconnected during handshake.\n"
+            >>= fun () ->
+            cleanup_resources client_socket input_channel output_channel
             >>= fun () ->
             Lwt.fail
               (Errors.ConnectionError "Client disconnected during handshake")
@@ -64,19 +77,15 @@ end = struct
                 log_attemp Logs.Level.ERROR
                   "Failed to deserialize client public key"
                 >>= fun () ->
+                cleanup_resources client_socket input_channel output_channel
+                >>= fun () ->
                 Lwt.fail
                   (Errors.MessageError "Invalid client public key format.")))
       (fun exn ->
         log_attemp Logs.Level.ERROR
           ("Handshake failed: %s\n" ^ Printexc.to_string exn)
-        >>= fun () -> Lwt.fail exn)
-
-  (* Remove a client from the active connections and close its socket *)
-  let remove_client client_socket input_channel output_channel =
-    client_sockets :=
-      List.filter (fun (socket, _) -> socket != client_socket) !client_sockets;
-    log_attemp Logs.Level.INFO "Client disconnected.\n" >>= fun () ->
-    Lwt_io.close input_channel >>= fun () -> Lwt_io.close output_channel
+        >>= fun () ->
+        cleanup_resources client_socket input_channel output_channel)
 
   (* Process the message received from the client *)
   let process_message message_str output_channel =
@@ -143,20 +152,17 @@ end = struct
         >>= function
         | None ->
             (* Handle client disconnection *)
-            remove_client client_socket input_channel output_channel
+            log_attemp Logs.Level.INFO "Client disconnected." >>= fun () ->
+            cleanup_resources client_socket input_channel output_channel
         | Some message_str ->
             (* Process the client's message *)
             process_message message_str output_channel >>= fun () ->
-            Lwt_io.close input_channel)
+            cleanup_resources client_socket input_channel output_channel)
       (fun exn ->
         log_attemp Logs.Level.ERROR
           ("Error handling client message: " ^ Printexc.to_string exn)
         >>= fun () ->
-        Lwt_io.close input_channel >>= fun () ->
-        Lwt_io.close output_channel >>= fun () ->
-        Lwt.fail
-          (Errors.ConnectionError
-             ("Client handling error: " ^ Printexc.to_string exn)))
+        cleanup_resources client_socket input_channel output_channel)
 
   (* First does handshake, then handles messages *)
   let handle_client client_socket =
@@ -227,7 +233,7 @@ end = struct
       accept_clients server_socket
 
   (* Server listens for incoming connections and process requests *)
-  let server_connect ?(ip = "127.0.0.1") ?(port = 8080) () =
+  let start_server ?(ip = "127.0.0.1") ?(port = 8080) () =
     log_attemp Logs.Level.INFO
       (Printf.sprintf "Starting server on %s:%d" ip port)
     >>= fun () ->
@@ -245,7 +251,7 @@ end = struct
              ("Server start error: " ^ Printexc.to_string exn)))
 
   (* Stop the server and close all connections *)
-  let server_disconnect server_socket =
+  let stop_server server_socket =
     log_attemp Logs.Level.INFO "Disconneting server" >>= fun () ->
     shutdown_flag := true;
     (* Close the listening socket to stop accepting new connections *)

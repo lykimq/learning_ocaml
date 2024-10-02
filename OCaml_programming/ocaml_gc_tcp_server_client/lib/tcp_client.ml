@@ -2,20 +2,22 @@ open Lwt.Infix
 open Ocaml_digestif_hash.Digital_signature_common
 
 module TCP_Client : sig
-  val client_connect : ip:string -> port:int -> unit -> unit Lwt.t
+  val start_client : ip:string -> port:int -> unit -> unit Lwt.t
 
   val client_send_message :
     msg_type:Messages.Message.msg_type -> string -> unit Lwt.t
 
-  val client_disconnect : unit -> unit Lwt.t
+  val stop_client : unit -> unit Lwt.t
   val client_status : unit -> unit Lwt.t
 end = struct
   (* Client private key for signing messages *)
   let client_private_key, client_public_key =
     Digital_signature_common.generate_keys ()
 
-  (* Socket for client connection *)
+  (* Socket and channels for client connection *)
   let client_socket = ref None
+  let input_channel = ref None
+  let output_channel = ref None
   let server_public_key = ref None
 
   (* Store IP and port information *)
@@ -32,23 +34,47 @@ end = struct
   let reconnect_delay = 1.5
   let log_attempt level msg = Logs.log_to_console_and_file level msg
 
+  (* Clean up client socket and resources after disconnected *)
+  let cleanup_resources () =
+    let close_channel channel =
+      match !channel with
+      | None -> Lwt.return_unit
+      | Some chn -> Lwt_io.close chn >>= fun () -> Lwt.return (channel := None)
+    in
+    let close_socket () =
+      match !client_socket with
+      | None -> Lwt.return_unit
+      | Some socket ->
+          Lwt_unix.close socket >>= fun () ->
+          client_socket := None;
+          log_attempt Logs.Level.INFO
+            "Client socket closed and resources cleaned up."
+    in
+    close_channel input_channel >>= fun () ->
+    close_channel output_channel >>= fun () ->
+    close_socket () >>= fun () ->
+    log_attempt Logs.Level.INFO
+      "Client socket and channels closed and resources cleaned up."
+
   let client_handshake socket =
-    let input_channel = Lwt_io.of_fd ~mode:Lwt_io.input socket in
-    let output_channel = Lwt_io.of_fd ~mode:Lwt_io.output socket in
+    let in_channel = Lwt_io.of_fd ~mode:Lwt_io.input socket in
+    let out_channel = Lwt_io.of_fd ~mode:Lwt_io.output socket in
     Lwt.catch
       (fun () ->
         (* Send client's public key to the server *)
         let client_public_key_str =
           Mirage_crypto_ec.Ed25519.pub_to_octets client_public_key
         in
-        Lwt_io.write_line output_channel client_public_key_str >>= fun () ->
+        Lwt_io.write_line out_channel client_public_key_str >>= fun () ->
         log_attempt Logs.Level.INFO "Send client public key to server."
         >>= fun () ->
         (* Receive the server's public key *)
-        Lwt_io.read_line_opt input_channel >>= function
+        Lwt_io.read_line_opt in_channel >>= function
         | None ->
             log_attempt Logs.Level.ERROR "Handshake failed: Server disconnected"
-            >>= fun () -> Lwt.fail_with "Handshake failed: Server disconnected."
+            >>= fun () ->
+            cleanup_resources () >>= fun () ->
+            Lwt.fail_with "Handshake failed: Server disconnected."
         | Some server_public_key_str -> (
             match
               Mirage_crypto_ec.Ed25519.pub_of_octets server_public_key_str
@@ -61,6 +87,7 @@ end = struct
                 log_attempt Logs.Level.ERROR
                   "Handshake failed: Incorrect public key format"
                 >>= fun () ->
+                cleanup_resources () >>= fun () ->
                 Lwt.fail_with "Handshake failed: Incorrect public key format"))
       (fun exn ->
         (* Using Lwt.fail for handling errors in asynchronous, [raise] is used
@@ -68,10 +95,11 @@ end = struct
         log_attempt Logs.Level.ERROR
           ("Error during handshake: " ^ Printexc.to_string exn)
         >>= fun () ->
+        cleanup_resources () >>= fun () ->
         Lwt.fail_with ("Error during handshake: " ^ Printexc.to_string exn))
 
   (* Open a connection to the server *)
-  let client_connect ~ip ~port () =
+  let start_client ~ip ~port () =
     log_attempt Logs.Level.INFO
       (Printf.sprintf "Attempting to connect to server at %s:%d" ip port)
     >>= fun () ->
@@ -94,6 +122,7 @@ end = struct
         log_attempt Logs.Level.ERROR
           ("Failed to connect to server: " ^ Printexc.to_string exn)
         >>= fun () ->
+        cleanup_resources () >>= fun () ->
         Lwt.fail
           (Errors.ConnectionError
              ("Failed to connect to server: " ^ Printexc.to_string exn)))
@@ -109,6 +138,7 @@ end = struct
             log_attempt Logs.Level.ERROR
               (Printf.sprintf "Reconnection attempt %d" attempt)
             >>= fun () ->
+            cleanup_resources () >>= fun () ->
             Lwt.fail
               (Errors.ConnectionError "Max reconnection attempts reached.")
           else
@@ -117,7 +147,7 @@ end = struct
             >>= fun () ->
             Lwt_unix.sleep reconnect_delay >>= fun () ->
             Lwt.catch
-              (fun () -> client_connect ~ip ~port ())
+              (fun () -> start_client ~ip ~port ())
               (fun exn ->
                 log_attempt Logs.Level.ERROR
                   ("Reconnection attempt failed: " ^ Printexc.to_string exn)
@@ -127,6 +157,7 @@ end = struct
     | _ ->
         log_attempt Logs.Level.ERROR "No previous connection info to reconnect."
         >>= fun () ->
+        cleanup_resources () >>= fun () ->
         Lwt.fail
           (Errors.ConnectionError "No previous connection info to reconnect.")
 
@@ -169,6 +200,7 @@ end = struct
         log_attempt Logs.Level.ERROR
           "Server closed the connection unexpectedly."
         >>= fun () ->
+        cleanup_resources () >>= fun () ->
         Lwt.fail (Errors.TimeoutError "Server closed the connection.")
     | Some response_str -> (
         let response_message = Messages.Message.decode_message response_str in
@@ -181,6 +213,7 @@ end = struct
         if response_message.hash <> expected_hash then
           log_attempt Logs.Level.ERROR "Response hash veryfication failed."
           >>= fun () ->
+          cleanup_resources () >>= fun () ->
           Lwt.fail (Errors.MessageError "Response hash verification failed.")
         else
           match response_message.signature with
@@ -199,6 +232,7 @@ end = struct
                     log_attempt Logs.Level.ERROR
                       "Server signature verificaiton failed."
                     >>= fun () ->
+                    cleanup_resources () >>= fun () ->
                     Lwt.fail
                       (Errors.MessageError
                          "Server signature verification failed.")
@@ -206,6 +240,7 @@ end = struct
                   log_attempt Logs.Level.ERROR
                     "Server public key not available for verification"
                   >>= fun () ->
+                  cleanup_resources () >>= fun () ->
                   Lwt.fail
                     (Errors.MessageError
                        "Server public key not available for verification"))
@@ -236,6 +271,7 @@ end = struct
             | None ->
                 log_attempt Logs.Level.ERROR "Client is not connected"
                 >>= fun () ->
+                cleanup_resources () >>= fun () ->
                 Lwt.fail (Errors.ConnectionError "Client is not connected")
             | Some _ -> Lwt.return_unit)
         | Some _ -> Lwt.return_unit
@@ -246,6 +282,7 @@ end = struct
           log_attempt Logs.Level.ERROR
             "Client is not connected even after reconnect"
           >>= fun () ->
+          cleanup_resources () >>= fun () ->
           Lwt.fail
             (Errors.ConnectionError
                "Client is not connected even after reconnection attempt.")
@@ -266,15 +303,16 @@ end = struct
                 ("Error during communcation or timeout: "
                ^ Printexc.to_string exn)
               >>= fun () ->
-              reconnect ~attempts:max_reconnect_attempts >>= fun () ->
+              cleanup_resources () >>= fun () ->
               Lwt.fail
                 (Errors.ConnectionError
                    ("Communication or timeout error: " ^ Printexc.to_string exn)))
 
   (* Graceful shutdown function *)
-  let client_disconnect () =
+  let stop_client () =
     log_attempt Logs.Level.INFO "Disconnecting client" >>= fun () ->
     shutdown_flag := true;
+    cleanup_resources () >>= fun () ->
     match !client_socket with
     | None -> log_attempt Logs.Level.INFO "Client is already disconnected."
     | Some socket ->

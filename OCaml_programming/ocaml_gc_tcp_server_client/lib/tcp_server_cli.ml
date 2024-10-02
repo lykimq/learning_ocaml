@@ -13,7 +13,7 @@ let start_server () =
       Tcp_cli_utils.parse_args "server" [ "start" ] >>= fun (_, args) ->
       let ip, port = Tcp_cli_utils.get_ip_port args in
       Lwt_io.printf "Starting the server on %s:%d...\n" ip port >>= fun () ->
-      let socket = Tcp_server.TCP_Server.server_connect ~ip ~port () in
+      let socket = Tcp_server.TCP_Server.start_server ~ip ~port () in
       server_socket := Some socket;
       Lwt_io.printf "Server started on %s:%d.\n" ip port
 
@@ -25,7 +25,7 @@ let stop_server () =
       Lwt_io.printf "Stopping the server...\n" >>= fun () ->
       (* Unwrapping the Lwt promise to get the actual socket *)
       socket_promise >>= fun socket ->
-      Tcp_server.TCP_Server.server_disconnect socket >>= fun () ->
+      Tcp_server.TCP_Server.stop_server socket >>= fun () ->
       server_socket := None;
       Lwt_io.printf "Server stopped.\n"
 

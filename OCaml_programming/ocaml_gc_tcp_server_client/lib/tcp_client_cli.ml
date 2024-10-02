@@ -11,10 +11,7 @@ let start_client () =
       Tcp_cli_utils.parse_args "client" [ "start" ] >>= fun (_, args) ->
       let ip, port = Tcp_cli_utils.get_ip_port args in
       Lwt_io.printf "Starting the client on %s:%d...\n" ip port >>= fun () ->
-      let socket =
-        Ocaml_gc_tcp_server_client.Tcp_client.TCP_Client.client_connect ~ip
-          ~port
-      in
+      let socket = Tcp_client.TCP_Client.start_client ~ip ~port in
       client_socket := Some socket;
       Lwt_io.printf "Client started on %s:%d.\n" ip port
 
@@ -50,7 +47,7 @@ let sign_message () =
           ~msg_type:Messages.Message.Critical payload
     | _ -> failwith "Only Critical message type is allowed for sign"
 
-let stop_client () = Tcp_client.TCP_Client.client_disconnect ()
+let stop_client () = Tcp_client.TCP_Client.stop_client ()
 let status_client () = Tcp_client.TCP_Client.client_status ()
 
 let main () =
