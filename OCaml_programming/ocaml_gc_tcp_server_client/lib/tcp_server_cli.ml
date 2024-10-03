@@ -25,7 +25,7 @@ let stop_server () =
       Lwt_io.printf "Stopping the server...\n" >>= fun () ->
       (* Unwrapping the Lwt promise to get the actual socket *)
       socket_promise >>= fun socket ->
-      Tcp_server.TCP_Server.stop_server socket >>= fun () ->
+      Tcp_server.TCP_Server.stop_server socket () >>= fun () ->
       server_socket := None;
       Lwt_io.printf "Server stopped.\n"
 
