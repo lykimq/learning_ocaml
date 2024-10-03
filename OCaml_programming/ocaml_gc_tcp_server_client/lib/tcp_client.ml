@@ -79,7 +79,7 @@ end = struct
                 log_attempt Logs.Level.ERROR
                   "Handshake failed: Server disconnected"
                 >>= fun () ->
-                cleanup_resources () >>= fun () ->
+                (*cleanup_resources () >>= fun () ->*)
                 Lwt.fail_with "Handshake failed: Server disconnected."
             | Some server_public_key_str -> (
                 match
@@ -155,7 +155,7 @@ end = struct
               log_attempt Logs.Level.ERROR
                 (Printf.sprintf "Reconnection attempt %d" attempt)
               >>= fun () ->
-              cleanup_resources () >>= fun () ->
+              (*cleanup_resources () >>= fun () ->*)
               Lwt.fail
                 (Errors.ConnectionError "Max reconnection attempts reached.")
             else
@@ -218,7 +218,7 @@ end = struct
         log_attempt Logs.Level.ERROR
           "Server closed the connection unexpectedly."
         >>= fun () ->
-        cleanup_resources () >>= fun () ->
+        (*cleanup_resources () >>= fun () ->*)
         Lwt.fail (Errors.TimeoutError "Server closed the connection.")
     | Some response_str -> (
         let response_message = Messages.Message.decode_message response_str in
@@ -231,7 +231,7 @@ end = struct
         if response_message.hash <> expected_hash then
           log_attempt Logs.Level.ERROR "Response hash veryfication failed."
           >>= fun () ->
-          cleanup_resources () >>= fun () ->
+          (*cleanup_resources () >>= fun () ->*)
           Lwt.fail (Errors.MessageError "Response hash verification failed.")
         else
           match response_message.signature with
@@ -250,7 +250,7 @@ end = struct
                     log_attempt Logs.Level.ERROR
                       "Server signature verificaiton failed."
                     >>= fun () ->
-                    cleanup_resources () >>= fun () ->
+                    (*cleanup_resources () >>= fun () ->*)
                     Lwt.fail
                       (Errors.MessageError
                          "Server signature verification failed.")
@@ -258,7 +258,7 @@ end = struct
                   log_attempt Logs.Level.ERROR
                     "Server public key not available for verification"
                   >>= fun () ->
-                  cleanup_resources () >>= fun () ->
+                  (*cleanup_resources () >>= fun () ->*)
                   Lwt.fail
                     (Errors.MessageError
                        "Server public key not available for verification"))
@@ -293,7 +293,7 @@ end = struct
               | None ->
                   log_attempt Logs.Level.ERROR "Client is not connected"
                   >>= fun () ->
-                  cleanup_resources () >>= fun () ->
+                  (*cleanup_resources () >>= fun () ->*)
                   Lwt.fail (Errors.ConnectionError "Client is not connected")
               | Some _ -> Lwt.return_unit)
           | Some _ -> Lwt.return_unit
@@ -304,7 +304,7 @@ end = struct
             log_attempt Logs.Level.ERROR
               "Client is not connected even after reconnect"
             >>= fun () ->
-            cleanup_resources () >>= fun () ->
+            (*cleanup_resources () >>= fun () ->*)
             Lwt.fail
               (Errors.ConnectionError
                  "Client is not connected even after reconnection attempt.")
@@ -337,7 +337,7 @@ end = struct
   let stop_client () =
     log_attempt Logs.Level.INFO "Disconnecting client" >>= fun () ->
     shutdown_flag := true;
-    cleanup_resources () >>= fun () ->
+    (*cleanup_resources () >>= fun () ->*)
     match !client_socket with
     | None -> log_attempt Logs.Level.INFO "Client is already disconnected."
     | Some socket ->

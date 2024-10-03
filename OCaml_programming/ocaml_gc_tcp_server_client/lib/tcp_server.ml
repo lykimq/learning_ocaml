@@ -106,8 +106,8 @@ end = struct
                   (Printf.sprintf "Client %s disconnected during handshake.\n"
                      (Option.value ~default:"Unknown" client_ip))
                 >>= fun () ->
-                cleanup_resources client_socket input_channel output_channel
-                >>= fun () ->
+                (*cleanup_resources client_socket input_channel output_channel
+                  >>= fun () ->*)
                 Lwt.fail
                   (Errors.ConnectionError "Client disconnected during handshake")
             | Some client_public_key_str -> (
@@ -230,13 +230,14 @@ end = struct
         >>= function
         | None ->
             (* Handle client disconnection *)
-            log_attemp Logs.Level.INFO "Client disconnected." >>= fun () ->
-            cleanup_resources client_socket input_channel output_channel
+            log_attemp Logs.Level.INFO "Client disconnected."
+        (*>>= fun () ->
+          cleanup_resources client_socket input_channel output_channel*)
         | Some message_str ->
             (* Process the client's message *)
             process_message message_str output_channel client_socket
-            >>= fun () ->
-            cleanup_resources client_socket input_channel output_channel)
+        (*>>= fun () ->
+          cleanup_resources client_socket input_channel output_channel*))
       (fun exn ->
         log_attemp Logs.Level.ERROR
           ("Error handling client message: " ^ Printexc.to_string exn)
@@ -252,13 +253,16 @@ end = struct
         server_handshake client_socket >>= fun () ->
         server_receive_messages client_socket >>= fun () ->
         (* After messages are handled, clean up resources *)
-        cleanup_resources client_socket input_channel output_channel)
+        (*cleanup_resources client_socket input_channel output_channel
+          >>= fun () ->*)
+        Lwt.return_unit)
       (fun exn ->
         (* In case of error, log it and clean up resources *)
         log_attemp Logs.Level.ERROR
           ("Client error: %s\n" ^ Printexc.to_string exn)
         >>= fun () ->
-        cleanup_resources client_socket input_channel output_channel)
+        cleanup_resources client_socket input_channel output_channel
+        >>= fun () -> Lwt.fail exn)
 
   (* Create a new TCP server socket and bind it to the specifed IP and port *)
   let create_server_socket ip port =
