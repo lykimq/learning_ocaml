@@ -27,10 +27,14 @@ let test_start_client_server () =
         | Lwt_unix.ADDR_INET (_, port) -> port
         | _ -> failwith "Unexpected server address"
       in
+      (* Start the client and connect to the server *)
       Tcp_client.TCP_Client.start_client ~ip ~port () >>= fun _ ->
-      Tcp_server.TCP_Server.stop_server server_socket () >>= fun () ->
+      (* Wait for some communication to happen, or simulate some interaction here *)
+      Lwt_unix.sleep 0.5 >>= fun () ->
+      (* Stop the client first to avoid server using a closed socket *)
       Tcp_client.TCP_Client.stop_client () >>= fun () ->
-      (* Ensure the client is stopped *)
+      (* Stop the server after ensuring the client has stopped *)
+      Tcp_server.TCP_Server.stop_server server_socket () >>= fun () ->
       Lwt.return_unit )
 
 let () =

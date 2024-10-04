@@ -116,6 +116,8 @@ end = struct
       log_attempt Logs.Level.INFO
         (Printf.sprintf "Attempting to connect to server at %s:%d" ip port)
       >>= fun () ->
+      (* Ignore SIGPIPE to prevent crashes when writing to a closed socket *)
+      Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
       (* Reset shutdown flag on new connection *)
       shutdown_flag := false;
       let socket = Lwt_unix.socket PF_INET SOCK_STREAM 0 in
@@ -334,23 +336,35 @@ end = struct
                     ^ Printexc.to_string exn)))
 
   (* Graceful shutdown function *)
+
+  (* Mutex to prevent simultaneous access to the socket during close operations *)
+  let socket_mutex = Lwt_mutex.create ()
+  let client_disconnected = ref false
+
   let stop_client () =
     log_attempt Logs.Level.INFO "Disconnecting client" >>= fun () ->
     shutdown_flag := true;
-    (*cleanup_resources () >>= fun () ->*)
+    client_disconnected := true;
     match !client_socket with
     | None -> log_attempt Logs.Level.INFO "Client is already disconnected."
     | Some socket ->
+        Lwt_mutex.lock socket_mutex >>= fun () ->
         log_attempt Logs.Level.INFO "Disconnecting from server..." >>= fun () ->
         Lwt.catch
           (fun () ->
             Lwt_unix.close socket >>= fun () ->
             client_socket := None;
-            log_attempt Logs.Level.INFO "Disconnected successfully.")
-          (fun exn ->
-            client_socket := None;
-            log_attempt Logs.Level.ERROR
-              ("Error during disconnect: " ^ Printexc.to_string exn))
+            log_attempt Logs.Level.INFO "Disconnected successfully."
+            >>= fun () ->
+            (* Unlock the mutex after closing the socket *)
+            Lwt_mutex.unlock socket_mutex;
+            Lwt.return_unit)
+          (function
+            | exn ->
+                client_socket := None;
+                Lwt_mutex.unlock socket_mutex;
+                log_attempt Logs.Level.ERROR
+                  ("Error during disconnect: " ^ Printexc.to_string exn))
 
   (* Client status: check if connected and show IP/PORT info *)
   let client_status () =

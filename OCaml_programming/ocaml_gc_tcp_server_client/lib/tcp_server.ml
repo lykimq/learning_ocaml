@@ -42,38 +42,69 @@ end = struct
     incr connected_clients;
     Lwt_io.printf "Client connected: %s\n" client_ip
 
+  let client_disconnected = Hashtbl.create 100
+
+  let mark_client_disconnected client_socket =
+    Hashtbl.replace client_disconnected client_socket true;
+    (* Get the peer name and log the disconnection message *)
+    match Lwt_unix.getpeername client_socket with
+    | Unix.ADDR_INET (inet_addr, _) ->
+        log_attemp Logs.Level.INFO
+          (Printf.sprintf "Client %s marked as disconnected"
+             (Unix.string_of_inet_addr inet_addr))
+    | Unix.ADDR_UNIX _ ->
+        log_attemp Logs.Level.INFO
+          "Client using Unix domain socket marked as disconnected"
+
   (* Clean up resources after a client disconnects and notify the server *)
   let cleanup_resources client_socket input_channel output_channel =
+    Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
     let close_input () =
       Lwt.catch
         (fun () -> Lwt_io.close input_channel)
-        (fun exn ->
-          log_attemp Logs.Level.ERROR
-            ("Failed to close input channel: " ^ Printexc.to_string exn)
-          >>= fun () -> Lwt.return_unit)
+        (function
+          | Unix.Unix_error (Unix.EBADF, _, _) ->
+              log_attemp Logs.Level.ERROR
+                "EBADF error: Ignoring bad file descriptor"
+              >>= fun () -> Lwt.return_unit
+          | exn ->
+              log_attemp Logs.Level.ERROR
+                ("Failed to close input channel: " ^ Printexc.to_string exn)
+              >>= fun () -> Lwt.return_unit)
     in
     let close_output () =
       Lwt.catch
         (fun () -> Lwt_io.close output_channel)
-        (fun exn ->
-          log_attemp Logs.Level.ERROR
-            ("Failed to close output channel: " ^ Printexc.to_string exn)
-          >>= fun () -> Lwt.return_unit)
+        (function
+          | Unix.Unix_error (Unix.EBADF, _, _) ->
+              log_attemp Logs.Level.ERROR
+                "EBADF error: Ignoring bad file descriptor"
+              >>= fun () -> Lwt.return_unit
+          | exn ->
+              log_attemp Logs.Level.ERROR
+                ("Failed to close output channel: " ^ Printexc.to_string exn)
+              >>= fun () -> Lwt.return_unit)
     in
     let close_socket () =
       Lwt.catch
         (fun () -> Lwt_unix.close client_socket)
-        (fun exn ->
-          log_attemp Logs.Level.ERROR
-            ("Failed to close socket: " ^ Printexc.to_string exn)
-          >>= fun () -> Lwt.return_unit)
+        (function
+          | Unix.Unix_error (Unix.EBADF, _, _) ->
+              log_attemp Logs.Level.ERROR
+                "EBADF error: Ignoring bad file descriptor"
+              >>= fun () -> Lwt.return_unit
+          | exn ->
+              log_attemp Logs.Level.ERROR
+                ("Failed to close socket: " ^ Printexc.to_string exn)
+              >>= fun () -> Lwt.return_unit)
     in
+    mark_client_disconnected client_socket >>= fun () ->
     (* Remove client from the hash table and decrease the count *)
-    Hashtbl.remove client_sockets client_socket;
-    decr connected_clients;
+    (*Hashtbl.remove client_sockets client_socket;*
+      decr connected_clients;
 
-    (* Notify that a client slot is free now *)
-    Lwt_condition.signal client_disconnect_condition ();
+      (* Notify that a client slot is free now *)
+      Lwt_condition.signal client_disconnect_condition ();*)
 
     (* Explicitly close channels and socket to release resources *)
     close_input () >>= fun () ->
@@ -153,65 +184,87 @@ end = struct
     attempt_handshake attempts
 
   (* Process the message received from the client *)
+
   let process_message message_str output_channel client_socket =
-    let client_ip = Hashtbl.find_opt client_sockets client_socket in
-    let open Messages.Message in
-    (* Decode and process the message *)
-    let message = decode_message message_str in
-    log_attemp Logs.Level.INFO
-      (Printf.sprintf "Processing message from %s:%s"
-         (Option.value ~default:"Unknown" client_ip)
-         message.payload)
-    >>= fun () ->
-    (* Verify the client message if it is signed *)
-    match (message.signature, !client_public_key_ref) with
-    | Some _, Some client_public_key ->
-        if verify_signature (module Blak2b) client_public_key message then
+    if Hashtbl.find_opt client_disconnected client_socket = Some true then
+      Lwt.return_unit
+    else
+      Lwt.catch
+        (fun () ->
+          let client_ip = Hashtbl.find_opt client_sockets client_socket in
+          let open Messages.Message in
+          (* Decode and process the message *)
+          let message = decode_message message_str in
           log_attemp Logs.Level.INFO
-            (Printf.sprintf "Signature verificaiton successful for client %s.\n"
-               (Option.value ~default:"Unknown" client_ip))
+            (Printf.sprintf "Processing message from %s:%s"
+               (Option.value ~default:"Unknown" client_ip)
+               message.payload)
           >>= fun () ->
-          log_attemp Logs.Level.INFO
-            ("Received message : %s\n" ^ message.payload)
-          >>= fun () ->
-          let response_message =
-            {
-              msg_type = Response;
-              payload = "Acknowledge " ^ message.payload;
-              timestamp = string_of_float (Unix.time ());
-              hash = "";
-              signature = None;
-            }
-          in
-          let response_message_hash =
-            hash_message (module Blak2b) response_message
-          in
-          let response_message =
-            { response_message with hash = response_message_hash }
-          in
-          let signed_response =
-            match response_message.msg_type with
-            | Critical ->
-                sign_message (module Blak2b) server_private_key response_message
-            | _ -> response_message
-          in
-          let encoded_message = encode_message signed_response in
-          (* Send the encoded response back to the client *)
-          Lwt_io.write_line output_channel encoded_message
-        else
-          log_attemp Logs.Level.ERROR
-            (Printf.sprintf "Invalid signature from client %s."
-               (Option.value ~default:"Unknown" client_ip))
-          >>= fun () ->
-          Lwt.fail (Errors.MessageError "Invalid client signature")
-    | None, _ ->
-        log_attemp Logs.Level.INFO "Message is not signed.\n" >>= fun () ->
-        Lwt.return_unit
-    | _, None ->
-        log_attemp Logs.Level.ERROR
-          (Printf.sprintf "No client public key available for client %s"
-             (Option.value ~default:"Unknown" client_ip))
-        >>= fun () -> Lwt.fail_with "No client public key available."
+          (* Verify the client message if it is signed *)
+          match (message.signature, !client_public_key_ref) with
+          | Some _, Some client_public_key ->
+              if verify_signature (module Blak2b) client_public_key message then
+                log_attemp Logs.Level.INFO
+                  (Printf.sprintf
+                     "Signature verificaiton successful for client %s.\n"
+                     (Option.value ~default:"Unknown" client_ip))
+                >>= fun () ->
+                log_attemp Logs.Level.INFO
+                  ("Received message : %s\n" ^ message.payload)
+                >>= fun () ->
+                let response_message =
+                  {
+                    msg_type = Response;
+                    payload = "Acknowledge " ^ message.payload;
+                    timestamp = string_of_float (Unix.time ());
+                    hash = "";
+                    signature = None;
+                  }
+                in
+                let response_message_hash =
+                  hash_message (module Blak2b) response_message
+                in
+                let response_message =
+                  { response_message with hash = response_message_hash }
+                in
+                let signed_response =
+                  match response_message.msg_type with
+                  | Critical ->
+                      sign_message
+                        (module Blak2b)
+                        server_private_key response_message
+                  | _ -> response_message
+                in
+                let encoded_message = encode_message signed_response in
+                if
+                  Hashtbl.find_opt client_disconnected client_socket = Some true
+                then Lwt.return_unit
+                else
+                  (* Send the encoded response back to the client *)
+                  Lwt_io.write_line output_channel encoded_message
+              else
+                log_attemp Logs.Level.ERROR
+                  (Printf.sprintf "Invalid signature from client %s."
+                     (Option.value ~default:"Unknown" client_ip))
+                >>= fun () ->
+                Lwt.fail (Errors.MessageError "Invalid client signature")
+          | None, _ ->
+              log_attemp Logs.Level.INFO "Message is not signed.\n"
+              >>= fun () -> Lwt.return_unit
+          | _, None ->
+              log_attemp Logs.Level.ERROR
+                (Printf.sprintf "No client public key available for client %s"
+                   (Option.value ~default:"Unknown" client_ip))
+              >>= fun () -> Lwt.fail_with "No client public key available.")
+        (function
+          | Unix.Unix_error (Unix.EBADF, _, _) ->
+              log_attemp Logs.Level.ERROR
+                "EBADF error in process_message: Ignoring"
+              >>= fun () -> Lwt.return_unit
+          | exn ->
+              log_attemp Logs.Level.ERROR
+                ("Error in process_message: " ^ Printexc.to_string exn)
+              >>= fun () -> Lwt.fail exn)
 
   let received_message_with_timeout input_channel timeout_duration =
     Lwt_unix.with_timeout timeout_duration (fun () ->
@@ -222,27 +275,40 @@ end = struct
     log_attemp Logs.Level.DEBUG "Receving message from client" >>= fun () ->
     let input_channel = Lwt_io.of_fd ~mode:Lwt_io.input client_socket in
     let output_channel = Lwt_io.of_fd ~mode:Lwt_io.output client_socket in
-    let timeout_duration = 10.0 (* seconds *) in
-    Lwt.catch
-      (fun () ->
-        (* set timeout for reading the client message *)
+    let rec handle_messages () =
+      if Hashtbl.find_opt client_disconnected client_socket = Some true then
+        Lwt.return_unit
+      else
+        let timeout_duration = 10.0 (* seconds *) in
         received_message_with_timeout input_channel timeout_duration
         >>= function
         | None ->
             (* Handle client disconnection *)
-            log_attemp Logs.Level.INFO "Client disconnected."
-        (*>>= fun () ->
-          cleanup_resources client_socket input_channel output_channel*)
+            mark_client_disconnected client_socket >>= fun () ->
+            log_attemp Logs.Level.INFO "Client disconnected." >>= fun () ->
+            cleanup_resources client_socket input_channel output_channel
         | Some message_str ->
             (* Process the client's message *)
+            log_attemp Logs.Level.INFO
+              (Printf.sprintf "Received: %s\n" message_str)
+            >>= fun () ->
             process_message message_str output_channel client_socket
-        (*>>= fun () ->
-          cleanup_resources client_socket input_channel output_channel*))
-      (fun exn ->
-        log_attemp Logs.Level.ERROR
-          ("Error handling client message: " ^ Printexc.to_string exn)
-        >>= fun () ->
-        cleanup_resources client_socket input_channel output_channel)
+            >>= fun () -> handle_messages ()
+    in
+    Lwt.catch
+      (fun () -> handle_messages ())
+      (function
+        | Unix.Unix_error (Unix.EBADF, _, _) ->
+            log_attemp Logs.Level.ERROR
+              "EBADF error: Ignoring bad file descriptor"
+            >>= fun () ->
+            mark_client_disconnected client_socket >>= fun () ->
+            cleanup_resources client_socket input_channel output_channel
+        | exn ->
+            log_attemp Logs.Level.ERROR
+              ("Error handling client message: " ^ Printexc.to_string exn)
+            >>= fun () ->
+            cleanup_resources client_socket input_channel output_channel)
 
   (* First does handshake, then handles messages *)
   let handle_client client_socket =
@@ -253,9 +319,8 @@ end = struct
         server_handshake client_socket >>= fun () ->
         server_receive_messages client_socket >>= fun () ->
         (* After messages are handled, clean up resources *)
-        (*cleanup_resources client_socket input_channel output_channel
-          >>= fun () ->*)
-        Lwt.return_unit)
+        cleanup_resources client_socket input_channel output_channel
+        >>= fun () -> Lwt.return_unit)
       (fun exn ->
         (* In case of error, log it and clean up resources *)
         log_attemp Logs.Level.ERROR
@@ -266,6 +331,14 @@ end = struct
 
   (* Create a new TCP server socket and bind it to the specifed IP and port *)
   let create_server_socket ip port =
+    (* Dirty hack: the current implementation of the message forwarding from
+       stdin to all TCP clients may sometimes cause a SIGPIPE signal. It happens
+       rarely but still may crash the application. For now, the application just
+       ignores the SIGPIPE signals. It does not affect application execution logic.
+
+       NOTE:  This prevents the server from crashing when trying to write to a
+       closed connection. *)
+    Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
     log_attemp Logs.Level.INFO
       (Printf.sprintf "Creating server socket on %s:%d" ip port)
     >>= fun () ->
