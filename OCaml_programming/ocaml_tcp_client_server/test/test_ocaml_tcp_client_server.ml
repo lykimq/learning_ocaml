@@ -36,9 +36,10 @@ let test_stop_server () =
   let port = 8082 in
   let shutdown_flag = Lwt_switch.create () in
   let server_scenario =
-    Tcp_server.TCP_Server.start_server port shutdown_flag >>= fun () ->
+    Tcp_server.TCP_Server.start_server port shutdown_flag
+    >>= fun server_socket ->
     Lwt_unix.sleep 3.0 >>= fun () ->
-    Tcp_server.TCP_Server.stop_server shutdown_flag >>= fun () ->
+    Tcp_server.TCP_Server.stop_server shutdown_flag server_socket >>= fun () ->
     check bool "Server stopped" true true;
     Lwt.return_unit
   in
