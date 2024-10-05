@@ -2,9 +2,13 @@ open Lwt.Infix
 
 module TCP_Server : sig
   val buffer_size : int
-  val create_server : Lwt_unix.file_descr -> bytes -> unit -> 'a Lwt.t
+
+  val create_server :
+    Lwt_unix.file_descr -> bytes -> Lwt_switch.t -> unit -> unit Lwt.t
+
   val create_socket : int -> Lwt_unix.file_descr Lwt.t
-  val start_server : int -> 'a Lwt.t
+  val start_server : int -> Lwt_switch.t -> unit Lwt.t
+  val stop_server : Lwt_switch.t -> unit Lwt.t
 end = struct
   let max_clients = 10
   let buffer_size = 1024
@@ -62,23 +66,31 @@ end = struct
         m "[connection: %i] New connection established" connection_id)
     >>= Lwt.return
 
-  let create_server server_socket buffer =
-    let rec serve () =
-      Lwt_unix.accept server_socket >>= accept_connection buffer >>= serve
-    in
-    serve
-
   let create_socket port =
-    (* NOTE: this prevents the server from crashing when trying to write to a
-       close connection. *)
     let socket_addr = Lwt_unix.ADDR_INET (Unix.inet_addr_any, port) in
     let serv_socket = Lwt_unix.socket PF_INET SOCK_STREAM 0 in
     Lwt_unix.bind serv_socket socket_addr >>= fun () ->
     Lwt_unix.listen serv_socket max_clients;
     Lwt.return serv_socket
 
-  let start_server port =
+  let create_server server_socket buffer shutdown_flag =
+    let rec serve () =
+      Lwt_unix.accept server_socket >>= fun conn ->
+      if Lwt_switch.is_on shutdown_flag then
+        accept_connection buffer conn >>= serve
+      else Lwt.return_unit
+    in
+    serve
+
+  let start_server port shutdown_flag =
     Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
     let buffer = Bytes.create buffer_size in
-    create_socket port >>= fun socket -> create_server socket buffer ()
+    create_socket port >>= fun socket ->
+    Lwt.async (fun () -> create_server socket buffer shutdown_flag ());
+    Logs_lwt.info (fun m -> m "Server started") >>= fun () -> Lwt.return_unit
+
+  let stop_server shutdown_flag =
+    Logs_lwt.info (fun m -> m "Stopping the server...") >>= fun () ->
+    Lwt_switch.turn_off shutdown_flag >>= fun () ->
+    Logs_lwt.info (fun m -> m "Server stopped.")
 end
