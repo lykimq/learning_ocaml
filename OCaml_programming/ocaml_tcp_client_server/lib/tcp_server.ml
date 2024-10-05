@@ -93,6 +93,34 @@ end = struct
     Logs_lwt.info (fun m -> m "Server started") >>= fun () ->
     Lwt.return server_socket
 
+  (* [safe_close: Unix.file_descr -> unit Lwt.t]
+
+      This function provides a safe way to shut down and close a socket file
+      descriptor.
+
+      It serves as a workaround to avoid using `Lwt_unix.close` directly, as
+      calling it often raises errors such as `Unix.EBADF` (Bad File Descriptor)
+      during  socket closure, especially when the socket might already be in an
+      invalid state or prematurely closed elsewhere in the system.
+
+      Instead of relying on `Lwt_unix.close`, this function manually shuts down
+      the socket using `Unix.shutdown` to ensure that no further reads or write
+      are allowed on the socket. It then calls `Unix.close` to close the socket,
+      while catching and handling potential errors like `Unix.ENOTCONN` (Not
+      Connected) and `Unix.EBADF`.
+
+      The function performs the following steps:
+      1. Logs the intent to shut down the socket.
+      2. Shuts down the socket for both reads and writes using `Unix.shutdown`.
+      3. If the socket is already closed or not connected, logs the information
+         and safely continues.
+      4. After shutdown, attempts to close the socket using `Unix.close`.
+      5. Logs any errors that occur during the shutdown or close process, and
+         handles common errors like `Unix.EBADF` and `Unix.ENOTCONN`
+
+     This approach ensures that the socket is properly cleaned up without causing
+     unexpected exceptions or crashes due to invalid file descriptors.
+  *)
   let safe_close socket_fd =
     (* Check if the socket file descriptor is valid *)
     Lwt.catch
