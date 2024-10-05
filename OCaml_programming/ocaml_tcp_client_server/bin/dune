@@ -1,0 +1,4 @@
+(executable
+ (public_name ocaml_tcp_client_server)
+ (name main)
+ (libraries ocaml_tcp_client_server))

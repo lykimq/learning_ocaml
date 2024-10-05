@@ -1,0 +1,84 @@
+open Lwt.Infix
+
+module TCP_Server : sig
+  val buffer_size : int
+  val create_server : Lwt_unix.file_descr -> bytes -> unit -> 'a Lwt.t
+  val create_socket : int -> Lwt_unix.file_descr Lwt.t
+  val start_server : int -> 'a Lwt.t
+end = struct
+  let max_clients = 10
+  let buffer_size = 1024
+
+  let next_connection_id =
+    let counter = ref 0 in
+    fun () ->
+      incr counter;
+      !counter
+
+  let rec handle_connection ic oc connection_id () =
+    let buffer = Bytes.create buffer_size in
+    Lwt_io.read_into ic buffer 0 buffer_size >>= fun bytes_read ->
+    if bytes_read = 0 then Lwt_io.close oc
+    else
+      let incoming_msg = Bytes.sub_string buffer 0 bytes_read in
+      Logs_lwt.info (fun m ->
+          m "[connection: %i] Received message: %s" connection_id incoming_msg)
+      >>= fun () ->
+      Lwt_io.write_line oc incoming_msg
+      >>= handle_connection ic oc connection_id
+
+  let transfer_messages buffer oc connection_id =
+    let rec transfer () =
+      match Lwt_io.is_closed oc with
+      | true ->
+          Logs_lwt.debug (fun m ->
+              m "[connection: %i] Output channel closed, ignoring message"
+                connection_id)
+      | false ->
+          if Bytes.length buffer > 0 then
+            let message = Bytes.to_string buffer in
+            Lwt_io.write_line oc message >>= fun () ->
+            Logs_lwt.info (fun m ->
+                m "[connection: %i] >> %s" connection_id message)
+            >>= fun () -> transfer ()
+          else Logs_lwt.info (fun m -> m "Stream ended unexpected.")
+    in
+    Lwt.catch
+      (fun () -> transfer ())
+      (fun exn ->
+        Logs_lwt.debug (fun m ->
+            m "[connection: %i] Cannot transfer message to connection: %s"
+              connection_id (Printexc.to_string exn)))
+
+  let accept_connection buffer conn =
+    let connection_id = next_connection_id () in
+    let fd, _ = conn in
+    let ic = Lwt_io.of_fd ~mode:Lwt_io.input fd in
+    let oc = Lwt_io.of_fd ~mode:Lwt_io.output fd in
+    Lwt.on_failure (handle_connection ic oc connection_id ()) (fun exn ->
+        Lwt_io.printf "%s" (Printexc.to_string exn) |> ignore);
+    Lwt.async (fun () -> transfer_messages buffer oc connection_id);
+    Logs_lwt.info (fun m ->
+        m "[connection: %i] New connection established" connection_id)
+    >>= Lwt.return
+
+  let create_server server_socket buffer =
+    let rec serve () =
+      Lwt_unix.accept server_socket >>= accept_connection buffer >>= serve
+    in
+    serve
+
+  let create_socket port =
+    (* NOTE: this prevents the server from crashing when trying to write to a
+       close connection. *)
+    let socket_addr = Lwt_unix.ADDR_INET (Unix.inet_addr_any, port) in
+    let serv_socket = Lwt_unix.socket PF_INET SOCK_STREAM 0 in
+    Lwt_unix.bind serv_socket socket_addr >>= fun () ->
+    Lwt_unix.listen serv_socket max_clients;
+    Lwt.return serv_socket
+
+  let start_server port =
+    Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
+    let buffer = Bytes.create buffer_size in
+    create_socket port >>= fun socket -> create_server socket buffer ()
+end
