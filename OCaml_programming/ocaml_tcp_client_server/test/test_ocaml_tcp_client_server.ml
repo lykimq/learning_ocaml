@@ -6,7 +6,13 @@ let test_create_socket () =
   let port = 8080 in
   let server_socket =
     Tcp_server.TCP_Server.create_socket port >>= fun socket ->
-    check bool "Socket is valid" true (Obj.is_block (Obj.repr socket));
+    let is_valid_socket =
+      try
+        ignore (Unix.getsockname socket);
+        true
+      with Unix.Unix_error (Unix.EBADF, _, _) -> false
+    in
+    check bool "Socket is valid" true is_valid_socket;
     Lwt.return_unit
   in
   Lwt_main.run server_socket

@@ -4,11 +4,11 @@ module TCP_Server : sig
   val buffer_size : int
 
   val create_server :
-    Lwt_unix.file_descr -> bytes -> Lwt_switch.t -> unit -> unit Lwt.t
+    Unix.file_descr -> bytes -> Lwt_switch.t -> unit -> unit Lwt.t
 
-  val create_socket : int -> Lwt_unix.file_descr Lwt.t
-  val start_server : int -> Lwt_switch.t -> Lwt_unix.file_descr Lwt.t
-  val stop_server : Lwt_switch.t -> Lwt_unix.file_descr -> unit Lwt.t
+  val create_socket : int -> Unix.file_descr Lwt.t
+  val start_server : int -> Lwt_switch.t -> Unix.file_descr Lwt.t
+  val stop_server : Lwt_switch.t -> Unix.file_descr -> unit Lwt.t
 end = struct
   let max_clients = 10
   let buffer_size = 1024
@@ -71,11 +71,14 @@ end = struct
     let server_socket = Lwt_unix.socket PF_INET SOCK_STREAM 0 in
     Lwt_unix.bind server_socket socket_addr >>= fun () ->
     Lwt_unix.listen server_socket max_clients;
-    Lwt.return server_socket
+    (* Convert Lwt_unix.file_descr to Unix.file_descr *)
+    Lwt.return (Lwt_unix.unix_file_descr server_socket)
 
   let create_server server_socket buffer shutdown_flag =
     let rec serve () =
-      Lwt_unix.accept server_socket >>= fun conn ->
+      Lwt_unix.accept
+        (Lwt_unix.of_unix_file_descr ~blocking:false server_socket)
+      >>= fun conn ->
       if Lwt_switch.is_on shutdown_flag then
         accept_connection buffer conn >>= serve
       else Lwt.return_unit
@@ -90,23 +93,58 @@ end = struct
     Logs_lwt.info (fun m -> m "Server started") >>= fun () ->
     Lwt.return server_socket
 
-  let shutdown_and_close_socket server_socket =
+  let safe_close socket_fd =
+    (* Check if the socket file descriptor is valid *)
     Lwt.catch
       (fun () ->
-        Logs_lwt.info (fun m -> m "Shutting down the server socket...")
+        (* First, shutdown the socket for both reads and writes *)
+        Logs_lwt.info (fun m -> m "Shutting down the socket...") >>= fun () ->
+        Lwt.catch
+          (fun () ->
+            Unix.shutdown socket_fd Unix.SHUTDOWN_ALL;
+            Logs_lwt.info (fun m -> m "Socket shutdown complete.") >>= fun () ->
+            Lwt.return_unit)
+          (function
+            | Unix.Unix_error (Unix.ENOTCONN, _, _) ->
+                Logs_lwt.info (fun m ->
+                    m "Socket was not connected; continuing.")
+                >>= fun () -> Lwt.return_unit
+            | Unix.Unix_error (Unix.EBADF, _, _) ->
+                Logs_lwt.info (fun m ->
+                    m "Socket already closed or invalid during shutdown")
+                >>= fun () -> Lwt.return_unit
+            | exn ->
+                Logs_lwt.err (fun m ->
+                    m "Error during socket shutdown: %s"
+                      (Printexc.to_string exn)))
         >>= fun () ->
-        let () = Lwt_unix.shutdown server_socket Unix.SHUTDOWN_ALL in
-        Logs_lwt.info (fun m -> m "Server socket closed.") >>= fun () ->
-        Lwt.return_unit)
+        (* After shutdown, manually close the socket using Unix.close *)
+        Logs_lwt.info (fun m -> m "Closing the socket...") >>= fun () ->
+        try
+          Unix.close socket_fd;
+          Logs_lwt.info (fun m -> m "Socket closed successfully.") >>= fun () ->
+          Lwt.return_unit
+        with
+        | Unix.Unix_error (Unix.EBADF, _, _) ->
+            Logs_lwt.info (fun m ->
+                m "Socket already closed or invalid during close.")
+            >>= fun () -> Lwt.return_unit
+        | exn ->
+            Logs_lwt.err (fun m ->
+                m "Error during socket close: %s" (Printexc.to_string exn))
+            >>= fun () -> Lwt.fail exn)
       (function
         | Unix.Unix_error (Unix.EBADF, _, _) ->
             Logs_lwt.info (fun m -> m "Socket was already closed.")
             >>= fun () -> Lwt.return_unit
-        | exn -> Lwt.fail exn)
+        | exn ->
+            Logs_lwt.err (fun m ->
+                m "Unexpected error: %s" (Printexc.to_string exn))
+            >>= fun () -> Lwt.fail exn)
 
   let stop_server shutdown_flag server_socket =
     Logs_lwt.info (fun m -> m "Stopping the server...") >>= fun () ->
     Lwt_switch.turn_off shutdown_flag >>= fun () ->
-    shutdown_and_close_socket server_socket >>= fun () ->
+    safe_close server_socket >>= fun () ->
     Logs_lwt.info (fun m -> m "Server stopped.")
 end
