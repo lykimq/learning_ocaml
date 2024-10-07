@@ -25,14 +25,7 @@ let test_client_server_connection () =
     Lwt_switch.turn_off client_shutdown_flag
   in
   (* Run both client and server in parallel *)
-  let both_scenarios =
-    Lwt.join [ server_scenario; client_scenario ]
-    (* Simulate a brief interaction period, then shutdown *)
-    (*Lwt_unix.sleep 3.0 >>= fun () ->
-      (* Stop the client and the server gracefully *)
-      Lwt_switch.turn_off client_shutdown_flag >>= fun () ->
-      Lwt_switch.turn_off server_shutdown_flag*)
-  in
+  let both_scenarios = Lwt.join [ server_scenario; client_scenario ] in
   Lwt_main.run both_scenarios
 
 let test_send_receive_message () =
