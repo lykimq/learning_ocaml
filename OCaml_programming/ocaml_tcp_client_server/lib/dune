@@ -1,4 +1,4 @@
 (library
  (name ocaml_tcp_client_server)
  (libraries lwt lwt.unix logs.lwt)
- (modules tcp_server tcp_client))
+ (modules tcp_server tcp_client tcp_common))

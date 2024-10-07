@@ -1,3 +1,7 @@
 (test
- (name test_ocaml_tcp_client_server)
+ (name test_tcp_server)
+ (libraries alcotest lwt.unix lwt ocaml_tcp_client_server))
+
+(test
+ (name test_tcp_client)
  (libraries alcotest lwt.unix lwt ocaml_tcp_client_server))
