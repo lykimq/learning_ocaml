@@ -14,11 +14,13 @@ end = struct
     Logs_lwt.info (fun m -> m "Client connected to server on port %d" port)
     >>= fun () -> Lwt.return client_socket
 
+  (* TODO: client can sign the message? *)
   let send_message client_socket message =
     let oc = Lwt_io.of_fd ~mode:Lwt_io.output client_socket in
     Lwt_io.write_line oc message >>= fun () ->
     Logs_lwt.info (fun m -> m "Message send: %s" message)
 
+  (* TODO: verify the signature from server *)
   let receive_message client_socket =
     let ic = Lwt_io.of_fd ~mode:Lwt_io.input client_socket in
     Lwt_io.read_line_opt ic >>= function

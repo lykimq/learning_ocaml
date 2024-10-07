@@ -173,6 +173,10 @@ end = struct
         Logs_lwt.err (fun m -> m "Received unknown message type.") >>= fun () ->
         Lwt.return response_msg
 
+  (* TODO: verify signature? currently server sign all message response , for
+     the message receive from client, check if it has signed or not by verify
+     the signature
+  *)
   let transfer_messages ic oc connection_id =
     let rec transfer () =
       (* Read message from the client *)
