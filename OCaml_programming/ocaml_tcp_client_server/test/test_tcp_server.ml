@@ -32,14 +32,60 @@ let test_start_server () =
   in
   Lwt_main.run server
 
-let test_buffer_creation () =
-  let buffer = Bytes.create Tcp_server.TCP_Server.buffer_size in
-  check int "Buffer size is correct" Tcp_server.TCP_Server.buffer_size
-    (Bytes.length buffer);
-  ()
+let test_send_receive_message () =
+  let open Messages.Message in
+  let port = 8082 in
+  let server_shutdown_flag = Lwt_switch.create () in
+  let client_shutdown_flag = Lwt_switch.create () in
+  let test_scenario =
+    (* Start the server *)
+    Tcp_server.TCP_Server.start_server port server_shutdown_flag
+    >>= fun server_socket ->
+    (* Connect the client to the server *)
+    Tcp_client.TCP_Client.connect_to_server "127.0.0.1" port
+    >>= fun client_socket ->
+    (* Create and send a message *)
+    let message =
+      {
+        msg_type = Request;
+        payload = "Test message";
+        timestamp = string_of_float (Unix.time ());
+        hash = "";
+        signature = None;
+      }
+    in
+    let signed_message =
+      sign_message
+        (module Blak2b)
+        Tcp_server.TCP_Server.server_private_key message
+    in
+    let encoded_message = encode_message signed_message in
+
+    (* Send the message *)
+    Tcp_client.TCP_Client.send_message client_socket encoded_message
+    >>= fun () ->
+    (* Receive a response from the server *)
+    Tcp_client.TCP_Client.receive_message client_socket >>= fun response ->
+    (* Decode the message *)
+    let decoded_response = decode_message response in
+
+    (* Check the response message *)
+    check string "Response received"
+      ("Acknowledge: " ^ message.payload)
+      decoded_response.payload;
+    (* Stop the server *)
+    Lwt_unix.sleep 3.0 >>= fun () ->
+    Tcp_server.TCP_Server.stop_server server_shutdown_flag server_socket
+    >>= fun () ->
+    Tcp_client.TCP_Client.stop_client client_shutdown_flag
+      (Lwt_unix.unix_file_descr client_socket)
+    >>= fun () -> Lwt_switch.turn_off client_shutdown_flag
+  in
+
+  Lwt_main.run test_scenario
 
 let test_stop_server () =
-  let port = 8082 in
+  let port = 8083 in
   let shutdown_flag = Lwt_switch.create () in
   let server_scenario =
     Tcp_server.TCP_Server.start_server port shutdown_flag
@@ -55,8 +101,8 @@ let tests =
   [
     test_case "Create server socket" `Quick test_create_socket;
     test_case "Start server" `Quick test_start_server;
-    test_case "Buffer creation" `Quick test_buffer_creation;
     test_case "Stop server" `Quick test_stop_server;
+    test_case "Send-Receive Message" `Quick test_send_receive_message;
   ]
 
 let () = Alcotest.run "TCP Server Tests" [ ("Server", tests) ]

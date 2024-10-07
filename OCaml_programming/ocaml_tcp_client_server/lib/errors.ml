@@ -1,0 +1,1 @@
+exception MessageError of string

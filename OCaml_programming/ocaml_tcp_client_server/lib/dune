@@ -1,4 +1,4 @@
 (library
  (name ocaml_tcp_client_server)
- (libraries lwt lwt.unix logs.lwt)
- (modules tcp_server tcp_client tcp_common))
+ (libraries ocaml_digestif_hash yojson base64 lwt lwt.unix logs.lwt)
+ (modules tcp_server tcp_client tcp_common messages errors))
