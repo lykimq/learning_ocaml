@@ -60,28 +60,22 @@ let test_send_receive_message () =
         Tcp_server.TCP_Server.server_private_key message
     in
     let encoded_message = encode_message signed_message in
-
-    (* Send the message *)
     Tcp_client.TCP_Client.send_message client_socket encoded_message
     >>= fun () ->
-    (* Receive a response from the server *)
     Tcp_client.TCP_Client.receive_message client_socket >>= fun response ->
-    (* Decode the message *)
     let decoded_response = decode_message response in
 
     (* Check the response message *)
     check string "Response received"
       ("Acknowledge: " ^ message.payload)
       decoded_response.payload;
-    (* Stop the server *)
+    (* Stop the server-client *)
     Lwt_unix.sleep 3.0 >>= fun () ->
     Tcp_server.TCP_Server.stop_server server_shutdown_flag server_socket
     >>= fun () ->
     Tcp_client.TCP_Client.stop_client client_shutdown_flag
       (Lwt_unix.unix_file_descr client_socket)
-    >>= fun () -> Lwt_switch.turn_off client_shutdown_flag
   in
-
   Lwt_main.run test_scenario
 
 let test_stop_server () =
