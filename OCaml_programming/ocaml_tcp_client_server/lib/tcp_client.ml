@@ -5,7 +5,7 @@ module TCP_Client : sig
   val send_message : Lwt_unix.file_descr -> string -> unit Lwt.t
   val receive_message : Lwt_unix.file_descr -> string Lwt.t
   val stop_client : Lwt_switch.t -> Unix.file_descr -> unit Lwt.t
-  val start_client : string -> int -> Lwt_switch.t -> unit Lwt.t
+  val start_client : string -> int -> Lwt_switch.t -> Lwt_unix.file_descr Lwt.t
 end = struct
   let connect_to_server host port =
     let addr = Unix.ADDR_INET (Unix.inet_addr_of_string host, port) in
@@ -71,5 +71,6 @@ end = struct
         Logs_lwt.info (fun m -> m "Shutting down client...") >>= fun () ->
         stop_client shutdown_flag (Lwt_unix.unix_file_descr client_socket));
 
-    Logs_lwt.info (fun m -> m "Client started.") >>= fun () -> Lwt.return_unit
+    Logs_lwt.info (fun m -> m "Client started.") >>= fun () ->
+    Lwt.return client_socket
 end

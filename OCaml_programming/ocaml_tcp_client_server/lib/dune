@@ -2,3 +2,15 @@
  (name ocaml_tcp_client_server)
  (libraries ocaml_digestif_hash yojson base64 lwt lwt.unix logs.lwt)
  (modules tcp_server tcp_client tcp_common messages errors))
+
+(executable
+ (name tcp_client_cli)
+ (public_name tcp_client)
+ (modules tcp_client_cli tcp_cli_common)
+ (libraries lwt lwt.unix logs.lwt ocaml_tcp_client_server))
+
+(executable
+ (name tcp_server_cli)
+ (public_name tcp_server)
+ (modules tcp_server_cli tcp_cli_common)
+ (libraries lwt lwt.unix logs.lwt ocaml_tcp_client_server))

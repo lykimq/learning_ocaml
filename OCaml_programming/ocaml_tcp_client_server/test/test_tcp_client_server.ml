@@ -20,7 +20,7 @@ let test_client_server_connection () =
     Lwt_unix.sleep 0.5 >>= fun () ->
     (* Delay to ensure server is up *)
     Tcp_client.TCP_Client.start_client host port client_shutdown_flag
-    >>= fun () ->
+    >>= fun _ ->
     Logs_lwt.info (fun m -> m "Client started.") >>= fun () ->
     Lwt_switch.turn_off client_shutdown_flag
   in
