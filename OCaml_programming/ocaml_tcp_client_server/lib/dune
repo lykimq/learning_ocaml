@@ -13,4 +13,4 @@
  (name tcp_server_cli)
  (public_name tcp_server)
  (modules tcp_server_cli tcp_cli_common)
- (libraries lwt lwt.unix logs.lwt ocaml_tcp_client_server))
+ (libraries lwt lwt.unix logs.lwt logs.fmt ocaml_tcp_client_server cmdliner))

@@ -67,10 +67,9 @@ end = struct
     Lwt.async (fun () -> client_loop ());
 
     (* Hook the shutdown flag to stop the client gracefully *)
-    Lwt_switch.add_hook (Some shutdown_flag) (fun () ->
+    (*Lwt_switch.add_hook (Some shutdown_flag) (fun () ->
         Logs_lwt.info (fun m -> m "Shutting down client...") >>= fun () ->
-        stop_client shutdown_flag (Lwt_unix.unix_file_descr client_socket));
-
+        stop_client shutdown_flag (Lwt_unix.unix_file_descr client_socket));*)
     Logs_lwt.info (fun m -> m "Client started.") >>= fun () ->
     Lwt.return client_socket
 end

@@ -1,35 +1,36 @@
 open Lwt.Infix
-open Tcp_cli_common
+open Cmdliner
 open Ocaml_tcp_client_server
 
-(* Store the server socket and shutdown flag to be reused for stopping *)
-let server_socket_ref = ref None
-let shutdown_flag_ref = ref None
+let setup_logs () =
+  Logs.set_reporter (Logs_fmt.reporter ());
+  Logs.set_level (Some Logs.Info)
 
-let start_server args =
-  let ip, port = get_ip_port args in
+let start_server ip port () =
+  setup_logs ();
   let shutdown_flag = Lwt_switch.create () in
-  shutdown_flag_ref := Some shutdown_flag;
-  Logs_lwt.info (fun m -> m "Starting TCP server on %s:%d" ip port)
-  >>= fun () ->
-  Tcp_server.TCP_Server.start_server port shutdown_flag >>= fun server_socket ->
-  server_socket_ref := Some server_socket;
-  Logs_lwt.info (fun m -> m "Server started. Press Ctrl+C to stop.")
+  Tcp_server.TCP_Server.create_socket ip port >>= fun _ ->
+  Tcp_server.TCP_Server.start_server ~ip ~port shutdown_flag >>= fun _ ->
+  Logs_lwt.info (fun m -> m "TCP Server started on port %d" port) >>= fun () ->
+  Lwt.return_unit
 
-let stop_server () =
-  match (!server_socket_ref, !shutdown_flag_ref) with
-  | Some server_socket, Some shutdown_flag ->
-      Logs_lwt.info (fun m -> m "Stopping server...") >>= fun () ->
-      Tcp_server.TCP_Server.stop_server shutdown_flag server_socket
-      >>= fun () -> Logs_lwt.info (fun m -> m "Server stopped.")
-  | _ -> Logs_lwt.err (fun m -> m "No running server to stop.")
+let start_cmd =
+  let ip =
+    let doc = "IP address to bind the server." in
+    Arg.(value & opt string "127.0.0.1" & info [ "ip" ] ~docv:"IP" ~doc)
+  in
+  let port =
+    let doc = "Port number to listen on." in
+    Arg.(value & opt int 8080 & info [ "port" ] ~docv:"PORT" ~doc)
+  in
+  Term.(
+    const (fun ip port -> Lwt_main.run (start_server ip port ())) $ ip $ port)
 
-let run () =
-  let valid_commands = [ "start"; "stop" ] in
-  parse_args "server" valid_commands >>= fun (command, args) ->
-  match command with
-  | "start" -> start_server args
-  | "stop" -> stop_server ()
-  | _ -> print_usage "server"
+let start_info = Cmd.info "start" ~doc:"Start the TCP server"
 
-let () = Lwt_main.run (run ())
+let cmd =
+  let doc = "TCP server CLI" in
+  let info = Cmd.info "tcp_server_cli" ~version:"v1.0" ~doc in
+  Cmd.group info [ Cmd.v start_info start_cmd ]
+
+let () = exit (Cmd.eval cmd)

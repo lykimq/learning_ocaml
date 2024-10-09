@@ -29,8 +29,8 @@ let print_usage program_type =
   let usage_msg =
     match program_type with
     | "client" ->
-        "Usage: ./tcp_client <start|send|stop> [-ip <IP>] [-port <Port>] [-v] \
-         [<args>]\n\n\
+        "Usage: ./tcp_client_cli <start|send|stop> [-ip <IP>] [-port <Port>] \
+         [-v] [<args>]\n\n\
          Available commands:\n\
          start  - Start the client with optional IP and port (defaults to \
          localhost:8080).\n\
@@ -44,7 +44,7 @@ let print_usage program_type =
          -port <Port> - Specify the port (default: 8080).\n\
          -v           - Enable verbose mode (detailed logging).\n"
     | "server" ->
-        "Usage: ./tcp_server <start|stop> [-ip <IP>] [-port <Port>] [-v]\n\n\
+        "Usage: ./tcp_server_cli <start|stop> [-ip <IP>] [-port <Port>] [-v]\n\n\
          Available commands:\n\
          start       - Start the server with optional IP and port (defaults to \
          localhost:8080).\n\

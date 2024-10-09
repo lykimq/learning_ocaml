@@ -6,17 +6,21 @@ open Ocaml_tcp_client_server
 let client_socket_ref = ref None
 let shutdown_flag_ref = ref None
 
-let start_client args =
-  let ip, port = get_ip_port args in
-  let shutdown_flag = Lwt_switch.create () in
-  shutdown_flag_ref := Some shutdown_flag;
-
-  Logs_lwt.info (fun m -> m "Starting TCP client to connect to %s:%d" ip port)
-  >>= fun () ->
-  Tcp_client.TCP_Client.start_client ip port shutdown_flag
-  >>= fun client_socket ->
-  client_socket_ref := Some client_socket;
-  Logs_lwt.info (fun m -> m "Client started. Press Ctrl+C to stop.")
+let start_client () =
+  match !client_socket_ref with
+  | Some _ -> Logs_lwt.info (fun m -> m "Client is already running.\n")
+  | None ->
+      parse_args "client" [ "start" ] >>= fun (_, args) ->
+      let ip, port = get_ip_port args in
+      let shutdown_flag = Lwt_switch.create () in
+      shutdown_flag_ref := Some shutdown_flag;
+      Logs_lwt.info (fun m ->
+          m "Starting TCP client to connect to %s:%d" ip port)
+      >>= fun () ->
+      Tcp_client.TCP_Client.start_client ip port shutdown_flag
+      >>= fun client_socket ->
+      client_socket_ref := Some client_socket;
+      Logs_lwt.info (fun m -> m "Client started. Press Ctrl+C to stop.")
 
 let stop_client () =
   match (!client_socket_ref, !shutdown_flag_ref) with
@@ -29,7 +33,7 @@ let stop_client () =
 
 let send_message args =
   if Array.length args < 4 then
-    Lwt_io.printl "Usage: ./tcp_client send <message_type> <message>"
+    Lwt_io.printl "Usage: ./tcp_client_cli send <message_type> <message>"
     >>= fun () -> Lwt.fail_with "Invalid arguments"
   else
     let message_type = args.(2) in
@@ -47,9 +51,9 @@ let run () =
   Lwt_main.run
     ( parse_args "client" valid_commands >>= fun (command, args) ->
       match command with
-      | "start" -> start_client args
+      | "start" -> start_client ()
       | "send" -> send_message args
       | "stop" -> stop_client ()
-      | _ -> print_usage "client" )
+      | _ -> failwith "Unknown command" )
 
 let () = run ()

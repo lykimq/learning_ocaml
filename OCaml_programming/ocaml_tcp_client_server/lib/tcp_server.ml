@@ -6,8 +6,11 @@ module TCP_Server : sig
   val server_private_key : Digital_signature_common.private_key
   val server_public_key : Digital_signature_common.public_key
   val create_server : Unix.file_descr -> Lwt_switch.t -> unit -> unit Lwt.t
-  val create_socket : int -> Unix.file_descr Lwt.t
-  val start_server : int -> Lwt_switch.t -> Unix.file_descr Lwt.t
+  val create_socket : string -> int -> Unix.file_descr Lwt.t
+
+  val start_server :
+    ?ip:string -> ?port:int -> Lwt_switch.t -> Unix.file_descr Lwt.t
+
   val stop_server : Lwt_switch.t -> Unix.file_descr -> unit Lwt.t
 end = struct
   let max_clients = 10
@@ -241,8 +244,8 @@ end = struct
         m "[connection: %i] New connection established" connection_id)
     >>= Lwt.return
 
-  let create_socket port =
-    let socket_addr = Lwt_unix.ADDR_INET (Unix.inet_addr_any, port) in
+  let create_socket ip port =
+    let socket_addr = Lwt_unix.ADDR_INET (Unix.inet_addr_of_string ip, port) in
     let server_socket = Lwt_unix.socket PF_INET SOCK_STREAM 0 in
     Lwt_unix.bind server_socket socket_addr >>= fun () ->
     Lwt_unix.listen server_socket max_clients;
@@ -258,12 +261,19 @@ end = struct
     in
     serve
 
-  let start_server port shutdown_flag =
+  let start_server ?(ip = "127.0.01") ?(port = 8080) shutdown_flag =
     Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
-    create_socket port >>= fun server_socket ->
-    Lwt.async (fun () -> create_server server_socket shutdown_flag ());
-    Logs_lwt.info (fun m -> m "Server started") >>= fun () ->
-    Lwt.return server_socket
+    Lwt.catch
+      (fun () ->
+        create_socket ip port >>= fun server_socket ->
+        Lwt.async (fun () -> create_server server_socket shutdown_flag ());
+        Logs_lwt.info (fun m -> m "Server started on IP %s and port %d" ip port)
+        >>= fun () -> Lwt.return server_socket)
+      (fun exn ->
+        Logs_lwt.err (fun m ->
+            m "Error starting server on IP %s and port %d: %s" ip port
+              (Printexc.to_string exn))
+        >>= fun () -> Lwt.fail exn)
 
   let stop_server shutdown_flag server_socket =
     Logs_lwt.info (fun m -> m "Stopping the server...") >>= fun () ->
