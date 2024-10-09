@@ -1,5 +1,5 @@
 (library
  (name ocaml_cli_examples)
  (public_name ocaml_cli_examples)
- (libraries cmdliner)
- (modules cmd_cli))
+ (libraries cmdliner oasis)
+ (modules cmd_cli oasis_cli))

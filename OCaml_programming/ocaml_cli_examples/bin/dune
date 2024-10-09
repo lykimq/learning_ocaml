@@ -2,3 +2,8 @@
  (public_name ocaml_cli_examples)
  (name main)
  (libraries ocaml_cli_examples))
+
+(executable
+ (public_name oasis_cli)
+ (name main_oasis_cli)
+ (libraries ocaml_cli_examples))
