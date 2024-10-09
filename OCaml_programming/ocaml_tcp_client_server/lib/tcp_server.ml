@@ -247,8 +247,11 @@ end = struct
   let create_socket ip port =
     let socket_addr = Lwt_unix.ADDR_INET (Unix.inet_addr_of_string ip, port) in
     let server_socket = Lwt_unix.socket PF_INET SOCK_STREAM 0 in
+    Lwt_unix.setsockopt server_socket Lwt_unix.SO_REUSEADDR true;
+    Logs_lwt.info (fun m -> m "Binding to %s:%d" ip port) >>= fun () ->
     Lwt_unix.bind server_socket socket_addr >>= fun () ->
     Lwt_unix.listen server_socket max_clients;
+    Logs_lwt.info (fun m -> m "Listening on %s:%d" ip port) >>= fun () ->
     Lwt.return (Lwt_unix.unix_file_descr server_socket)
 
   let create_server server_socket shutdown_flag =
