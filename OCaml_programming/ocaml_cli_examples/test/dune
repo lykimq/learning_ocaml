@@ -3,5 +3,5 @@
  (libraries alcotest bos rresult ocaml_cli_examples))
 
 (test
- (name test_oasis_cli)
+ (name test_arg_cli)
  (libraries alcotest bos rresult ocaml_cli_examples))

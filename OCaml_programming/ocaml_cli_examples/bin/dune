@@ -4,6 +4,6 @@
  (libraries ocaml_cli_examples))
 
 (executable
- (public_name oasis_cli)
- (name main_oasis_cli)
+ (public_name arg_cli)
+ (name main_arg_cli)
  (libraries ocaml_cli_examples))

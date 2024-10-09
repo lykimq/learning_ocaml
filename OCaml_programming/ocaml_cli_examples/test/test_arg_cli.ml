@@ -10,7 +10,7 @@ let run_cmd cmd =
 let test_greet () =
   let args = [ "Gwen" ] in
   let start_cmd =
-    Bos.Cmd.(v "dune" % "exec" % "oasis_cli" % "--" % "--g" %% of_list args)
+    Bos.Cmd.(v "dune" % "exec" % "arg_cli" % "--" % "--g" %% of_list args)
     (* Correctly place the "--" before "-g" *)
   in
   let output = run_cmd start_cmd in
@@ -19,7 +19,7 @@ let test_greet () =
 let test_goodbye () =
   let args = [ "Gwen" ] in
   let start_cmd =
-    Bos.Cmd.(v "dune" % "exec" % "oasis_cli" % "--" % "--b" %% of_list args)
+    Bos.Cmd.(v "dune" % "exec" % "arg_cli" % "--" % "--b" %% of_list args)
     (* Correctly place the "--" before "-b" *)
   in
   let output = run_cmd start_cmd in
