@@ -1,0 +1,4 @@
+(executable
+ (public_name ocaml_cli_examples)
+ (name main)
+ (libraries ocaml_cli_examples))
