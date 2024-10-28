@@ -1,0 +1,4 @@
+(executable
+ (public_name EventCast)
+ (name main)
+ (libraries EventCast))
