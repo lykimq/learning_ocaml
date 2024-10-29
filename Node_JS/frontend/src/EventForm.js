@@ -1,4 +1,3 @@
-// EventForm.js
 import React, { useState } from 'react';
 
 const EventForm = ({ onSubmit }) => {
@@ -7,6 +6,15 @@ const EventForm = ({ onSubmit }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        const selectedDate = new Date(eventTime);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize today to start of the day
+
+        if (selectedDate < today) {
+            alert("Event date cannot be in the past.");
+            return; // Prevent submission
+        }
+
         onSubmit({ content, event_time: eventTime });
         setContent('');
         setEventTime('');
