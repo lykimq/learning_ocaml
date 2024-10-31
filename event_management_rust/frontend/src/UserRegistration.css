@@ -1,0 +1,81 @@
+/* User Registration Styles */
+.registration-page {
+    max-width: 600px; /* Set a maximum width for the page */
+    margin: 0 auto; /* Center the content */
+    padding: 20px; /* Add padding */
+    text-align: center; /* Center text */
+}
+
+h1 {
+    color: #333; /* Darker text color */
+}
+
+p {
+    color: #555; /* Slightly lighter text color */
+    margin-bottom: 20px; /* Space below the paragraph */
+}
+
+.container {
+    max-width: 400px; /* Set a maximum width for the form */
+    margin: 0 auto; /* Center the form */
+    padding: 20px; /* Add padding inside the form */
+    border: 1px solid #ccc; /* Light gray border */
+    border-radius: 5px; /* Rounded corners */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    background-color: #f9f9f9; /* Light background color */
+}
+
+label {
+    display: block; /* Make labels block elements */
+    margin: 10px 0 5px; /* Space above and below labels */
+    font-weight: bold; /* Bold labels */
+    color: #555; /* Slightly lighter text color */
+}
+
+input[type="text"],
+input[type="email"] {
+    width: 100%; /* Full width inputs */
+    padding: 10px; /* Padding inside inputs */
+    margin-bottom: 15px; /* Space below inputs */
+    border: 1px solid #ccc; /* Border around inputs */
+    border-radius: 4px; /* Rounded corners */
+    font-size: 16px; /* Font size for input text */
+    transition: border-color 0.3s; /* Smooth transition for border color */
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus {
+    border-color: #007BFF; /* Blue border on focus */
+    outline: none; /* Remove default outline */
+}
+
+button {
+    width: 100%; /* Full width button */
+    padding: 10px; /* Padding inside button */
+    background-color: #007BFF; /* Bootstrap primary blue */
+    color: white; /* White text color */
+    border: none; /* No border */
+    border-radius: 4px; /* Rounded corners */
+    font-size: 16px; /* Font size for button text */
+    cursor: pointer; /* Pointer cursor on hover */
+    transition: background-color 0.3s; /* Smooth transition for background color */
+}
+
+button:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
+
+.message {
+    margin-top: 15px; /* Space above message */
+    text-align: center; /* Center the message */
+    color: #d9534f; /* Bootstrap danger color for error messages */
+}
+
+.show-users-button {
+    margin-top: 15px; /* Space above button */
+    background-color: #28a745; /* Green background for show users button */
+}
+
+.show-users-button:hover {
+    background-color: #218838; /* Darker green on hover */
+}
