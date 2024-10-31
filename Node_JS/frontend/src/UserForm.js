@@ -19,14 +19,17 @@ const UserForm = ({ onSubmit }) => {
             setUsername('');
             setEmail('');
         } else if (result && result.error) {
-            setErrorMessage(result.error); // Display the error message returned from the server
+            if (result.error.includes('username already exists')) {
+                alert('Username is already taken. Please choose a different one.'); // Alert for non-unique username
         } else {
             setErrorMessage('An unexpected error occurred.'); // Fallback error message
+            }
         }
     };
 
     return (
         <div>
+            <h3>User Registration</h3>
             <form onSubmit={handleSubmit}>
                 <input
                     type="text"
