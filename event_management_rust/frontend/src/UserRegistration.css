@@ -1,81 +1,211 @@
 /* User Registration Styles */
 .registration-page {
-    max-width: 600px; /* Set a maximum width for the page */
-    margin: 0 auto; /* Center the content */
-    padding: 20px; /* Add padding */
-    text-align: center; /* Center text */
+    max-width: 800px; /* Increase max-width for wider layout */
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column; /* Stack items vertically */
+    gap: 20px; /* Space between form and user list */
+    padding: 20px;
 }
 
 h1 {
-    color: #333; /* Darker text color */
+    color: #333;
 }
 
 p {
-    color: #555; /* Slightly lighter text color */
-    margin-bottom: 20px; /* Space below the paragraph */
+    color: #555;
+    margin-bottom: 20px;
 }
 
+/* Container for the form section */
 .container {
-    max-width: 400px; /* Set a maximum width for the form */
+    width: 100%; /* Use full width */
+    max-width: 400px;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    background-color: #f9f9f9;
     margin: 0 auto; /* Center the form */
-    padding: 20px; /* Add padding inside the form */
-    border: 1px solid #ccc; /* Light gray border */
-    border-radius: 5px; /* Rounded corners */
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
-    background-color: #f9f9f9; /* Light background color */
 }
 
 label {
-    display: block; /* Make labels block elements */
-    margin: 10px 0 5px; /* Space above and below labels */
-    font-weight: bold; /* Bold labels */
-    color: #555; /* Slightly lighter text color */
+    display: block;
+    margin: 10px 0 5px;
+    font-weight: bold;
+    color: #555;
 }
 
 input[type="text"],
 input[type="email"] {
-    width: 100%; /* Full width inputs */
-    padding: 10px; /* Padding inside inputs */
-    margin-bottom: 15px; /* Space below inputs */
-    border: 1px solid #ccc; /* Border around inputs */
-    border-radius: 4px; /* Rounded corners */
-    font-size: 16px; /* Font size for input text */
-    transition: border-color 0.3s; /* Smooth transition for border color */
+    width: calc(100% - 20px); /* Ensure input fields take full width minus padding */
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+    box-sizing: border-box; /* Include padding and border in element's total width and height */
 }
 
 input[type="text"]:focus,
 input[type="email"]:focus {
-    border-color: #007BFF; /* Blue border on focus */
-    outline: none; /* Remove default outline */
+    border-color: #007BFF;
+    outline: none;
 }
 
 button {
-    width: 100%; /* Full width button */
-    padding: 10px; /* Padding inside button */
-    background-color: #007BFF; /* Bootstrap primary blue */
-    color: white; /* White text color */
-    border: none; /* No border */
-    border-radius: 4px; /* Rounded corners */
-    font-size: 16px; /* Font size for button text */
-    cursor: pointer; /* Pointer cursor on hover */
-    transition: background-color 0.3s; /* Smooth transition for background color */
+    width: 100%;
+    padding: 10px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-bottom: 10px; /* Add space at the bottom */
+
 }
 
 button:hover {
-    background-color: #0056b3; /* Darker blue on hover */
+    background-color: #0056b3;
 }
 
 .message {
-    margin-top: 15px; /* Space above message */
-    text-align: center; /* Center the message */
-    color: #d9534f; /* Bootstrap danger color for error messages */
+    margin-top: 15px;
+    text-align: center;
+    color: #d9534f;
 }
 
 .show-users-button {
-    margin-top: 15px; /* Space above button */
-    background-color: #28a745; /* Green background for show users button */
+    margin-top: 15px;
+    background-color: #28a745;
 }
 
 .show-users-button:hover {
-    background-color: #218838; /* Darker green on hover */
+    background-color: #218838;
+}
+
+/* User list table styling */
+.user-table {
+    flex: 1; /* Take remaining space next to the form */
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    background-color: #f4f4f4;
+    margin-top: 20px; /* Add spacing above the user table */
+    width: auto;
+    align-self: flex-start; /* Align the user table frame to the left */
+    margin-left: 0; /* Ensure no left margin */
+}
+
+
+.user-table h2 {
+    margin-top: 0;
+    text-align: left /* Left the table header */
+}
+
+
+.user-table p {
+    text-align: left; /* Center total users count */
+}
+
+.user-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.user-table th, .user-table td {
+    padding: 10px;
+    border: 1px solid #ccc;
+    text-align: left;
+}
+
+.user-table th {
+    background-color: #e9ecef;
+    font-weight: bold;
+}
+
+.user-table button {
+    margin-right: 5px;
+    padding: 5px 10px;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.user-table button:nth-child(1) {
+    background-color: #007bff;
+}
+
+.user-table button:nth-child(2) {
+    background-color: #dc3545;
+}
+
+.user-table button:hover {
+    opacity: 0.9;
+}
+
+
+/* Pagination styling */
+.pagination {
+    display: flex;
+    align-items: center; /* Center items vertically */
+    margin-top: 15px;
+}
+
+.pagination-button {
+    padding: 2px 5px; /* Short button size */
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-right: 5px; /* Space between buttons */
+}
+
+.pagination-button:hover {
+    background-color: #0056b3;
+}
+
+.pagination-info {
+    margin-left: 10px; /* Add space before pagination info */
+    font-size: 12px; /* Optional: adjust the font size of pagination info */
+}
+
+/* Additional styles to ensure button fit */
+.pagination-button {
+    height: auto; /* Allow height to adjust */
+    width: auto; /* Allow width to fit text */
+}
+
+/* Sort buttons styling */
+.sort-button {
+    padding: 2px 5px; /* Add padding for a comfortable click area */
+    background-color: #007BFF; /* Default background color */
+    color: white; /* Text color */
+    border: none; /* Remove border */
+    border-radius: 4px; /* Rounded corners */
+    cursor: pointer; /* Change cursor on hover */
+    font-size: 12px; /* Font size for the button text */
+    margin-right: 5px; /* Space between buttons */
+    margin-bottom: 10px; /* Add space at the bottom */
+    transition: background-color 0.3s; /* Smooth background color transition */
+    height: auto; /* Allow height to adjust */
+    width: auto; /* Allow width to fit text */
+}
+
+.sort-button:hover {
+    background-color: #0056b3; /* Darker shade on hover */
+}
+
+.sort-button:disabled {
+    background-color: #cccccc; /* Grey out disabled buttons */
+    cursor: not-allowed; /* Change cursor to indicate unavailability */
+    opacity: 0.6; /* Reduce opacity for visual feedback */
 }

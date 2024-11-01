@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use actix_cors::Cors;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use serde::{Deserialize, Serialize};
@@ -9,9 +11,15 @@ pub struct User {
     pub email: String,
 }
 
-#[derive(Serialize)]
+#[derive(sqlx::FromRow, Serialize)] // Ensure this derives FromRow for mapping
 pub struct UserResponse {
     pub id: i32,
+    pub username: String,
+    pub email: String,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateUser {
     pub username: String,
     pub email: String,
 }
@@ -65,14 +73,84 @@ pub async fn register_user_handler(
     }
 }
 
-// Handler function to get all users
-pub async fn get_all_users_handler(pool: web::Data<PgPool>) -> impl Responder {
-    let users = sqlx::query_as!(UserResponse, "SELECT id, username, email FROM users")
+// Update the handler function to accept query parameters for sorting
+pub async fn get_all_users_handler(
+    pool: web::Data<PgPool>,
+    web::Query(sort_by): web::Query<HashMap<String, String>>,
+) -> impl Responder {
+    let mut query = "SELECT id, username, email FROM users".to_string();
+    let mut sort_clause = String::new();
+
+    // Check for sorting parameters
+    if let Some(order) = sort_by.get("sort_by") {
+        if order == "username" {
+            sort_clause = " ORDER BY username".to_string();
+        } else if order == "email" {
+            sort_clause = " ORDER BY email".to_string();
+        }
+    }
+
+    query.push_str(&sort_clause);
+    // Use sqlx::query_as! for direct mapping to UserResponse
+    let users: Vec<UserResponse> = sqlx::query_as::<_, UserResponse>(&query)
         .fetch_all(pool.get_ref())
         .await
         .unwrap_or_else(|_| Vec::new());
 
     HttpResponse::Ok().json(users)
+}
+
+// Handler function to update a user
+pub async fn update_user_handler(
+    pool: web::Data<PgPool>,
+    user_id: web::Path<i32>,
+    updated_user: web::Json<UpdateUser>,
+) -> impl Responder {
+    let user_id = user_id.into_inner();
+    match update_user(
+        pool.get_ref(),
+        user_id,
+        &updated_user.username,
+        &updated_user.email,
+    )
+    .await
+    {
+        Ok(_) => HttpResponse::Ok().json("User updated successfully."),
+        Err(_) => HttpResponse::BadRequest().json("Failed to update user."),
+    }
+}
+
+//Function to update a user in the database
+async fn update_user(pool: &PgPool, id: i32, username: &str, email: &str) -> Result<(), Error> {
+    sqlx::query!(
+        "UPDATE users SET username = $1, email = $2 WHERE id = $3",
+        username,
+        email,
+        id
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+//Handler function to delete a user
+pub async fn delete_user_handler(
+    pool: web::Data<PgPool>,
+    user_id: web::Path<i32>,
+) -> impl Responder {
+    let user_id = user_id.into_inner();
+    match delete_user(pool.get_ref(), user_id).await {
+        Ok(_) => HttpResponse::Ok().json("User deleted successfully."),
+        Err(_) => HttpResponse::BadRequest().json("Failed to delete user."),
+    }
+}
+
+//Function to delete a user from the database
+async fn delete_user(pool: &PgPool, id: i32) -> Result<(), Error> {
+    sqlx::query!("DELETE FROM users WHERE id = $1", id)
+        .execute(pool)
+        .await?;
+    Ok(())
 }
 
 // Function to create the HTTP server
@@ -89,12 +167,14 @@ pub async fn run_server(
             .wrap(
                 Cors::default()
                     .allowed_origin(&format!("http://localhost:{}", frontend_port))
-                    .allowed_methods(vec!["POST", "GET", "OPTIONS"])
+                    .allowed_methods(vec!["POST", "GET", "PUT", "DELETE", "OPTIONS"])
                     .allowed_headers(vec!["Content-Type", "Authorization"])
                     .max_age(3600),
             )
             .route("/register", web::post().to(register_user_handler))
             .route("/users", web::get().to(get_all_users_handler))
+            .route("users/{id}/edit", web::put().to(update_user_handler))
+            .route("users/{id}", web::delete().to(delete_user_handler))
     })
     .bind(format!("127.0.0.1:{}", backend_port))?
     .run()
