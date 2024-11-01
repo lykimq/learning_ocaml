@@ -40,7 +40,7 @@ const UserRegistration = () => {
             setEmail('');
             setIsEditing(false);
             setEditUserId(null);
-            handleShowUsers()
+            handleShowUsers(sortBy)
 
         } catch (error) {
             setMessage("An error occurred. Please try again.");

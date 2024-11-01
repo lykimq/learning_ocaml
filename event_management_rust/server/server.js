@@ -36,6 +36,7 @@ app.get('/users', async (req, res) => {
         res.status(500).send('Server error');
     }
 });
+
 // Register a new user
 app.post('/register', async (req, res) => {
     const { username, email } = req.body;
