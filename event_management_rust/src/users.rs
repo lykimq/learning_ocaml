@@ -1,9 +1,7 @@
-use std::collections::HashMap;
-
-use actix_cors::Cors;
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use sqlx::{Error, PgPool};
+use std::collections::HashMap;
 
 #[derive(Deserialize)]
 pub struct User {
@@ -151,32 +149,4 @@ async fn delete_user(pool: &PgPool, id: i32) -> Result<(), Error> {
         .execute(pool)
         .await?;
     Ok(())
-}
-
-// Function to create the HTTP server
-pub async fn run_server(
-    pool: PgPool,
-    frontend_port: String,
-    backend_port: u16,
-) -> std::io::Result<()> {
-    println!("Connected to the database");
-
-    HttpServer::new(move || {
-        App::new()
-            .app_data(web::Data::new(pool.clone()))
-            .wrap(
-                Cors::default()
-                    .allowed_origin(&format!("http://localhost:{}", frontend_port))
-                    .allowed_methods(vec!["POST", "GET", "PUT", "DELETE", "OPTIONS"])
-                    .allowed_headers(vec!["Content-Type", "Authorization"])
-                    .max_age(3600),
-            )
-            .route("/register", web::post().to(register_user_handler))
-            .route("/users", web::get().to(get_all_users_handler))
-            .route("users/{id}/edit", web::put().to(update_user_handler))
-            .route("users/{id}", web::delete().to(delete_user_handler))
-    })
-    .bind(format!("127.0.0.1:{}", backend_port))?
-    .run()
-    .await
 }
