@@ -1,5 +1,3 @@
-// src/UserRegistration.js
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import './UserRegistration.css';
@@ -7,9 +5,12 @@ import './UserRegistration.css';
 const UserRegistration = () => {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
+    const [notification, setNotification] = useState('');
+    const [isSuccess, setIsSuccess] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
         const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/register`, {
             method: 'POST',
             headers: {
@@ -18,9 +19,17 @@ const UserRegistration = () => {
             body: JSON.stringify({ username, email }),
         });
 
-        const data = await response.json();
-        console.log(data);
-        // Handle registration success or error here
+        if (response.ok) {
+            const data = await response.json();
+            setNotification(`Registration successful: ${data.username}`);
+            setIsSuccess(true);
+            setUsername('');
+            setEmail('');
+        } else {
+            const error = await response.text();
+            setNotification(`Registration failed: ${error}`);
+            setIsSuccess(false);
+        }
     };
 
     return (
@@ -30,6 +39,13 @@ const UserRegistration = () => {
 
             <div className="registration-container">
                 <h1 className="registration-title">User Registration</h1>
+
+                {notification && (
+                    <p className={`notification ${isSuccess ? '' : 'error'}`}>
+                        {notification}
+                    </p>
+                )}
+
                 <form onSubmit={handleSubmit} className="registration-form">
                     <input
                         type="text"

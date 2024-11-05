@@ -54,3 +54,23 @@
 .registration-form button:hover {
     background-color: #0056b3;
 }
+
+
+.notification {
+    margin-top: 10px; /* Space above the notification */
+    padding: 10px; /* Padding inside the notification */
+    border-radius: 5px; /* Rounded corners */
+    text-align: center; /* Center text */
+    font-weight: bold; /* Bold text */
+}
+
+.notification {
+    color: #fff; /* White text for visibility */
+    background-color: #4caf50; /* Green background for success */
+}
+
+/* Add a different style for error notifications */
+.notification.error {
+    color: #fff; /* White text */
+    background-color: #f44336; /* Red background for errors */
+}
