@@ -3,7 +3,9 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use dotenv::dotenv;
 use std::env;
+
 mod login;
+mod users;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -18,6 +20,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(pool.clone()))
+            .route("/register", web::post().to(users::register))
             // Call Login
             .route("/login", web::post().to(login::login))
     })
