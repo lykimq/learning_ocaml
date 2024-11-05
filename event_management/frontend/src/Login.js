@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import './Login.css';
 
 const Login = () => {
@@ -23,7 +24,6 @@ const Login = () => {
         // Implement Google login logic here
         console.log('Login with Google');
     };
-
 
 
     return (
@@ -57,8 +57,13 @@ const Login = () => {
                     <p>
                         Don't have an account? <a href="/register">Register here</a>
                     </p>
+
                 </div>
             </div>
+            <p>
+                <Link to="/">Back to Home</Link> {/* Link to home */}
+            </p>
+
         </div>
     );
 };
