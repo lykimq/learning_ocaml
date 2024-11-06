@@ -12,7 +12,7 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-
+        // Handler login
         const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/auth/login`, {
             method: 'POST',
             headers: {
@@ -24,7 +24,7 @@ const Login = () => {
 
         // Check for successful login
         if (response.ok) {
-            // TODO: store the user info
+
             const data = await response.json();
             setNotification(`Login sucessful:, ${data.username}`);
             setIsSuccess(true);
@@ -35,10 +35,9 @@ const Login = () => {
             localStorage.setItem("isLoggedIn", true);
             localStorage.setItem("username", username);
 
-            naviage('/dashboard')
+            naviage('/auth/dashboard')
         }
         else {
-            //TODO handle login failure show error message, etc.
             const error = await response.text();
             setNotification(`Login failed: ${error}`);
             setIsSuccess(false);
@@ -89,7 +88,7 @@ const Login = () => {
                         Login with Google
                     </button>
                     <p>
-                        Don't have an account? <a href="/register">Sign up</a>
+                        Don't have an account? <a href="/auth/login">Sign up</a>
                     </p>
                 </div>
                 <p>

@@ -23,22 +23,18 @@ const Dashboard = () => {
                 <h2>Event Access</h2>
                 <p>Admins can manage events from here. Please click below to register events.</p>
                 {/*TODO": create a page to register login */}
-                <Link to="/login" className="btn"> Register Event</Link>
+                <Link to="/auth/login" className="btn"> Register Event</Link>
             </div>
 
             <div className="section user-section">
                 <h2>User Registration</h2>
                 <p>Admins can register users to participate in events or manage existing registrations.</p>
-                <Link to="/register" className="btn"> User Registration</Link>
+                <Link to="/users/register" className="btn"> User Registration</Link>
             </div>
 
             <button onClick={handleSignOut} className="btn sign-out">
                 Sign Out
             </button>
-
-            <p>
-                <Link to="/">Back to Home</Link> {/* Link to home */}
-            </p>
         </div>
     )
 }

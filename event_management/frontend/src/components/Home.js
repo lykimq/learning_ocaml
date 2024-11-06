@@ -12,7 +12,7 @@ const Home = () => {
     useEffect(() => {
         // Check if admin is logged in
         if (localStorage.getItem("isLoggedIn")) {
-            naviage("/dashboard")
+            naviage("/auth/dashboard")
         }
     }, [naviage]);
 
@@ -24,13 +24,13 @@ const Home = () => {
             <div className="section admin-section">
                 <h2>Admin Access</h2>
                 <p>The login option is exclusively for admins. Admins can manage events and oversee user registrations.</p>
-                <Link to="/login" className="btn">Admin Login</Link>
+                <Link to="/auth/login" className="btn">Admin Login</Link>
             </div>
 
             <div className="section user-section">
                 <h2>User Registration</h2>
                 <p>Users can register to participate in events. Please register below:</p>
-                <Link to="/register" className="btn">User Registration</Link>
+                <Link to="/users/register" className="btn">User Registration</Link>
             </div>
         </div>
     );

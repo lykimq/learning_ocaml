@@ -11,7 +11,7 @@ const UserRegistration = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/auth/user`, {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/users/register`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
