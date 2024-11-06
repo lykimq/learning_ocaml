@@ -14,9 +14,6 @@ const Dashboard = () => {
         if (loggedInUser) {
             setNotification(`Welcome back, ${loggedInUser}`);
             setIsSuccess(true)
-        } else {
-            // If not logged in, redirect to login page
-            naviage('/auth/login')
         }
     })
 

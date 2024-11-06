@@ -27,7 +27,6 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(pool.clone())) // Clone the pool for each instance
             .wrap(
                 Cors::default()
-                    // TODO: call from env and have an option to be any port and the default is 3000
                     .allowed_origin(&format!("http://localhost:{}", frontend_port))
                     .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
                     .allowed_headers(vec!["Content-Type", "Authorization"])

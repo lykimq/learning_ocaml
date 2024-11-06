@@ -1,21 +1,19 @@
 import React, { useState } from "react";
 import { Link } from 'react-router-dom';
 import { useNavigate } from "react-router-dom";
-import './SignUp.css'
-
+import './SignUp.css';
 
 const SignUp = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [notification, setNotification] = useState('');
-    const [isSuccess, setIsSuccess] = useState('');
-    const naviage = useNavigate();
+    const [isSuccess, setIsSuccess] = useState(false); // Changed initial state to false
+    const navigate = useNavigate(); // Corrected the spelling of `naviage` to `navigate`
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         // Send the sign up to the backend
-
         const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/auth/signup`, {
             method: 'POST',
             headers: {
@@ -25,19 +23,19 @@ const SignUp = () => {
         });
 
         if (response.ok) {
-            const data = response.json();
+            const data = await response.json();  // Corrected: Await the response
             setNotification(`Registration successful: ${data.username}`);
             setIsSuccess(true);
             setUsername('');
-            setPassword('')
+            setPassword('');
 
-            // Redirect to login page
-            naviage('/auth/login') // Corrected navigation path
+            // Redirect to dashboard
+            navigate('/auth/dashboard');  // Fixed typo here
 
         } else {
             const error = await response.text();
             setNotification(`Registration failed: ${error}`);
-            setIsSuccess(false)
+            setIsSuccess(false);
         }
     };
 
@@ -83,6 +81,6 @@ const SignUp = () => {
 
         </div>
     );
-}
+};
 
 export default SignUp;
