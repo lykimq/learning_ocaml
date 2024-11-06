@@ -92,7 +92,7 @@ const Login = () => {
                     </p>
                 </div>
                 <p>
-                    <Link to="/">Back to Home</Link> {/* Link to home */}
+                    <Link to="/">Back to Dashboard</Link> {/* Link to home */}
                 </p>
             </div>
         </div>

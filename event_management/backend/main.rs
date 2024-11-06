@@ -37,8 +37,12 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/auth")
                     .route("/login", web::post().to(login::login_handler))
-                    .route("/register", web::post().to(login::register_login_handler))
-                    .route("/user", web::post().to(users::register_user_handler)),
+                    .route("/register", web::post().to(login::register_login_handler)),
+            )
+            // Users
+            .service(
+                web::scope("/users")
+                    .route("/register", web::post().to(users::register_user_handler)),
             )
             // Other routes
             .route("/admin/users", web::get().to(users::get_all_users_handler))

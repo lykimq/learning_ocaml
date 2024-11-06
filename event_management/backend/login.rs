@@ -1,4 +1,4 @@
-use actix_web::{guard::Head, web, HttpResponse, Responder};
+use actix_web::{web, HttpResponse, Responder};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use serde::{Deserialize, Serialize};
 use sqlx::{Error, PgPool};
