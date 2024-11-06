@@ -6,14 +6,18 @@ const Dashboard = () => {
 
     const [notification, setNotification] = useState('');
     const [isSuccess, setIsSuccess] = useState('');
-    const naviage = useNavigate();
+    const navigate = useNavigate();
 
     useEffect(() => {
+        //TODO: check to see if this appear
         //check if user is already logged in
         const loggedInUser = localStorage.getItem('username');
         if (loggedInUser) {
             setNotification(`Welcome back, ${loggedInUser}`);
             setIsSuccess(true)
+        } else {
+            // If not logged in, redirect to login page
+            navigate('/auth/login');
         }
     })
 
@@ -22,7 +26,7 @@ const Dashboard = () => {
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem("username")
 
-        naviage("/")
+        navigate("/")
     };
 
     return (

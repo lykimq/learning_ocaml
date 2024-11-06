@@ -30,7 +30,7 @@ const SignUp = () => {
             setPassword('');
 
             // Redirect to dashboard
-            navigate('/auth/dashboard');  // Fixed typo here
+            navigate('/auth/login');
 
         } else {
             const error = await response.text();
