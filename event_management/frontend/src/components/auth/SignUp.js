@@ -1,65 +1,53 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import './Login.css';
+import React, { useState } from "react";
+import { Link } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
+import './SignUp.css'
 
-const Login = () => {
+
+const SignUp = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [notification, setNotification] = useState('');
     const [isSuccess, setIsSuccess] = useState('');
     const naviage = useNavigate();
 
-
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Handler login
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/auth/login`, {
+        // Send the sign up to the backend
+
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/auth/signup`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify({ username, password })
         });
 
-
-        // Check for successful login
         if (response.ok) {
-
-            const data = await response.json();
-            setNotification(`Login sucessful:, ${data.username}`);
+            const data = response.json();
+            setNotification(`Registration successful: ${data.username}`);
             setIsSuccess(true);
             setUsername('');
-            setPassword('');
+            setPassword('')
 
-            // Save login status to localStorage
-            localStorage.setItem("isLoggedIn", true);
-            localStorage.setItem("username", username);
+            // Redirect to login page
+            naviage('/auth/login') // Corrected navigation path
 
-            naviage('/auth/dashboard')
-        }
-        else {
+        } else {
             const error = await response.text();
-            setNotification(`Login failed: ${error}`);
-            setIsSuccess(false);
+            setNotification(`Registration failed: ${error}`);
+            setIsSuccess(false)
         }
-
     };
-
-    //TODO
-    const handleGoogleLogin = () => {
-        // Implement Google login logic here
-        console.log('Login with Google');
-    };
-
 
     return (
         <div>
             <h1 className="app-title">Event Management</h1>
             <p className="app-description">Manage your events efficiently and effortlessly.</p>
 
-            <div className="login-container">
-                <h1 className="login-title">Login</h1>
+            <div className="signup-container">
+                <h1 className="signup-title">Sign Up</h1>
 
                 {notification && (
                     <p className={`notification ${isSuccess ? '' : 'error'}`}>
@@ -67,7 +55,7 @@ const Login = () => {
                     </p>
                 )}
 
-                <form onSubmit={handleSubmit} className="login-form">
+                <form onSubmit={handleSubmit} className="signup-form">
                     <input
                         type="text"
                         placeholder="Username"
@@ -82,24 +70,19 @@ const Login = () => {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                     />
-                    <button type="submit">Login</button>
+                    <button type="submit">Sign Up</button>
                 </form>
-                <div className="login-options">
-                    <button className="google-login" onClick={handleGoogleLogin}>
-                        Login with Google
-                    </button>
 
-                    {/*TODO: have a page form to auth/register*/}
-                    <p>
-                        Don't have an account? <a href="/auth/signup">Sign up</a>
-                    </p>
-                </div>
+                <p>
+                    Already have an account? <a href="/auth/login">Login</a>
+                </p>
                 <p>
                     <Link to="/">Back to Dashboard</Link> {/* Link to home */}
                 </p>
             </div>
+
         </div>
     );
-};
+}
 
-export default Login;
+export default SignUp;

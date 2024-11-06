@@ -4,6 +4,7 @@ import Login from './components/auth/Login';
 import UserRegistration from './components/users/UserRegistration';
 import Home from './components/Home';
 import Dashboard from './components/auth/Dashboard';
+import SignUp from './components/auth/SignUp';
 
 const App = () => {
 
@@ -14,6 +15,7 @@ const App = () => {
 
         {/* Login */}
         <Route path="/auth/login" element={<Login />} />
+        <Route path="/auth/signup" element={<SignUp />} />
         <Route path="/auth/dashboard" element={<Dashboard />} />
 
         {/* Users */}

@@ -31,7 +31,7 @@ async fn username_exists(pool: &PgPool, username: &str) -> Result<bool, Error> {
     Ok(result.is_some())
 }
 
-pub async fn register_login(
+pub async fn signup(
     pool: &PgPool,
     username: &str,
     password: &str,
@@ -68,11 +68,11 @@ pub async fn register_login(
     }
 }
 
-pub async fn register_login_handler(
+pub async fn signup_handler(
     pool: web::Data<PgPool>,
     user: web::Json<RegisterInfo>,
 ) -> impl Responder {
-    match register_login(pool.get_ref(), &user.username, &user.password).await {
+    match signup(pool.get_ref(), &user.username, &user.password).await {
         Ok(response) => HttpResponse::Created().json(response),
         Err(err) => HttpResponse::BadRequest().json(err),
     }
