@@ -11,7 +11,7 @@ const UserRegistration = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/register`, {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/auth/user`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,11 +63,12 @@ const UserRegistration = () => {
                     />
                     <button type="submit">Register</button>
                 </form>
-            </div>
 
-            <p>
-                <Link to="/">Back to Home</Link> {/* Link to home */}
-            </p>
+                <p>
+                    <Link to="/">Back to Home</Link> {/* Link to home */}
+                </p>
+
+            </div>
 
         </div>
     );

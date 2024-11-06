@@ -1,10 +1,21 @@
 // src/Home.js
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import "./Home.css";
 
 const Home = () => {
+
+    const naviage = useNavigate();
+
+    useEffect(() => {
+        // Check if admin is logged in
+        if (localStorage.getItem("isLoggedIn")) {
+            naviage("/dashboard")
+        }
+    }, [naviage]);
+
     return (
         <div className="home-container">
             <h1 className="app-title">Welcome to Event Management</h1>

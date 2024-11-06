@@ -3,15 +3,17 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'; // En
 import Login from './Login';
 import UserRegistration from './UserRegistration';
 import Home from './Home';
-
+import Dashboard from './Dashboard';
 
 const App = () => {
+
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<UserRegistration />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         {/* Add other routes as needed */}
       </Routes>
     </Router>

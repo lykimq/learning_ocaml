@@ -1,25 +1,52 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './Login.css';
 
 const Login = () => {
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [notification, setNotification] = useState('');
+    const [isSuccess, setIsSuccess] = useState('');
+    const naviage = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/login`, {
+
+
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ username, password }),
         });
-        const data = await response.json();
-        console.log(data);
-        // Handle login logic here, e.g., store user info
+
+
+        // Check for successful login
+        if (response.ok) {
+            // TODO: store the user info
+            const data = await response.json();
+            setNotification(`Login sucessful:, ${data.username}`);
+            setIsSuccess(true);
+            setUsername('');
+            setPassword('');
+
+            // Save login status to localStorage
+            localStorage.setItem("isLoggedIn", true);
+            localStorage.setItem("username", username);
+
+            naviage('/dashboard')
+        }
+        else {
+            //TODO handle login failure show error message, etc.
+            const error = await response.text();
+            setNotification(`Login failed: ${error}`);
+            setIsSuccess(false);
+        }
+
     };
 
+    //TODO
     const handleGoogleLogin = () => {
         // Implement Google login logic here
         console.log('Login with Google');
@@ -33,12 +60,19 @@ const Login = () => {
 
             <div className="login-container">
                 <h1 className="login-title">Login</h1>
+
+                {notification && (
+                    <p className={`notification ${isSuccess ? '' : 'error'}`}>
+                        {notification}
+                    </p>
+                )}
+
                 <form onSubmit={handleSubmit} className="login-form">
                     <input
-                        type="email"
-                        placeholder="Email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        type="text"
+                        placeholder="Username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
                         required
                     />
                     <input
@@ -55,15 +89,13 @@ const Login = () => {
                         Login with Google
                     </button>
                     <p>
-                        Don't have an account? <a href="/register">Register here</a>
+                        Don't have an account? <a href="/register">Sign up</a>
                     </p>
-
                 </div>
+                <p>
+                    <Link to="/">Back to Home</Link> {/* Link to home */}
+                </p>
             </div>
-            <p>
-                <Link to="/">Back to Home</Link> {/* Link to home */}
-            </p>
-
         </div>
     );
 };

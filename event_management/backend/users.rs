@@ -1,6 +1,6 @@
-use sqlx::{PgPool, Error, FromRow};
-use serde::{Deserialize, Serialize};
 use actix_web::{web, HttpResponse, Responder};
+use serde::{Deserialize, Serialize};
+use sqlx::{Error, FromRow, PgPool};
 use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, FromRow)]
