@@ -9,7 +9,6 @@ const Dashboard = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        //TODO: check to see if this appear
         //check if user is already logged in
         const loggedInUser = localStorage.getItem('username');
         if (loggedInUser) {
@@ -19,15 +18,22 @@ const Dashboard = () => {
             // If not logged in, redirect to login page
             navigate('/auth/login');
         }
-    })
+    }, [navigate])
+
 
     const handleSignOut = () => {
         // Clear login status
         localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem("username")
+        localStorage.removeItem('username');
+        localStorage.removeItem('isAdmin');
 
         navigate("/")
     };
+
+
+    const isAdmin = localStorage.getItem('isAdmin') === 'true';
+    console.log("isAdmin: ", isAdmin);
+
 
     return (
         <div className="dashboard-container">
@@ -47,12 +53,13 @@ const Dashboard = () => {
                 <Link to="/auth/login" className="btn"> Register Event</Link>
             </div>
 
-            {/* TODO: when admin success login, he should have the option to register users and show a list of users. */}
-            <div className="section user-section">
-                <h2>User Registration</h2>
-                <p>Admins can register users to participate in events or manage existing registrations.</p>
-                <Link to="/users/register" className="btn"> User Registration</Link>
-            </div>
+            {isAdmin && (
+                <div className="section user-section">
+                    <h2>User Registration</h2>
+                    <p>Admins can register users to participate in events or manage existing registrations.</p>
+                    <Link to="/users/admin/register" className="btn"> User Registration</Link>
+                </div>
+            )}
 
             <button onClick={handleSignOut} className="btn sign-out">
                 Sign Out

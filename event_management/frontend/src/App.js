@@ -5,6 +5,7 @@ import UserRegistration from './components/users/UserRegistration';
 import Home from './components/Home';
 import Dashboard from './components/auth/Dashboard';
 import SignUp from './components/auth/SignUp';
+import UserList from './components/users/UserList';
 
 const App = () => {
 
@@ -18,8 +19,10 @@ const App = () => {
         <Route path="/auth/signup" element={<SignUp />} />
         <Route path="/auth/dashboard" element={<Dashboard />} />
 
-        {/* Users */}
+        {/* Users: user */}
         <Route path="/users/register" element={<UserRegistration />} />
+        {/* Users: admin */}
+        <Route path="/users/admin/register" element={<UserList />} />
 
         {/* Add other routes as needed */}
       </Routes>

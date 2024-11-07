@@ -1,5 +1,8 @@
 use actix_cors::Cors;
-use actix_web::{web, App, HttpServer};
+use actix_web::{
+    web::{self},
+    App, HttpServer,
+};
 use dotenv::dotenv;
 use sqlx::PgPool;
 use std::env;
@@ -41,10 +44,12 @@ async fn main() -> std::io::Result<()> {
             // Users
             .service(
                 web::scope("/users")
-                    .route("/register", web::post().to(users::register_user_handler)),
+                    .route("/register", web::post().to(users::register_user_handler))
+                    .route("/{id}/edit", web::put().to(users::update_user_handler))
+                    .route("/{id}", web::delete().to(users::delete_user_handler))
+                    .route("/admin/list", web::get().to(users::get_all_users_handler)),
             )
-            // Other routes
-            .route("/admin/users", web::get().to(users::get_all_users_handler))
+        // Other routes
     })
     .bind(format!("127.0.0.1:{}", backend_port))? // Use the backend port from .env
     .run()

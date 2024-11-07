@@ -6,8 +6,8 @@ const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [notification, setNotification] = useState('');
-    const [isSuccess, setIsSuccess] = useState('');
-    const naviage = useNavigate();
+    const [isSuccess, setIsSuccess] = useState(false);
+    const navigate = useNavigate();
 
 
     const handleSubmit = async (e) => {
@@ -35,8 +35,9 @@ const Login = () => {
             // Save login status to localStorage
             localStorage.setItem("isLoggedIn", true);
             localStorage.setItem("username", username);
+            localStorage.setItem("isAdmin", data.isAdmin); // Save isAdmin flag here
 
-            naviage('/auth/dashboard')
+            navigate('/auth/dashboard')
         }
         else {
             const error = await response.text();
@@ -89,7 +90,6 @@ const Login = () => {
                         Login with Google
                     </button>
 
-                    {/*TODO: have a page form to auth/register*/}
                     <p>
                         Don't have an account? <a href="/auth/signup">Sign up</a>
                     </p>

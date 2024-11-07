@@ -9,6 +9,7 @@ use sqlx::{Error, PgPool};
 pub struct RegisterResponse {
     pub id: i32,
     pub username: String,
+    is_admin: bool,
 }
 
 #[derive(Deserialize)]
@@ -50,9 +51,10 @@ pub async fn signup(
 
     // Insert the new admin into the database
     let result = sqlx::query!(
-        "INSERT INTO public.admins (username, password) VALUES ($1, $2) RETURNING id, username",
+        "INSERT INTO admins (username, password, is_admin) VALUES ($1, $2, $3) RETURNING id, username, is_admin",
         username,
-        hashed_password
+        hashed_password,
+        true
     )
     .fetch_one(pool)
     .await;
@@ -63,6 +65,7 @@ pub async fn signup(
         Ok(row) => Ok(RegisterResponse {
             id: row.id,
             username: username.to_string(),
+            is_admin: row.is_admin,
         }),
         Err(err) => Err(format!("Database error: {}", err)),
     }
@@ -78,22 +81,37 @@ pub async fn signup_handler(
     }
 }
 
-async fn validate_login(pool: &PgPool, username: &str, password: &str) -> Result<bool, Error> {
+async fn validate_login(
+    pool: &PgPool,
+    username: &str,
+    password: &str,
+) -> Result<Option<bool>, Error> {
     // Query the admins table to find the user by username
-    let row = sqlx::query!("SELECT password FROM admins WHERE username = $1", username)
-        .fetch_optional(pool)
-        .await?;
+    let row = sqlx::query!(
+        "SELECT id, password, is_admin FROM admins WHERE username = $1",
+        username
+    )
+    .fetch_optional(pool)
+    .await?;
 
     match row {
         Some(user) => {
             // verify if the hashed password from DB matches the provided password
             if verify(password, &user.password).unwrap_or(false) {
-                Ok(true)
+                // Update the is_admin field to true if not already set
+                if !user.is_admin {
+                    sqlx::query!("UPDATE admins SET is_admin = true WHERE id = $1", user.id)
+                        .execute(pool)
+                        .await?;
+                }
+
+                // Return is_admin status after potential update
+                Ok(Some(true))
             } else {
-                Ok(false)
+                Ok(None)
             }
         }
-        None => Ok(false),
+        None => Ok(None),
     }
 }
 
@@ -106,8 +124,9 @@ pub async fn login_handler(
     let password = &credentials.password;
 
     match validate_login(pool.get_ref(), username, password).await {
-        Ok(true) => HttpResponse::Ok().json("Login successful."),
-        Ok(false) => HttpResponse::Unauthorized().json("Invalid username or password"),
+        Ok(Some(is_admin)) => HttpResponse::Ok()
+            .json(serde_json::json!({ "message": "Login successful." , "isAdmin": is_admin})),
+        Ok(None) => HttpResponse::Unauthorized().json("Invalid username or password"),
         Err(err) => HttpResponse::InternalServerError().json(format!("Database error:{}", err)),
     }
 }

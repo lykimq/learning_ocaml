@@ -1,0 +1,263 @@
+.app-title {
+    text-align: center;
+    font-size: 28px;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.app-description {
+    text-align: center;
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.dashboard-container {
+    text-align: center;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-width: 800px; /* Increase max width for larger form */
+    margin: auto;
+}
+
+.registration-page {
+    max-width: 100%; /* Allow the registration page to span the full width */
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+}
+
+h1 {
+    color: #333;
+}
+
+p {
+    color: #555;
+    margin-bottom: 20px;
+}
+
+.container-register {
+    max-width: 400px; /* Set a max width for the container */
+    margin: 0 auto; /* Center the container */
+    padding: 40px; /* Increase padding for better spacing */
+    background-color: #f9f9f9; /* Light background color */
+    border-radius: 10px; /* Rounded corners for the container */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); /* Shadow for depth */
+}
+
+.container-table {
+    width: 100%;
+    max-width: 600px; /* Increased max width */
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    background-color: #f9f9f9;
+    margin: 0 auto;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+
+label {
+    display: block;
+    margin: 10px 0 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+input[type="text"],
+input[type="email"] {
+    width: calc(100% - 20px);
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus {
+    border-color: #007BFF;
+    outline: none;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-bottom: 10px;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.message {
+    margin-top: 15px;
+    text-align: center;
+    color: #d9534f;
+}
+
+.show-users-button {
+    margin-top: 15px;
+    background-color: #28a745;
+}
+
+.show-users-button:hover {
+    background-color: #218838;
+}
+
+/* User list table styling */
+.user-table {
+    flex: 1;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    background-color: #f4f4f4;
+    margin-top: 20px;
+    width: auto;
+    box-sizing: border-box;
+    overflow-x: auto; /* Allow horizontal scrolling if needed */
+}
+
+.user-table h2 {
+    margin-top: 0;
+    text-align: left;
+}
+
+.user-table p {
+    text-align: left;
+}
+
+.user-table table {
+    width: 100%;
+    border-collapse: collapse;
+
+}
+
+.user-table th, .user-table td {
+    padding: 12px; /* Increased padding for better spacing */
+    border: 1px solid #ccc;
+    text-align: left;
+}
+
+.user-table th {
+    background-color: #e9ecef;
+    font-weight: bold;
+}
+
+.user-table td {
+    font-size: 14px; /* Slightly reduce font size to fit content better */
+}
+
+.user-table button {
+    padding: 6px 12px; /* Slightly larger button padding */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.user-table button:nth-child(1) {
+    background-color: #007bff;
+}
+
+.user-table button:nth-child(2) {
+    background-color: #dc3545;
+}
+
+.user-table button:hover {
+    opacity: 0.9;
+}
+
+/* Pagination styling */
+.pagination {
+    display: flex;
+    align-items: center;
+    margin-top: 15px;
+}
+
+.pagination-button {
+    padding: 5px 15px; /* Add enough padding to ensure comfortable space around text */
+    height: auto; /* Allow height to adjust */
+    width: auto; /* Allow width to fit text */
+    margin-right: 10px;
+    min-width: 60px; /* Set a minimum width to prevent buttons from becoming too small */
+
+}
+
+.pagination-button:hover {
+    background-color: #0056b3;
+}
+
+.pagination-info {
+    margin-left: 10px;
+    font-size: 12px;
+}
+
+/* Sort buttons styling */
+.sort-button {
+    padding: 6px 12px; /* Slightly larger padding for sort buttons */
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-right: 5px;
+    margin-bottom: 10px;
+    transition: background-color 0.3s;
+    height: auto;
+    width: auto;
+}
+
+.sort-button:hover {
+    background-color: #0056b3;
+}
+
+.sort-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.sign-out-button {
+    padding: 5px 15px; /* Add enough padding to ensure comfortable space around text */
+    height: auto; /* Allow height to adjust */
+    width: auto; /* Allow width to fit text */
+    margin-right: 10px;
+    min-width: 60px; /* Set a minimum width to prevent buttons from becoming too small */
+
+}
+
+.sign-out-btn:hover {
+    background-color: #0056b3; /* Darker shade on hover */
+}
+
+.toggle-button {
+    padding: 5px 15px; /* Add enough padding to ensure comfortable space around text */
+    height: auto; /* Allow height to adjust */
+    width: auto; /* Allow width to fit text */
+    margin-right: 10px;
+    min-width: 60px; /* Set a minimum width to prevent buttons from becoming too small */
+
+}
+
+.toggle-button:hover {
+    background-color: #0056b3; /* Darker shade on hover */
+}

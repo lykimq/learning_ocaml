@@ -8,7 +8,7 @@ const SignUp = () => {
     const [password, setPassword] = useState('');
     const [notification, setNotification] = useState('');
     const [isSuccess, setIsSuccess] = useState(false); // Changed initial state to false
-    const navigate = useNavigate(); // Corrected the spelling of `naviage` to `navigate`
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -28,6 +28,10 @@ const SignUp = () => {
             setIsSuccess(true);
             setUsername('');
             setPassword('');
+
+            localStorage.setItem("isLoggedIn", true);
+            localStorage.setItem("username", username);
+            localStorage.setItem("isAdmin", data.isAdmin);
 
             // Redirect to dashboard
             navigate('/auth/login');
