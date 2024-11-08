@@ -56,7 +56,7 @@ async fn main() -> std::io::Result<()> {
                     .route("/add", web::post().to(events::add_event))
                     .route("/edit/{id}", web::put().to(events::edit_event))
                     .route("/list", web::get().to(events::get_all_events))
-                    .route("/pass", web::get().to(events::get_past_events))
+                    .route("/past", web::get().to(events::get_past_events))
                     .route("/current", web::get().to(events::get_current_events))
                     .route("/future", web::get().to(events::get_future_events))
                     .route("/{id}", web::delete().to(events::delete_event)),

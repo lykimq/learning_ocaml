@@ -12,8 +12,7 @@ const EventManagement = () => {
   const [isEditing, setIsEditing] = useState (false);
   const [editEventId, setEditEventId] = useState (null);
   const [message, setMessage] = useState ('');
-  const [showEventList, setShowEventList] = useState (false);
-  const [eventFilter, setEventFilter] = useState ('all');
+  const [eventFilter, setEventFilter] = useState ('');
   const [page, setPage] = useState (0);
   const pageSize = 20;
 
@@ -65,7 +64,7 @@ const EventManagement = () => {
     try {
       let url = `${process.env.REACT_APP_BACKEND_URL}/events/list`;
       if (filter === 'past') {
-        url = `${process.env.REACT_APP_BACKEND_URL}/events/pass`;
+        url = `${process.env.REACT_APP_BACKEND_URL}/events/past`;
       } else if (filter === 'current') {
         url = `${process.env.REACT_APP_BACKEND_URL}/events/current`;
       } else if (filter === 'future') {
@@ -115,17 +114,7 @@ const EventManagement = () => {
     }
   };
 
-  useEffect (
-    () => {
-      handleShowEvents (eventFilter);
-    },
-    [handleShowEvents, eventFilter]
-  );
-
-  // Pagination
-  const paginatedEvents = events.slice (page * pageSize, (page + 1) * pageSize);
-  const totalPages = Math.ceil (events.length / pageSize);
-
+  // Sign out
   const handleSignOut = () => {
     // Clear login status
     localStorage.removeItem ('isLoggedIn');
@@ -135,16 +124,23 @@ const EventManagement = () => {
     navigate ('/');
   };
 
-  // Toggle show event list and reset form if necessary
-  const handleToggleShowEvents = () => {
-    setShowEventList (prev => {
-      const newState = !prev;
-      if (!newState) {
-        // Hide event list, reset form if it's open
-        setIsEditing (false);
+  useEffect (
+    () => {
+      if (eventFilter) {
+        handleShowEvents (eventFilter);
       }
-      return newState;
-    });
+    },
+    [eventFilter, handleShowEvents]
+  );
+
+  // Pagination
+  const paginatedEvents = events.slice (page * pageSize, (page + 1) * pageSize);
+  const totalPages = Math.ceil (events.length / pageSize);
+
+  // Show filter buttons
+  const onFilterSelected = filter => {
+    setEventFilter (filter); // Set the selected filter
+    handleShowEvents (filter); // Fetch filtered events
   };
 
   return (
@@ -161,87 +157,23 @@ const EventManagement = () => {
       </p>
 
       <div className="event-management-page">
-        {/* Button to toggle showing/hiding the event list */}
-        <div className="toggle-event-list">
-          <h3 className="app-title">Admin Controls</h3>
-          <button onClick={handleToggleShowEvents} className="toggle-button">
-            {showEventList ? 'Hide' : 'Show'} Event List
+        {/* Show filter buttons always */}
+        <div className="event-filters">
+          <button onClick={() => onFilterSelected ('all')}>All Events</button>
+          <button onClick={() => onFilterSelected ('past')}>Past Events</button>
+          <button onClick={() => onFilterSelected ('current')}>
+            Current Events
+          </button>
+          <button onClick={() => onFilterSelected ('future')}>
+            Future Events
           </button>
         </div>
 
-        {/* Show the edit form only when isEditing is true */}
-        {isEditing &&
-          <div className="container-register">
-            <h2>Edit Event</h2>
-            <form onSubmit={handleSubmit}>
-              <label>
-                Event Title:
-                <input
-                  type="text"
-                  value={eventTitle}
-                  onChange={e => setEventTitle (e.target.value)}
-                  required
-                />
-              </label>
-              <label>
-                Event Date:
-                <input
-                  type="date"
-                  value={eventDate}
-                  onChange={e => setEventDate (e.target.value)}
-                  required
-                />
-              </label>
-              <label>
-                Event Time:
-                <input
-                  type="time"
-                  value={eventTime}
-                  onChange={e => setEventTime (e.target.value)}
-                  required
-                />
-              </label>
-              <label>
-                Address:
-                <input
-                  type="text"
-                  value={address}
-                  onChange={e => setAddress (e.target.value)}
-                  required
-                />
-              </label>
-              <label>
-                Content:
-                <textarea
-                  value={content}
-                  onChange={e => setContent (e.target.value)}
-                  required
-                />
-              </label>
-              <button type="submit">Update Event</button>
-            </form>
-            {message && <div className="message">{message}</div>}
-          </div>}
-
-        {/* Event Table */}
-        {showEventList &&
+        {/* Show the event table when a filter is selected */}
+        {eventFilter &&
           <div className="event-table">
-            <h2>All Events</h2>
+            <h2>Events</h2>
             <p>Total Events: {events.length}</p>
-
-            {/* Event Filter Buttons */}
-            <div className="event-filters">
-              <button onClick={() => setEventFilter ('all')}>All Events</button>
-              <button onClick={() => setEventFilter ('past')}>
-                Past Events
-              </button>
-              <button onClick={() => setEventFilter ('current')}>
-                Current Events
-              </button>
-              <button onClick={() => setEventFilter ('future')}>
-                Future Events
-              </button>
-            </div>
 
             <table>
               <thead>
