@@ -118,8 +118,6 @@ pub async fn update_user_handler(
 }
 
 async fn update_user(pool: &PgPool, id: i32, username: &str, email: &str) -> Result<(), Error> {
-    // TODO: why do I need to check if the email already exists
-
     sqlx::query!(
         "UPDATE users SET username = $1, email = $2 WHERE id = $3",
         username,

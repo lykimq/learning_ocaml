@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse, Responder};
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool, Row};
+use sqlx::{FromRow, PgPool};
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Event {
@@ -50,6 +50,15 @@ struct EventResponse {
     event_time: NaiveTime,
     address: String,
     content: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateEventRequest {
+    event_title: Option<String>,
+    event_day: Option<NaiveDate>,
+    event_time: Option<NaiveTime>,
+    address: Option<String>,
+    content: Option<String>,
 }
 
 pub async fn add_event(pool: web::Data<PgPool>, new_event: web::Json<NewEvent>) -> impl Responder {
@@ -132,67 +141,6 @@ pub async fn get_future_events(pool: web::Data<PgPool>) -> impl Responder {
     HttpResponse::Ok().json(events)
 }
 
-pub async fn edit_event(
-    pool: web::Data<PgPool>,
-    event_id: web::Path<i32>,
-    edited_event: web::Json<EditEvent>,
-) -> impl Responder {
-    let _event_id = event_id.into_inner();
-    let mut update_query = "UPDATE events SET".to_string();
-    let mut params = Vec::new();
-    let mut param_index = 1;
-
-    if let Some(event_title) = &edited_event.event_title {
-        update_query.push_str(&format!(" event_title = ${},", param_index));
-        params.push(event_title);
-        param_index += 1;
-    }
-    if let Some(event_day) = &edited_event.event_day {
-        update_query.push_str(&format!(" event_day = ${},", param_index));
-        params.push(event_day);
-        param_index += 1;
-    }
-    if let Some(event_time) = &edited_event.event_time {
-        update_query.push_str(&format!(" event_time = ${},", param_index));
-        params.push(event_time);
-        param_index += 1;
-    }
-    if let Some(address) = &edited_event.address {
-        update_query.push_str(&format!(" address = ${},", param_index));
-        params.push(address);
-        param_index += 1;
-    }
-    if let Some(content) = &edited_event.content {
-        update_query.push_str(&format!(" content = ${},", param_index));
-        params.push(content);
-        param_index += 1;
-    }
-
-    // Remove the trailing comma and add the WHERE clause
-    update_query.pop();
-    update_query.push_str(&format!(
-        " WHERE id = ${} RETURNING id, event_title, event_day, event_time, address, content",
-        param_index
-    ));
-
-    let result = sqlx::query(&update_query).fetch_one(pool.get_ref()).await;
-
-    match result {
-        Ok(row) => {
-            let event = EventResponse {
-                id: row.get("id"),
-                event_title: row.get("event_title"),
-                event_day: row.get("event_day"),
-                event_time: row.get("event_time"),
-                address: row.get("address"),
-                content: row.get("content"), // Include content in response
-            };
-            HttpResponse::Ok().json(event)
-        }
-        Err(err) => HttpResponse::InternalServerError().json(format!("Error: {}", err)),
-    }
-}
-
 pub async fn delete_event(pool: web::Data<PgPool>, event_id: web::Path<i32>) -> impl Responder {
     let event_id = event_id.into_inner();
     let result = sqlx::query!("DELETE FROM events WHERE id = $1", event_id)
@@ -202,5 +150,50 @@ pub async fn delete_event(pool: web::Data<PgPool>, event_id: web::Path<i32>) -> 
     match result {
         Ok(_) => HttpResponse::Ok().json("Event deleted successfully."),
         Err(err) => HttpResponse::InternalServerError().json(format!("Error: {}", err)),
+    }
+}
+
+pub async fn update_event(
+    pool: web::Data<PgPool>,
+    event_id: web::Path<i32>,
+    update_request: web::Json<UpdateEventRequest>,
+) -> impl Responder {
+    let event_id = event_id.into_inner();
+    let update_request = update_request.into_inner();
+
+    // Prepare SQL query for updating the event
+    let result = sqlx::query!(
+        r#"
+        UPDATE events
+        SET
+            event_title = COALESCE($1, event_title),
+            event_day = COALESCE($2, event_day),
+            event_time = COALESCE($3, event_time),
+            address = COALESCE($4, address),
+            content = COALESCE($5, content),
+            updated_at = NOW()
+        WHERE id = $6
+        RETURNING id, event_title, event_day, event_time, address, content
+        "#,
+        update_request.event_title,
+        update_request.event_day,
+        update_request.event_time,
+        update_request.address,
+        update_request.content,
+        event_id
+    )
+    .fetch_one(pool.get_ref())
+    .await;
+
+    match result {
+        Ok(event) => HttpResponse::Ok().json(EventResponse {
+            id: event.id,
+            event_title: event.event_title,
+            event_day: event.event_day,
+            event_time: event.event_time,
+            address: event.address,
+            content: event.content,
+        }),
+        Err(_) => HttpResponse::InternalServerError().body("Error updating event"),
     }
 }

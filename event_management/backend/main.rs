@@ -54,7 +54,7 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/events")
                     .route("/add", web::post().to(events::add_event))
-                    .route("/edit/{id}", web::put().to(events::edit_event))
+                    .route("/edit/{id}", web::put().to(events::update_event))
                     .route("/list", web::get().to(events::get_all_events))
                     .route("/past", web::get().to(events::get_past_events))
                     .route("/current", web::get().to(events::get_current_events))

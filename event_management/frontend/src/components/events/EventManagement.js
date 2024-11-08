@@ -1,6 +1,6 @@
 import React, {useState, useEffect, useCallback} from 'react';
 import {Link, useNavigate} from 'react-router-dom';
-import './EventManagement.css'; // Import the CSS file
+import './EventManagement.css';
 
 const EventManagement = () => {
   const [eventTitle, setEventTitle] = useState ('');
@@ -12,7 +12,7 @@ const EventManagement = () => {
   const [isEditing, setIsEditing] = useState (false);
   const [editEventId, setEditEventId] = useState (null);
   const [message, setMessage] = useState ('');
-  const [eventFilter, setEventFilter] = useState ('');
+  const [eventFilter, setEventFilter] = useState ('all'); // Default filter
   const [page, setPage] = useState (0);
   const pageSize = 20;
 
@@ -46,14 +46,8 @@ const EventManagement = () => {
       }
 
       setMessage ('Event updated successfully.');
-      setEventTitle ('');
-      setEventDate ('');
-      setEventTime ('');
-      setAddress ('');
-      setContent ('');
-      setIsEditing (false);
-      setEditEventId (null);
-      handleShowEvents (eventFilter);
+      resetForm ();
+      handleShowEvents (eventFilter); // Load events with the current filter
     } catch (error) {
       setMessage ('An error occurred. Please try again.');
     }
@@ -116,19 +110,31 @@ const EventManagement = () => {
 
   // Sign out
   const handleSignOut = () => {
-    // Clear login status
     localStorage.removeItem ('isLoggedIn');
     localStorage.removeItem ('username');
     localStorage.removeItem ('isAdmin');
-
     navigate ('/');
+  };
+
+  // Cancel editing
+  const cancelEdit = () => {
+    resetForm ();
+    handleShowEvents (eventFilter); // Ensure the event list is shown with the current filter
+  };
+
+  const resetForm = () => {
+    setEventTitle ('');
+    setEventDate ('');
+    setEventTime ('');
+    setAddress ('');
+    setContent ('');
+    setIsEditing (false);
+    setEditEventId (null);
   };
 
   useEffect (
     () => {
-      if (eventFilter) {
-        handleShowEvents (eventFilter);
-      }
+      handleShowEvents (eventFilter); // Fetch events whenever the filter changes
     },
     [eventFilter, handleShowEvents]
   );
@@ -140,7 +146,6 @@ const EventManagement = () => {
   // Show filter buttons
   const onFilterSelected = filter => {
     setEventFilter (filter); // Set the selected filter
-    handleShowEvents (filter); // Fetch filtered events
   };
 
   return (
@@ -169,8 +174,64 @@ const EventManagement = () => {
           </button>
         </div>
 
-        {/* Show the event table when a filter is selected */}
-        {eventFilter &&
+        {/* Show the edit form when editing an event */}
+        {isEditing &&
+          <div className="edit-event-form">
+            <h2>Edit Event</h2>
+            <form onSubmit={handleSubmit}>
+              <label>
+                Event Title:
+                <input
+                  type="text"
+                  value={eventTitle}
+                  onChange={e => setEventTitle (e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Event Date:
+                <input
+                  type="date"
+                  value={eventDate}
+                  onChange={e => setEventDate (e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Event Time:
+                <input
+                  type="time"
+                  value={eventTime}
+                  onChange={e => setEventTime (e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Address:
+                <input
+                  type="text"
+                  value={address}
+                  onChange={e => setAddress (e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Content:
+                <textarea
+                  value={content}
+                  onChange={e => setContent (e.target.value)}
+                  required
+                />
+              </label>
+              <button type="submit">Update Event</button>
+              <button type="button" onClick={cancelEdit}>Cancel</button>
+            </form>
+            {message && <div className="message">{message}</div>}
+          </div>}
+
+        {/* Show the event table when not editing */}
+        {!isEditing &&
+          eventFilter &&
           <div className="event-table">
             <h2>Events</h2>
             <p>Total Events: {events.length}</p>

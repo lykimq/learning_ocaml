@@ -204,3 +204,58 @@
     font-weight: bold;
     text-align: center;
 }
+
+
+/* Event Edit Registration Form */
+.edit-event-form {
+    max-width: 450px; /* Slightly wider form for better usability */
+    margin: 0 auto; /* Center the container */
+    padding: 50px 40px; /* Increased padding for better spacing */
+    background-color: #ffffff; /* White background for contrast */
+    border-radius: 12px; /* Rounded corners */
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1); /* Deeper shadow for more emphasis */
+    margin-bottom: 20px;
+}
+
+/* Form Heading */
+.edit-event-form h2 {
+    font-size: 2em; /* Larger heading */
+    margin-bottom: 20px;
+    color: #333; /* Darker color for visibility */
+}
+
+/* Form Labels */
+.edit-event-form label {
+    font-size: 1.1em;
+    display: block;
+    margin-bottom: 12px;
+    color: #555; /* Softened color for labels */
+}
+
+/* Form Inputs and Textarea */
+.edit-event-form input, .edit-event-form textarea {
+    width: 100%;
+    padding: 12px;  /* Increased padding for consistency */
+    font-size: 1em;
+    margin-bottom: 20px;
+    border-radius: 8px; /* Rounded corners for inputs */
+    border: 1px solid #ccc;
+    box-sizing: border-box;  /* Ensures padding and width are included in element size */
+    background-color: #f9f9f9; /* Light background color for inputs */
+}
+
+/* Submit Button */
+.edit-event-form button {
+    padding: 12px 25px;
+    background-color: #007bff; /* Blue color for the button */
+    color: white;
+    font-size: 1.1em;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+}
+
+.edit-event-form button:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
