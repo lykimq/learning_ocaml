@@ -7,6 +7,8 @@ import Dashboard from './components/auth/Dashboard';
 import SignUp from './components/auth/SignUp';
 import UserList from './components/users/UserList';
 import EventDashboard from './components/events/EventDashboard';
+import EventManagement from './components/events/EventManagement';
+import EventRegister from './components/events/EventRegister';
 
 const App = () => {
   return (
@@ -26,6 +28,13 @@ const App = () => {
 
         {/* Event */}
         <Route path="/events/dashboard" element={<EventDashboard />} />
+        <Route path="/events/add" element={<EventRegister />} />
+        <Route path="/events/list" element={<EventManagement />} />
+        <Route path="/events/past" element={<EventManagement />} />
+        <Route path="/events/current" element={<EventManagement />} />
+        <Route path="/events/future" element={<EventManagement />} />
+        <Route path="/events/edit/:id" element={<EventManagement />} />
+        <Route path="/events/delete/:id" element={<EventManagement />} />
         {/* Add other routes as needed */}
       </Routes>
     </Router>

@@ -1,0 +1,206 @@
+/* Main Container for Event Management Page */
+.dashboard-container {
+    text-align: center;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-width: 1000px;  /* Adjusted max-width to allow more space */
+    margin: auto;
+}
+
+/* App Title and Description */
+.app-title {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.app-description {
+    font-size: 1.2em;
+    margin-bottom: 30px;
+}
+
+/* Event Management Form Section */
+.container-register {
+    max-width: 400px; /* Set a max width for the container */
+    margin: 0 auto; /* Center the container */
+    padding: 40px; /* Increase padding for better spacing */
+    background-color: #f9f9f9; /* Light background color */
+    border-radius: 10px; /* Rounded corners for the container */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); /* Shadow for depth */
+    margin-bottom: 20px;
+}
+
+.container-register h2 {
+    font-size: 1.8em;
+    margin-bottom: 20px;
+}
+
+.container-register label {
+    font-size: 1.1em;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.container-register input, .container-register textarea {
+    width: 100%;
+    padding: 12px;  /* Increased padding for consistency */
+    font-size: 1em;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;  /* Ensures padding and width are included in element size */
+}
+
+.container-register button {
+    padding: 12px 25px;
+    background-color: #007bff;
+    color: white;
+    font-size: 1.1em;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+}
+
+.container-register button:hover {
+    background-color: #0056b3;
+}
+
+.container-register .message {
+    margin-top: 15px;
+    font-size: 1.1em;
+    color: #007bff;
+}
+
+/* Event Table Section */
+.container-table {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;  /* Ensure table section takes full width */
+    max-width: 1000px; /* Prevent the table section from stretching too wide */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.container-table .toggle-event-list {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.container-table .toggle-button {
+    padding: 10px 20px;
+    background-color: #28a745;
+    color: white;
+    font-size: 1em;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.container-table .toggle-button:hover {
+    background-color: #218838;
+}
+
+/* Filter Buttons for Events */
+/* Filter Buttons for Events */
+.event-filters {
+    margin-bottom: 20px;
+    display: flex; /* Flexbox to arrange buttons in a row */
+    justify-content: center; /* Center buttons horizontally */
+}
+
+.event-filters button {
+    padding: 8px 18px; /* Padding to match the sign-out button's padding */
+    margin: 0 10px; /* Space between buttons */
+    background-color: #17a2b8;
+    color: white;
+    font-size: 1em;
+    border-radius: 5px;
+    cursor: pointer;
+    min-width: 100px; /* Ensure buttons don't get too small */
+    text-align: center; /* Align text properly */
+}
+
+.event-filters button:hover {
+    background-color: #117a8b;
+}
+
+.event-filters button:focus {
+    outline: none; /* Optional: Remove focus outline for a cleaner look */
+}
+/* Event Table Styling */
+.event-table table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    table-layout: fixed; /* Prevent table columns from stretching too wide */
+}
+
+.event-table th, .event-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border: 1px solid #ddd;
+    word-wrap: break-word; /* Ensure text wraps within the table */
+}
+
+.event-table th {
+    background-color: #007bff;
+    color: white;
+}
+
+.event-table td {
+    background-color: #f9f9f9;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.pagination-button {
+    padding: 8px 15px;
+    background-color: #007bff;
+    color: white;
+    font-size: 1em;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 0 5px;
+}
+
+.pagination-button:hover {
+    background-color: #0056b3;
+}
+
+.pagination span {
+    font-size: 1.1em;
+    margin: 0 10px;
+}
+
+/* Sign-out Button */
+.sign-out-button {
+    padding: 8px 18px;
+    height: auto;
+    width: auto;
+    margin-right: 10px;
+    min-width: 80px;
+    background-color: #dc3545;
+    color: white;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.sign-out-button:hover {
+    background-color: #c82333;
+}
+
+/* Ensuring uniform button sizes */
+.btn, .sign-out-button {
+    font-weight: bold;
+    text-align: center;
+}

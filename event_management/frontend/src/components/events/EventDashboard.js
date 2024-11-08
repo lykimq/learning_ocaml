@@ -45,45 +45,6 @@ const EventDashboard = () => {
         <Link to="/events/list" className="btn">Show All Events</Link>
       </div>
 
-      <div className="section event-section">
-        <h2>Past Events</h2>
-        <p>
-          View all events that have already occurred. This page will show the history of past events.
-        </p>
-        <Link to="/events/past" className="btn">Past Events</Link>
-      </div>
-
-      <div className="section event-section">
-        <h2>Current Events</h2>
-        <p>
-          Check out the events that are currently happening. You can manage active events from here.
-        </p>
-        <Link to="/events/current" className="btn">Current Events</Link>
-      </div>
-
-      <div className="section event-section">
-        <h2>Future Events</h2>
-        <p>
-          Browse upcoming events and plan for the future. You can manage future events here.
-        </p>
-        <Link to="/events/future" className="btn">Future Events</Link>
-      </div>
-
-      <div className="section event-section">
-        <h2>Edit Event</h2>
-        <p>
-          Edit the details of existing events, such as title, date, and location.
-        </p>
-        <Link to="/events/edit" className="btn">Edit Event</Link>
-      </div>
-
-      <div className="section event-section">
-        <h2>Delete Event</h2>
-        <p>
-          Remove an event from the system by clicking below. Be cautious as this action is irreversible.
-        </p>
-        <Link to="/events/delete" className="btn">Delete Event</Link>
-      </div>
       <p>
         <Link to="/">Back to Dashboard</Link> {/* Link to home */}
       </p>

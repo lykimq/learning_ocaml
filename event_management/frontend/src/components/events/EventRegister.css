@@ -1,0 +1,117 @@
+/* Main Container for Event Management Page */
+.dashboard-container {
+    text-align: center;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 12px; /* Softened the border radius */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Slightly deeper shadow for more depth */
+    max-width: 1000px; /* Adjusted max-width to allow more space */
+    margin: auto;
+    margin-top: 30px; /* Added margin-top to create some space at the top */
+}
+
+/* App Title and Description */
+.app-title {
+    font-size: 2.8em; /* Increased font size for better readability */
+    margin-bottom: 15px; /* Adjusted margin for spacing */
+    color: #333; /* Darker color for the title */
+    font-weight: 600; /* Slightly bolder font for emphasis */
+}
+
+.app-description {
+    font-size: 1.3em; /* Slightly bigger for better readability */
+    margin-bottom: 30px;
+    color: #777; /* Softened the color for the description */
+}
+
+/* Sign Out Button */
+.sign-out-button {
+    padding: 10px 20px;
+    background-color: #ff4d4d; /* Red color for the sign-out button */
+    color: white;
+    font-size: 1.1em;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.sign-out-button:hover {
+    background-color: #cc0000; /* Darker red on hover */
+}
+
+/* Event Registration Form */
+.container-register {
+    max-width: 450px; /* Slightly wider form for better usability */
+    margin: 0 auto; /* Center the container */
+    padding: 50px 40px; /* Increased padding for better spacing */
+    background-color: #ffffff; /* White background for contrast */
+    border-radius: 12px; /* Rounded corners */
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1); /* Deeper shadow for more emphasis */
+    margin-bottom: 20px;
+}
+
+/* Form Heading */
+.container-register h2 {
+    font-size: 2em; /* Larger heading */
+    margin-bottom: 20px;
+    color: #333; /* Darker color for visibility */
+}
+
+/* Form Labels */
+.container-register label {
+    font-size: 1.1em;
+    display: block;
+    margin-bottom: 12px;
+    color: #555; /* Softened color for labels */
+}
+
+/* Form Inputs and Textarea */
+.container-register input, .container-register textarea {
+    width: 100%;
+    padding: 12px;  /* Increased padding for consistency */
+    font-size: 1em;
+    margin-bottom: 20px;
+    border-radius: 8px; /* Rounded corners for inputs */
+    border: 1px solid #ccc;
+    box-sizing: border-box;  /* Ensures padding and width are included in element size */
+    background-color: #f9f9f9; /* Light background color for inputs */
+}
+
+/* Submit Button */
+.container-register button {
+    padding: 12px 25px;
+    background-color: #007bff; /* Blue color for the button */
+    color: white;
+    font-size: 1.1em;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+}
+
+.container-register button:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
+
+/* Success/Error Message */
+.container-register .message {
+    margin-top: 20px;
+    font-size: 1.1em;
+    color: #007bff;
+}
+
+/* Link back to Dashboard */
+.container-register p {
+    margin-top: 20px;
+    font-size: 1.1em;
+}
+
+.container-register p a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.container-register p a:hover {
+    text-decoration: underline;
+}
