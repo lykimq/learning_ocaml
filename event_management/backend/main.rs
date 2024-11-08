@@ -7,6 +7,7 @@ use dotenv::dotenv;
 use sqlx::PgPool;
 use std::env;
 
+mod events;
 mod login;
 mod users;
 
@@ -49,6 +50,18 @@ async fn main() -> std::io::Result<()> {
                     .route("/{id}", web::delete().to(users::delete_user_handler))
                     .route("/admin/list", web::get().to(users::get_all_users_handler)),
             )
+            // Events
+            .service(
+                web::scope("/events")
+                    .route("/add", web::post().to(events::add_event))
+                    .route("/edit/{id}", web::put().to(events::edit_event))
+                    .route("/list", web::get().to(events::get_all_events))
+                    .route("/pass", web::get().to(events::get_past_events))
+                    .route("/current", web::get().to(events::get_current_events))
+                    .route("/future", web::get().to(events::get_future_events))
+                    .route("/{id}", web::delete().to(events::delete_event)),
+            )
+
         // Other routes
     })
     .bind(format!("127.0.0.1:{}", backend_port))? // Use the backend port from .env

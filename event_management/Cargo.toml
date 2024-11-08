@@ -10,11 +10,13 @@ actix-web = "4.0"
 actix-cors = "0.7"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1", features = ["full"] }
+rocket = "0.5.0-rc.1"
+tokio = { version = "1.41.1", features = ["full"] }
 dotenv = "0.15"
 idna = "1.0.3"
-sqlx = { version = "0.6", features = ["runtime-actix-native-tls", "postgres", "macros"] }
+sqlx = { version = "0.6", features = ["runtime-actix-native-tls", "postgres", "macros", "time", "chrono"] }
 bcrypt="0.15.1"
+chrono = { version = "0.4", features = ["serde"] }
 
 [[bin]]
 name= "event_management"

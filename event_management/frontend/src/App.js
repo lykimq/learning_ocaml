@@ -1,14 +1,14 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'; // Ensure Navigate is imported
+import {BrowserRouter as Router, Routes, Route} from 'react-router-dom'; // Ensure Navigate is imported
 import Login from './components/auth/Login';
 import UserRegistration from './components/users/UserRegistration';
 import Home from './components/Home';
 import Dashboard from './components/auth/Dashboard';
 import SignUp from './components/auth/SignUp';
 import UserList from './components/users/UserList';
+import EventDashboard from './components/events/EventDashboard';
 
 const App = () => {
-
   return (
     <Router>
       <Routes>
@@ -24,6 +24,8 @@ const App = () => {
         {/* Users: admin */}
         <Route path="/users/admin/register" element={<UserList />} />
 
+        {/* Event */}
+        <Route path="/events/dashboard" element={<EventDashboard />} />
         {/* Add other routes as needed */}
       </Routes>
     </Router>

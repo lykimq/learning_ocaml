@@ -1,0 +1,80 @@
+/* Main Container for Event Dashboard */
+.event-dashboard-container {
+    text-align: center;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-width: 700px;  /* Adjusted max-width */
+    margin: auto;
+}
+
+/* Section Styling for each event management option */
+.event-dashboard-container .section {
+    margin-bottom: 30px;
+}
+
+.app-title {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.app-description {
+    font-size: 1.2em;
+    margin-bottom: 30px;
+}
+
+
+
+/* Styling for Buttons within Event Dashboard */
+.event-dashboard-container .btn {
+    display: inline-block;
+    padding: 12px 25px; /* Adjusted padding for larger buttons */
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    margin-top: 10px;
+    font-size: 1.1em;  /* Adjusted font size */
+}
+
+.event-dashboard-container .btn:hover {
+    background-color: #0056b3;
+}
+
+/* Event Section Title (h2) */
+.event-dashboard-container .section h2 {
+    font-size: 1.8em;
+    margin-bottom: 15px;
+}
+
+/* Event Section Description (p) */
+.event-dashboard-container .section p {
+    font-size: 1.1em;
+    margin-bottom: 20px;
+}
+
+/* Styling for Sign-out Button */
+.sign-out-button {
+    padding: 8px 18px; /* Adjusted padding for comfortable space */
+    height: auto;
+    width: auto;
+    margin-right: 10px;
+    min-width: 80px; /* Adjusted minimum width */
+    background-color: #dc3545;
+    color: white;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.sign-out-button:hover {
+    background-color: #c82333;  /* Darker shade on hover */
+}
+
+/* Ensuring uniform button sizes */
+.btn, .sign-out-button {
+    font-weight: bold;
+    text-align: center;
+}
+

@@ -36,3 +36,16 @@
 .dashboard-container .btn:hover {
     background-color: #0056b3;
 }
+
+.sign-out-button {
+    padding: 5px 15px; /* Add enough padding to ensure comfortable space around text */
+    height: auto; /* Allow height to adjust */
+    width: auto; /* Allow width to fit text */
+    margin-right: 10px;
+    min-width: 60px; /* Set a minimum width to prevent buttons from becoming too small */
+
+}
+
+.sign-out-btn:hover {
+    background-color: #0056b3; /* Darker shade on hover */
+}
