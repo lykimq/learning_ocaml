@@ -45,6 +45,16 @@ const EventDashboard = () => {
         <Link to="/events/list" className="btn">Show All Events</Link>
       </div>
 
+      <div className="section event-section">
+        <h2>Send Event Notifications</h2>
+        <p>
+          Here, you can send event details to users via Google Calendar, email, or other platforms. This feature will be set up soon.
+        </p>
+        <Link to="/events/notifications" className="btn">
+          Send Notifications
+        </Link>
+      </div>
+
       <p>
         <Link to="/">Back to Dashboard</Link> {/* Link to home */}
       </p>

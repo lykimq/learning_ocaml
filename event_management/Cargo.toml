@@ -6,6 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+google-api-auth = "0.2"
+google-calendar3 = "6.0.0"
+oauth2 = "4.0"               # for OAuth2 support
 actix-web = "4.0"
 actix-cors = "0.7"
 serde = { version = "1.0", features = ["derive"] }
@@ -17,6 +20,7 @@ idna = "1.0.3"
 sqlx = { version = "0.6", features = ["runtime-actix-native-tls", "postgres", "macros", "time", "chrono"] }
 bcrypt="0.15.1"
 chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.12.9", features = ["json"] }
 
 [[bin]]
 name= "event_management"

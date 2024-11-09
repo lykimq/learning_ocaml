@@ -8,6 +8,8 @@ pub struct User {
     pub id: i32,
     pub username: String,
     pub email: String,
+    pub google_access_token: Option<String>, // New field for access token
+    pub google_refresh_token: Option<String>,
 }
 
 #[derive(sqlx::FromRow, Serialize)]
@@ -95,6 +97,18 @@ pub async fn get_all_users_handler(
         .unwrap_or_else(|_| Vec::new());
 
     HttpResponse::Ok().json(users)
+}
+
+// Helper to fetch user details by ID, including Google tokens
+pub async fn get_user_from_db(pool: &PgPool, user_id: i32) -> Result<User, String> {
+    sqlx::query_as!(
+        User,
+        "SELECT id, username, email, google_access_token, google_refresh_token FROM users WHERE id = $1",
+        user_id
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| format!("Error fetching user: {}", e))
 }
 
 // Handler to update user information

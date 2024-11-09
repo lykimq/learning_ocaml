@@ -9,6 +9,7 @@ import UserList from './components/users/UserList';
 import EventDashboard from './components/events/EventDashboard';
 import EventManagement from './components/events/EventManagement';
 import EventRegister from './components/events/EventRegister';
+import EventNotification from './components/events/EventNotification';
 
 const App = () => {
   return (
@@ -35,6 +36,8 @@ const App = () => {
         <Route path="/events/future" element={<EventManagement />} />
         <Route path="/events/edit/:id" element={<EventManagement />} />
         <Route path="/events/delete/:id" element={<EventManagement />} />
+        <Route path="/events/notifications" element={<EventNotification />} />
+
         {/* Add other routes as needed */}
       </Routes>
     </Router>

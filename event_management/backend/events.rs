@@ -3,6 +3,9 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 
+use crate::google_calendar::GoogleCalendar;
+use crate::users::{get_user_from_db, User}; // Adjust if `get_user_from_db` is in a different module
+
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Event {
     pub id: i32,
@@ -33,7 +36,7 @@ pub struct EditEvent {
     pub content: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 struct EventRecord {
     id: i32,
     event_title: String,
@@ -141,6 +144,35 @@ pub async fn get_future_events(pool: web::Data<PgPool>) -> impl Responder {
     HttpResponse::Ok().json(events)
 }
 
+pub async fn get_current_future_events(pool: web::Data<PgPool>) -> impl Responder {
+    let current_date = chrono::Utc::now().date_naive();
+
+    // Get current events
+    let current_events = sqlx::query_as!(
+        EventRecord,
+        "SELECT id, event_title, event_day, event_time, address FROM events WHERE event_day = $1 ORDER BY event_time DESC",
+        current_date
+    )
+    .fetch_all(pool.get_ref())
+    .await
+    .unwrap_or_else(|_| Vec::new());
+
+    // Get future events
+    let future_events = sqlx::query_as!(
+        EventRecord,
+        "SELECT id, event_title, event_day, event_time, address FROM events WHERE event_day > $1 ORDER BY event_day ASC, event_time ASC",
+        current_date
+    )
+    .fetch_all(pool.get_ref())
+    .await
+    .unwrap_or_else(|_| Vec::new());
+
+    // Combine both current and future events into one list
+    let combined_events = [current_events, future_events].concat();
+
+    HttpResponse::Ok().json(combined_events)
+}
+
 pub async fn delete_event(pool: web::Data<PgPool>, event_id: web::Path<i32>) -> impl Responder {
     let event_id = event_id.into_inner();
     let result = sqlx::query!("DELETE FROM events WHERE id = $1", event_id)
@@ -195,5 +227,51 @@ pub async fn update_event(
             content: event.content,
         }),
         Err(_) => HttpResponse::InternalServerError().body("Error updating event"),
+    }
+}
+
+// Send event to google calendar handler
+pub async fn send_event_to_google_calendar_handler(
+    pool: web::Data<PgPool>,
+    event_id: web::Path<i32>,
+    user_email: web::Query<String>,
+) -> impl Responder {
+    let event = sqlx::query_as!(
+         Event,
+        "SELECT id, event_title, event_day, event_time, address, content, created_at, updated_at FROM events WHERE id = $1",
+        event_id.into_inner()
+    )
+    .fetch_one(pool.get_ref())
+    .await;
+
+    match event {
+        Ok(event) => {
+            let user_email_str = user_email.into_inner();
+
+            let user = sqlx::query_as!(
+                User,
+                "SELECT id, username, email, google_access_token, google_refresh_token FROM users WHERE email = $1",
+                user_email_str
+            )
+            .fetch_one(pool.get_ref())
+            .await;
+
+            match user {
+                Ok(user) => {
+                    // Initialize GoogleCalendar instance with the pool
+                    let google_calendar = GoogleCalendar::new(pool.get_ref().clone());
+                    // Send event to Google Calendar
+                    match google_calendar
+                        .send_event_to_google_calendar(user.id, &event)
+                        .await
+                    {
+                        Ok(_) => HttpResponse::Ok().json("Event sent to Google Calendar."),
+                        Err(e) => HttpResponse::InternalServerError().json(format!("Error: {}", e)),
+                    }
+                }
+                Err(e) => HttpResponse::NotFound().json(format!("User not found: {}", e)),
+            }
+        }
+        Err(_) => HttpResponse::NotFound().json("Event not found."),
     }
 }

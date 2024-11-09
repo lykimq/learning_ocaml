@@ -8,6 +8,7 @@ use sqlx::PgPool;
 use std::env;
 
 mod events;
+mod google_calendar;
 mod login;
 mod users;
 
@@ -24,11 +25,13 @@ async fn main() -> std::io::Result<()> {
 
     // Connect to the PostgreSQL database
     let pool = PgPool::connect(&database_url).await.unwrap();
+    let google_calendar_data = google_calendar::google_calendar_data(pool.clone());
 
     // Create the HTTP server
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(pool.clone())) // Clone the pool for each instance
+            .app_data(google_calendar_data.clone()) // Pass the GoogleCalendar struct
             .wrap(
                 Cors::default()
                     .allowed_origin(&format!("http://localhost:{}", frontend_port))
@@ -59,7 +62,15 @@ async fn main() -> std::io::Result<()> {
                     .route("/past", web::get().to(events::get_past_events))
                     .route("/current", web::get().to(events::get_current_events))
                     .route("/future", web::get().to(events::get_future_events))
-                    .route("/{id}", web::delete().to(events::delete_event)),
+                    .route(
+                        "/current_future",
+                        web::get().to(events::get_current_future_events),
+                    )
+                    .route("/{id}", web::delete().to(events::delete_event))
+                    .route(
+                        "/sync_google_calendar/{user_id}",
+                        web::post().to(events::send_event_to_google_calendar_handler),
+                    ),
             )
 
         // Other routes

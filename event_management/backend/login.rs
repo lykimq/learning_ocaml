@@ -3,6 +3,8 @@ use bcrypt::{hash, verify, DEFAULT_COST};
 use serde::{Deserialize, Serialize};
 use sqlx::{Error, PgPool};
 
+use crate::users::User;
+
 // Register
 
 #[derive(sqlx::FromRow, Serialize)]
