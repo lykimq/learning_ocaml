@@ -97,50 +97,48 @@ const Stack = createStackNavigator ();
 
 export default function AdminNavigator () {
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={({route}) => ({
-          tabBarIcon: ({color, size}) => {
-            let iconName;
-            switch (route.name) {
-              case 'Home':
-                iconName = 'home';
-                break;
-              case 'Media':
-                iconName = 'play-circle-outline';
-                break;
-              case 'Events':
-                iconName = 'event';
-                break;
-              case 'HomeGroups':
-                iconName = 'handshake';
-                break;
-              case 'Serving':
-                iconName = 'volunteer-activism';
-                break;
-              case 'Giving':
-                iconName = 'attach-money';
-                break;
-              case 'Users':
-                iconName = 'people';
-                break;
-            }
-            return <MaterialIcons name={iconName} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: '#4A90E2',
-          tabBarInactiveTintColor: 'gray',
-          tabBarLabel: () => null,
-        })}
-      >
-        {/* Nesting Stack Navigators for each Tab */}
-        <Tab.Screen name="Home" component={DashBoardStack} />
-        <Tab.Screen name="Media" component={MediaStack} />
-        <Tab.Screen name="Events" component={EventsStack} />
-        <Tab.Screen name="HomeGroups" component={HomeGroupStack} />
-        <Tab.Screen name="Serving" component={ServingStack} />
-        <Tab.Screen name="Giving" component={GivingStack} />
-        <Tab.Screen name="Users" component={UsersStack} />
-      </Tab.Navigator>
-    </NavigationContainer>
+    <Tab.Navigator
+      screenOptions={({route}) => ({
+        tabBarIcon: ({color, size}) => {
+          let iconName;
+          switch (route.name) {
+            case 'Home':
+              iconName = 'home';
+              break;
+            case 'Media':
+              iconName = 'play-circle-outline';
+              break;
+            case 'Events':
+              iconName = 'event';
+              break;
+            case 'HomeGroups':
+              iconName = 'handshake';
+              break;
+            case 'Serving':
+              iconName = 'volunteer-activism';
+              break;
+            case 'Giving':
+              iconName = 'attach-money';
+              break;
+            case 'Users':
+              iconName = 'people';
+              break;
+          }
+          return <MaterialIcons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#4A90E2',
+        tabBarInactiveTintColor: 'gray',
+        tabBarLabel: () => null,
+      })}
+    >
+      {/* Nesting Stack Navigators for each Tab */}
+      <Tab.Screen name="Home" component={DashBoardStack} />
+      <Tab.Screen name="Media" component={MediaStack} />
+      <Tab.Screen name="Events" component={EventsStack} />
+      <Tab.Screen name="HomeGroups" component={HomeGroupStack} />
+      <Tab.Screen name="Serving" component={ServingStack} />
+      <Tab.Screen name="Giving" component={GivingStack} />
+      <Tab.Screen name="Users" component={UsersStack} />
+    </Tab.Navigator>
   );
 }

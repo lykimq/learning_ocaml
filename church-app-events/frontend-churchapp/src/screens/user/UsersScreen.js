@@ -1,10 +1,10 @@
 import React from 'react';
 import {View, Text, StyleSheet} from 'react-native';
 
-export default function MediaScreen () {
+export default function UsersScreen () {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Media</Text>
+      <Text style={styles.title}>Users Screen</Text>
       <Text style={styles.title}>Upcoming</Text>
     </View>
   );
