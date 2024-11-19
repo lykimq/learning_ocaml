@@ -20,6 +20,10 @@ npm install formik yup
 npm install react-native-vector-icons
 // React Native Image Zoom (for zoomable images)
 npm install react-native-image-zoom-viewer
+// React Native Button Tabs
+npm install @react-navigation/buttom-tabs
+// React Native Card-Based UI
+ npm install react-native-paper
 ```
 
 ## Expo CLI
@@ -33,7 +37,9 @@ npx expo start
 npx expo prebuild
 // This step is needed to not raise the RNGoogleSignIn
 npx expo prebuild --clean
-// Start emulator for android/iso
+// Start with clean up
+npx expo start --clear
+// Build/Prebuild emulator for android/iso
 npx expo run:android
 ```
 

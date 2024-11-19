@@ -1,18 +1,33 @@
+// HeaderBanner.js
 import React from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
+import {View, Text, StyleSheet, ImageBackground} from 'react-native';
 
-// A simple header component that displays the app's title or user profile
-const Header = ({title, onPressProfile}) => {
+const Header = () => {
   return (
-    <View style={{padding: 10, backgroundColor: '#6200EE'}}>
-      <Text style={{fontSize: 20, color: 'white'}}>{title}</Text>
-      <TouchableOpacity onPress={onPressProfile}>
-        <Text style={{color: 'white', textDecorationLine: 'underline'}}>
-          Profile
-        </Text>
-      </TouchableOpacity>
-    </View>
+    <ImageBackground
+      source={{uri: '../../asserts/pics/header.jpg'}}
+      style={styles.banner}
+    >
+      <Text style={styles.bannerText}>Welcome to the Admin Dashboard</Text>
+    </ImageBackground>
   );
 };
+
+const styles = StyleSheet.create ({
+  banner: {
+    width: '100%',
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bannerText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: {width: 1, height: 1},
+    textShadowRadius: 2,
+  },
+});
 
 export default Header;

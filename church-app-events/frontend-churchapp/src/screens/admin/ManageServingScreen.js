@@ -1,44 +1,23 @@
-import React, {useEffect, useState} from 'react';
-import {View, Button, FlatList} from 'react-native';
-import {
-  getServingOpportunities,
-  deleteServing,
-} from '../../services/servingService';
-import ServingCard from '../../components/ServingCard';
+import React from 'react';
+import {View, Text, StyleSheet} from 'react-native';
 
-// Allows admin to manage serving (view, delete)
-const ManageServingScreen = () => {
-  const [serving, setServing] = useState ([]);
-
-  useEffect (() => {
-    fetchServing ();
-  }, []);
-
-  const fetchServing = async () => {
-    const data = await getServingOpportunities ();
-    setServing (data);
-  };
-
-  const handleDelete = servingId => {
-    deleteServing (servingId);
-    fetchServing ();
-  };
-
+export default function ManageServingScreen () {
   return (
-    <View>
-      <Button
-        title="Create Serving Opportunity"
-        onPress={() => navigate ('CreateServing')}
-      />
-      <FlatList
-        data={serving}
-        keyExtractor={item => item.id.toString ()}
-        renderItem={({item}) => (
-          <ServingCard serving={item} onDelete={() => handleDelete (item.id)} />
-        )}
-      />
+    <View style={styles.container}>
+      <Text style={styles.title}>Serving</Text>
+      <Text style={styles.title}>Upcoming</Text>
     </View>
   );
-};
+}
 
-export default ManageServingScreen;
+const styles = StyleSheet.create ({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+});

@@ -1,38 +1,23 @@
-import React, {useEffect, useState} from 'react';
-import {View, Button, FlatList} from 'react-native';
-import {getEvents, deleteEvent} from '../../services/eventService';
-import EventCard from '../../components/EventCard';
+import React from 'react';
+import {View, Text, StyleSheet} from 'react-native';
 
-// Admin manages events (view, delete)
-const ManageEventsScreen = () => {
-  const [events, setEvents] = useState ([]);
-
-  useEffect (() => {
-    fetchEvents ();
-  }, []);
-
-  const fetchEvents = async () => {
-    const data = await getEvents ();
-    setEvents (data);
-  };
-
-  const handleDelete = eventId => {
-    deleteEvent (eventId);
-    fetchEvents ();
-  };
-
+export default function ManageEventsScreen () {
   return (
-    <View>
-      <Button title="Create Event" onPress={() => navigate ('CreateEvent')} />
-      <FlatList
-        data={events}
-        keyExtractor={item => item.id.toString ()}
-        renderItem={({item}) => (
-          <EventCard event={item} onDelete={() => handleDelete (item.id)} />
-        )}
-      />
+    <View style={styles.container}>
+      <Text style={styles.title}>Event Card</Text>
+      <Text style={styles.title}>Upcoming</Text>
     </View>
   );
-};
+}
 
-export default ManageEventsScreen;
+const styles = StyleSheet.create ({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+});

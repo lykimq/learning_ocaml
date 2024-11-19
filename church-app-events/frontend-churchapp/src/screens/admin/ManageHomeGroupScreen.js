@@ -1,44 +1,23 @@
-import React, {useEffect, useState} from 'react';
-import {View, Button, FlatList} from 'react-native';
-import {getHomeGroups, deleteHomeGroup} from '../../services/homeGroupService';
-import HomeGroupCard from '../../components/HomeGroupCard';
+import React from 'react';
+import {View, Text, StyleSheet} from 'react-native';
 
-// Allow admin to manage HomeGroups (view, delete)
-const ManageHomeGroupScreen = () => {
-  const [homeGroups, setHomeGroups] = useState ([]);
-
-  useEffect (() => {
-    fetchHomeGroups ();
-  }, []);
-
-  const fetchHomeGroups = async () => {
-    const data = await getHomeGroups ();
-    setHomeGroups (data);
-  };
-
-  const handleDelete = groupId => {
-    deleteHomeGroup (groupId);
-    fetchHomeGroups ();
-  };
-
+export default function ManageHomeGroupScreen () {
   return (
-    <View>
-      <Button
-        title="Create HomeGroup"
-        onPress={() => navigate ('CreateHomeGroup')}
-      />
-      <FlatList
-        data={homeGroups}
-        keyExtractor={item => item.id.toString ()}
-        renderItem={({item}) => (
-          <HomeGroupCard
-            homeGroup={item}
-            onDelete={() => handleDelete (item.id)}
-          />
-        )}
-      />
+    <View style={styles.container}>
+      <Text style={styles.title}>Home Group Screen</Text>
+      <Text style={styles.title}>Upcoming</Text>
     </View>
   );
-};
+}
 
-export default ManageHomeGroupScreen;
+const styles = StyleSheet.create ({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+});
