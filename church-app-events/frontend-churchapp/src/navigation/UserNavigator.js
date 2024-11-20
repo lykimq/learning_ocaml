@@ -11,77 +11,7 @@ import ServingScreen from '../screens/user/ServingScreen';
 import EventsScreen from '../screens/user/EventsScreen';
 import UsersScreen from '../screens/user/UsersScreen';
 
-// Stack Navigator for the DashBoardScreen
-function HomeStack () {
-  return (
-    <Stack.Navigator initialRouteName="HomeScreen">
-      <Stack.Screen name="HomeScreen" component={HomeScreen} />
-      <Stack.Screen name="MediaScreen" component={MediaScreen} />
-      <Stack.Screen name="EventsScreen" component={EventsScreen} />
-      <Stack.Screen name="HomeGroupScreen" component={HomeGroupScreen} />
-      <Stack.Screen name="ServingScreen" component={ServingScreen} />
-      <Stack.Screen name="GivingScreen" component={GivingScreen} />
-      <Stack.Screen name="UsersScreen" component={UsersScreen} />
-    </Stack.Navigator>
-  );
-}
-
-// Stack Navigator for Media
-function MediaStack () {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="MediaScreen" component={MediaScreen} />
-    </Stack.Navigator>
-  );
-}
-
-// Stack Navigator for Events
-function EventsStack () {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="EventsScreen" component={EventsScreen} />
-    </Stack.Navigator>
-  );
-}
-
-// Stack Navigator for Home Groups
-function HomeGroupStack () {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="HomeGroupScreen" component={HomeGroupScreen} />
-    </Stack.Navigator>
-  );
-}
-
-// Stack Navigator for Serving
-function ServingStack () {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="ServingScreen" component={ServingScreen} />
-    </Stack.Navigator>
-  );
-}
-
-// Stack Navigator for Giving
-function GivingStack () {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="GivingScreen" component={GivingScreen} />
-    </Stack.Navigator>
-  );
-}
-
-// Stack Navigator for Users
-function UsersStack () {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="UsersScreen" component={UsersScreen} />
-    </Stack.Navigator>
-  );
-}
-
 const Tab = createBottomTabNavigator ();
-const Stack = createStackNavigator ();
 
 export default function UserNavigator () {
   return (
@@ -120,13 +50,14 @@ export default function UserNavigator () {
       })}
     >
       {/* Nesting Stack Navigators for each Tab */}
-      <Tab.Screen name="Home" component={HomeStack} />
-      <Tab.Screen name="Media" component={MediaStack} />
-      <Tab.Screen name="Events" component={EventsStack} />
-      <Tab.Screen name="HomeGroups" component={HomeGroupStack} />
-      <Tab.Screen name="Serving" component={ServingStack} />
-      <Tab.Screen name="Giving" component={GivingStack} />
-      <Tab.Screen name="Users" component={UsersStack} />
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Media" component={MediaScreen} />
+      <Tab.Screen name="Events" component={EventsScreen} />
+      <Tab.Screen name="HomeGroups" component={HomeGroupScreen} />
+      <Tab.Screen name="Serving" component={ServingScreen} />
+      <Tab.Screen name="Giving" component={GivingScreen} />
+      <Tab.Screen name="Users" component={UsersScreen} />
+
     </Tab.Navigator>
   );
 }

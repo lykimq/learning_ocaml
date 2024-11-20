@@ -1,6 +1,9 @@
 import React, {useState} from 'react';
 import {View, TextInput, Button, Text, StyleSheet} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
+import UserNavigator from '../../navigation/UserNavigator';
+import AdminNavigator from '../../navigation/AdminNavigator';
+import DashboardScreen from '../admin/DashboardScreen';
 
 export default function LoginScreen () {
   const navigation = useNavigation ();
