@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {createStackNavigator} from '@react-navigation/stack';
 import LoginScreen from '../screens/shared/LoginScreen';
 import AdminNavigator from './AdminNavigator';
@@ -7,11 +7,15 @@ import UserNavigator from './UserNavigator';
 const Stack = createStackNavigator ();
 
 export default function AuthNavigator () {
+  const [isAdmin, setIsAdmin] = useState (false); // Track if user is logged in as admin
+
   return (
-    <Stack.Navigator initialRouteName="LoginScreen">
+    <Stack.Navigator
+      initialRouteName={isAdmin ? 'AdminNavigator' : 'UserNavigator'}
+    >
       <Stack.Screen
-        name="LoginScreen"
-        component={LoginScreen}
+        name="UserNavigator"
+        component={UserNavigator}
         options={{headerShown: false}}
       />
       <Stack.Screen
@@ -20,9 +24,10 @@ export default function AuthNavigator () {
         options={{headerShown: false}}
       />
       <Stack.Screen
-        name="UserNavigator"
-        component={UserNavigator}
+        name="LoginScreen"
+        component={LoginScreen}
         options={{headerShown: false}}
+        initialParams={{setIsAdmin}} // Pass setIsAdmin to LoginScreen to update login state
       />
     </Stack.Navigator>
   );

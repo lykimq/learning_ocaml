@@ -1,25 +1,17 @@
 import React, {useState} from 'react';
 import {View, TextInput, Button, Text, StyleSheet} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import UserNavigator from '../../navigation/UserNavigator';
-import AdminNavigator from '../../navigation/AdminNavigator';
-import DashboardScreen from '../admin/DashboardScreen';
+import {useAuth} from '../../contexts/AuthContext';
 
-export default function LoginScreen () {
+export default function LoginScreen({route}) {
   const navigation = useNavigation ();
+  const {loginAsAdmin, logout} = useAuth ();
 
-  // State to manage the inputs
   const [username, setUsername] = useState ('');
   const [password, setPassword] = useState ('');
   const [errorMessage, setErrorMessage] = useState ('');
 
-  // Hardcoded credentials for admin and user
-  const userCredentials = {
-    username: 'user',
-    password: 'user',
-    role: 'user',
-  };
-
+  // Hardcoded credentials for admin only
   const adminCredentials = {
     username: 'admin',
     password: 'admin',
@@ -29,16 +21,11 @@ export default function LoginScreen () {
   // Handle login action
   const handleLogin = () => {
     if (
-      username === userCredentials.username &&
-      password === userCredentials.password
-    ) {
-      // Navigate to User screen
-      navigation.navigate ('UserNavigator');
-    } else if (
       username === adminCredentials.username &&
       password === adminCredentials.password
     ) {
-      // Navigate to Admin screen
+      // Admin login successful, update the login state
+      loginAsAdmin ();
       navigation.navigate ('AdminNavigator');
     } else {
       setErrorMessage ('Invalid username or password');

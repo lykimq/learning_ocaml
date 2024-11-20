@@ -1,7 +1,5 @@
 import React from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {createStackNavigator} from '@react-navigation/stack';
-import {NavigationContainer} from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import GivingScreen from '../screens/user/GivingScreen';
 import MediaScreen from '../screens/user/MediaScreen';
@@ -10,6 +8,7 @@ import HomeGroupScreen from '../screens/user/HomeGroupScreen';
 import ServingScreen from '../screens/user/ServingScreen';
 import EventsScreen from '../screens/user/EventsScreen';
 import UsersScreen from '../screens/user/UsersScreen';
+import LoginScreen from '../screens/shared/LoginScreen';
 
 const Tab = createBottomTabNavigator ();
 
@@ -41,6 +40,9 @@ export default function UserNavigator () {
             case 'Users':
               iconName = 'people';
               break;
+            case 'Login':
+              iconName = 'login';
+              break;
           }
           return <MaterialIcons name={iconName} size={size} color={color} />;
         },
@@ -57,6 +59,7 @@ export default function UserNavigator () {
       <Tab.Screen name="Serving" component={ServingScreen} />
       <Tab.Screen name="Giving" component={GivingScreen} />
       <Tab.Screen name="Users" component={UsersScreen} />
+      <Tab.Screen name="Login" component={LoginScreen} />
 
     </Tab.Navigator>
   );
