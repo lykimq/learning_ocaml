@@ -1,4 +1,4 @@
-use actix_web::{post, put, delete, get, web, HttpResponse, Responder};
+use actix_web::{web, HttpResponse, Responder};
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
@@ -15,7 +15,7 @@ pub struct Event {
     pub updated_at: Option<NaiveDateTime>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct NewEvent {
     pub event_title: String,
     pub event_date: NaiveDate,
@@ -53,7 +53,6 @@ pub struct UpdateEventRequest {
 }
 
 
-#[post("/admin/events")]
 pub async fn add_event(
     pool: web::Data<PgPool>,
     new_event: web::Json<NewEvent>,
@@ -91,7 +90,6 @@ pub async fn add_event(
     }
 }
 
-#[get("/admin/events")]
 pub async fn get_all_events(pool: web::Data<PgPool>) -> impl Responder {
     // Fetch all events from the database
     let result = sqlx::query_as!(
@@ -224,7 +222,6 @@ pub async fn get_current_future_events(pool: web::Data<PgPool>) -> impl Responde
 }
 
 
-#[delete("/admin/events/:id")]
 pub async fn delete_event(pool: web::Data<PgPool>, event_id: web::Path<i32>) -> impl Responder {
     let event_id = event_id.into_inner();
     let result = sqlx::query!("DELETE FROM events WHERE id = $1", event_id)
@@ -237,7 +234,7 @@ pub async fn delete_event(pool: web::Data<PgPool>, event_id: web::Path<i32>) -> 
     }
 }
 
-#[put("/admin/events/:id")]
+
 pub async fn update_event(
     pool: web::Data<PgPool>,
     event_id: web::Path<i32>,
