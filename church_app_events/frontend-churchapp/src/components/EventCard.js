@@ -1,38 +1,33 @@
-import {View, Text, StyleSheet} from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Button } from 'react-native';
 
-const EventCard = ({event}) => {
+const EventCard = ({ event, onDelete, onEdit }) => {
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>{event.title}</Text>
-      <Text style={styles.date}>{event.date}</Text>
-      <Text style={styles.description}>{event.description}</Text>
+      <Text style={styles.title}>{event.event_title}</Text>
+      <Text>{event.event_date} at {event.event_time}</Text>
+      <Text>{event.address}</Text>
+      <Text>{event.description}</Text>
+      {onEdit && <Button title="Edit" onPress={onEdit} />}
+      {onDelete && <Button title="Delete" onPress={onDelete} />}
     </View>
   );
 };
 
-const styles = StyleSheet.create ({
+const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    padding: 16,
-    marginBottom: 16,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    padding: 15,
+    marginBottom: 10,
+    borderRadius: 10,
+    backgroundColor: '#f9f9f9',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
   },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  date: {
-    fontSize: 16,
-    color: '#666',
-  },
-  description: {
-    fontSize: 14,
-    color: '#444',
   },
 });
 

@@ -17,26 +17,12 @@ async fn main() -> std::io::Result<()> {
 
     // Read DATABASE_URL and BACKEND_PORT from environment variables
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let backend_port = env::var("BACKEND_PORT").expect("BACKEND_PORT must be set");
+    let _backend_port = env::var("BACKEND_PORT").expect("BACKEND_PORT must be set");
     let frontend_port = env::var("FRONTEND_PORT").expect("FRONTEND_PORT must be set");
 
+    // Connect to the PostgreSQL database
+    let pool = PgPool::connect(&database_url).await.unwrap();
 
-       // Connect to the PostgreSQL database
-       let pool = PgPool::connect(&database_url).await.unwrap();
-
-        // Determine whether we are running in the Android emulator or web
-        let server_address = if cfg!(target_os = "android") {
-            // Use 10.0.2.2 for the Android emulator
-            format!("http://10.0.2.2:{}", backend_port)
-        } else if cfg!(target_os = "ios") {
-            // Use the local IP address for physical iOS devices
-            // Use localhost for iOS simulator (on macOS), or configure a local IP address for physical devices
-            let local_ip = "127.0.0.1"; // Hardcode this for testing or get it programmatically
-            format!("http://{}:{}", local_ip, backend_port)
-        } else {
-            // Use 127.0.0.1 for web browsers
-            format!("127.0.0.1:{}", backend_port)
-        };
 
        HttpServer::new(move || {
         App::new()
@@ -68,7 +54,7 @@ async fn main() -> std::io::Result<()> {
 
         // Other routes
     })
-    .bind(server_address)? // Use the backend port from .env
+    .bind("0.0.0.0:8080")? // Bind to all interfaces
     .run()
     .await
 

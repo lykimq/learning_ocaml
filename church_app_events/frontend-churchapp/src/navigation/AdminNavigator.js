@@ -1,6 +1,6 @@
 import React from 'react';
 import DashboardScreen from '../screens/admin/DashboardScreen';
-import ManageEventsScreen from '../screens/admin/ManageEventsScreen';
+import ManageEventsScreen from '../screens/admin/events/ManageEventsScreen';
 import ManageHomeGroupScreen from '../screens/admin/ManageHomeGroupScreen';
 import ManageMediaScreen from '../screens/admin/ManageMediaScreen';
 import ManageServingScreen from '../screens/admin/ManageServingScreen';
@@ -12,7 +12,8 @@ import {useAuth} from '../contexts/AuthContext';
 
 const Tab = createBottomTabNavigator ();
 
-export default function AdminTabNavigator({navigation}) {
+export default function AdminTabNavigator({ navigation }) {
+
   const {logout} = useAuth ();
 
   // Handle logout and navigate to UserNavigator
