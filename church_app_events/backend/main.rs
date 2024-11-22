@@ -17,7 +17,7 @@ async fn main() -> std::io::Result<()> {
 
     // Read DATABASE_URL and BACKEND_PORT from environment variables
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let _backend_port = env::var("BACKEND_PORT").expect("BACKEND_PORT must be set");
+    let backend_port = env::var("BACKEND_PORT").expect("BACKEND_PORT must be set");
     let frontend_port = env::var("FRONTEND_PORT").expect("FRONTEND_PORT must be set");
 
     // Connect to the PostgreSQL database
@@ -51,10 +51,9 @@ async fn main() -> std::io::Result<()> {
                     )
                     .route("/{id}", web::delete().to(events::delete_event))
             )
-
         // Other routes
     })
-    .bind("0.0.0.0:8080")? // Bind to all interfaces
+    .bind(&format!("0.0.0.0:{}", backend_port))?
     .run()
     .await
 

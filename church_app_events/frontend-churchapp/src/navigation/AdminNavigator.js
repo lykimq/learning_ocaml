@@ -8,22 +8,12 @@ import ManageUsersScreen from '../screens/admin/ManageUsersScreen';
 import ManageGivingScreen from '../screens/admin/ManageGivingScreen';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import {useAuth} from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+import LogoutScreen from '../screens/shared/LogoutScreen';
 
 const Tab = createBottomTabNavigator ();
 
 export default function AdminTabNavigator({ navigation }) {
-
-  const {logout} = useAuth ();
-
-  // Handle logout and navigate to UserNavigator
-  const handleLogout = () => {
-    logout ();
-    navigation.reset ({
-      index: 0,
-      routes: [{name: 'UserNavigator'}], // Reset navigation to UserNavigator
-    });
-  };
 
   return (
     <Tab.Navigator
@@ -73,13 +63,7 @@ export default function AdminTabNavigator({ navigation }) {
       <Tab.Screen name="Users" component={ManageUsersScreen} />
       <Tab.Screen
         name="Logout"
-        component={() => null} // Placeholder for logout tab
-        listeners={{
-          tabPress: e => {
-            e.preventDefault (); // Prevent navigation to this tab
-            handleLogout (); // Perform logout
-          },
-        }}
+        component={LogoutScreen}
       />
     </Tab.Navigator>
   );

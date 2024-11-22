@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TextInput as RNTextInput, TouchableOpacity } from 'react-native';
-import { Text, Button, TextInput,HelperText } from 'react-native-paper';
+import { Text, TextInput, Button, HelperText } from 'react-native-paper';
 import {
   DatePickerModal,
   TimePickerModal,
   registerTranslation,
 } from 'react-native-paper-dates';
 import { en } from 'react-native-paper-dates';
+import { addEvent } from '../../../services/eventService';
 
 // Register English locale for the date picker
 registerTranslation('en', en);
@@ -31,7 +32,7 @@ const EventForm = ({ eventData, onSubmit }) => {
     }
   }, [eventData]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const validationErrors = {};
     if (!eventTitle) validationErrors.eventTitle = true;
     if (!eventDate) validationErrors.eventDate = true;
@@ -49,7 +50,21 @@ const EventForm = ({ eventData, onSubmit }) => {
       description,
     };
 
-    onSubmit(formData);
+     // Log the form data to ensure it's correct
+    console.log('Submitting form data:', formData);
+
+    // Call the addEvent from eventServices
+    try {
+      const result = await addEvent(formData);
+      if (result) {
+        console.log('Event added successfully:', result)
+        onSubmit(formData)
+      }
+
+    } catch (error) {
+      console.error('Error adding event:', error)
+    }
+
   };
 
   return (
