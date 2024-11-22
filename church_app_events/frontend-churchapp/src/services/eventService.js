@@ -1,11 +1,11 @@
 import axios from 'axios'
 import { Platform } from 'react-native';
 
-
 // Adjust for the android/iOS/web as needed
 //const apiUrl = "http://10.0.2.2:8080/admin/events"
-
-const apiUrl = "http://localhost:8080/admin/events";  // Correct URL
+//const apiUrl = "http://localhost:8080/admin/events";  // Correct URL
+const apiUrl = Platform.OS ===
+    'android' ? 'http://10.0.2.2:8080/admin/events' : 'http://localhost:8080/admin/events'
 
 const api = axios.create({
     baseURL: apiUrl,
