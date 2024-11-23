@@ -33,70 +33,77 @@ export default function LoginScreen({ route }) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+    <View style={styles.pageContainer}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Login</Text>
 
-      {/* Username input */}
-      <TextInput
-        style={styles.input}
-        placeholder="Username"
-        value={username}
-        onChangeText={setUsername}
-      />
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Username"
+            value={username}
+            onChangeText={setUsername}
+          />
 
-      {/* Password input */}
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
 
-      {/* Error message */}
-      {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+          {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
 
-      {/* Login button */}
-      <Button title="Login" onPress={handleLogin} />
-
+          <Button title="Login" onPress={handleLogin} />
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: Platform.OS === 'web' ? 0 : 1,
-    maxWidth: Platform.OS === 'web' ? 600 : '100%',
-    width: '100%',
-    padding: 16,
+  pageContainer: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
+  },
+  container: {
+    flex: Platform.OS === 'web' ? 0 : 1,
+    maxWidth: Platform.OS === 'web' ? 400 : '100%',
+    width: Platform.OS === 'web' ? '90%' : '100%',
+    padding: Platform.OS === 'web' ? 0 : 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fff',
+  },
+  inputContainer: {
+    width: '100%',
+    gap: 16,
+    maxWidth: Platform.OS === 'web' ? 320 : '90%',
     alignSelf: 'center',
-    ...(Platform.OS === 'web' && {
-      marginHorizontal: 'auto',
-      marginVertical: 20,
-      borderRadius: 8,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      backgroundColor: '#f5f5f5',
-    }),
   },
   title: {
-    fontSize: 24,
-    marginBottom: 16,
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 24,
+    color: '#333',
   },
   input: {
     width: '100%',
-    padding: 10,
-    marginVertical: 8,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    backgroundColor: '#fff',
+    fontSize: 16,
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fff',
   },
   error: {
-    color: 'red',
+    color: '#e41e3f',
     marginVertical: 8,
+    textAlign: 'center',
   },
 });
