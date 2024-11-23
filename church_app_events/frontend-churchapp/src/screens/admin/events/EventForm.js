@@ -1,26 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TextInput as RNTextInput, TouchableOpacity } from 'react-native';
-import { Text, TextInput, Button, HelperText } from 'react-native-paper';
-import {
-  DatePickerModal,
-  TimePickerModal,
-  registerTranslation,
-} from 'react-native-paper-dates';
-import { en } from 'react-native-paper-dates';
+import { View, StyleSheet, Platform } from 'react-native';
+import { Text, TextInput, Button, Title } from 'react-native-paper';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { addEvent } from '../../../services/eventService';
-
-// Register English locale for the date picker
-registerTranslation('en', en);
 
 const EventForm = ({ eventData, onSubmit }) => {
   const [eventTitle, setEventTitle] = useState('');
-  const [eventDate, setEventDate] = useState(null);
-  const [eventTime, setEventTime] = useState(null);
+  const [eventDate, setEventDate] = useState(new Date());
+  const [eventTime, setEventTime] = useState(new Date());
   const [address, setAddress] = useState('');
   const [description, setDescription] = useState('');
   const [errors, setErrors] = useState({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const onDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || eventDate;
+    setShowDatePicker(Platform.OS === 'ios');
+    setEventDate(currentDate);
+  };
+
+  const onTimeChange = (event, selectedTime) => {
+    const currentTime = selectedTime || eventTime;
+    setShowTimePicker(Platform.OS === 'ios');
+    setEventTime(currentTime);
+  };
 
   useEffect(() => {
     if (eventData) {
@@ -50,7 +54,7 @@ const EventForm = ({ eventData, onSubmit }) => {
       description,
     };
 
-     // Log the form data to ensure it's correct
+    // Log the form data to ensure it's correct
     console.log('Submitting form data:', formData);
 
     // Call the addEvent from eventServices
@@ -67,121 +71,229 @@ const EventForm = ({ eventData, onSubmit }) => {
 
   };
 
+  const DateTimeSelector = ({ mode, value, onChange, showPicker, setShowPicker }) => {
+    if (Platform.OS === 'web') {
+      return (
+        <input
+          type={mode}
+          value={
+            mode === 'date'
+              ? value.toISOString().split('T')[0]
+              : value.toTimeString().split(' ')[0].slice(0, 5)
+          }
+          onChange={(e) => {
+            let newDate = new Date(value);
+            if (mode === 'date') {
+              newDate = new Date(e.target.value);
+            } else {
+              const [hours, minutes] = e.target.value.split(':');
+              newDate.setHours(hours);
+              newDate.setMinutes(minutes);
+            }
+            onChange({ type: 'set', nativeEvent: { timestamp: newDate } }, newDate);
+          }}
+          style={{
+            padding: 10,
+            borderRadius: 4,
+            borderWidth: 1,
+            borderColor: '#ccc',
+            marginRight: 10,
+            flex: 1,
+          }}
+        />
+      );
+    }
+
+    return showPicker && (
+      <DateTimePicker
+        testID="dateTimePicker"
+        value={value}
+        mode={mode}
+        is24Hour={true}
+        display="default"
+        onChange={onChange}
+      />
+    );
+  };
+
   return (
-    <View style={styles.form}>
+    <View style={styles.container}>
+      <Title style={styles.title}>Create New Event</Title>
+
       <TextInput
-        label="Event Title *"
+        label="Event Title"
         value={eventTitle}
         onChangeText={setEventTitle}
         style={styles.input}
-        error={!!errors.eventTitle}
+        mode="outlined"
       />
-      <HelperText type="error" visible={!!errors.eventTitle}>
-        Event title is required.
-      </HelperText>
 
-      <View style={styles.inputGroup}>
-        <RNTextInput
-          style={styles.input}
-          placeholder="Event Date"
-          value={eventDate ? eventDate.toDateString() : ''}
+      <View style={styles.dateTimeContainer}>
+        <TextInput
+          label="Event Date"
+          value={eventDate.toDateString()}
+          style={[styles.input, styles.dateTimeInput]}
+          mode="outlined"
           editable={false}
         />
-        <Button
-          mode="outlined"
-          onPress={() => setShowDatePicker(true)}
-          style={styles.dateButton}>
-          Select Date
-        </Button>
+        {Platform.OS === 'web' ? (
+          <DateTimeSelector
+            mode="date"
+            value={eventDate}
+            onChange={onDateChange}
+            showPicker={showDatePicker}
+            setShowPicker={setShowDatePicker}
+          />
+        ) : (
+          <Button
+            onPress={() => setShowDatePicker(true)}
+            mode="contained"
+            style={styles.dateTimeButton}
+            compact={Platform.OS !== 'web'}
+            labelStyle={Platform.OS === 'web' ? null : { fontSize: 12 }}
+          >
+            {Platform.OS === 'web' ? 'Choose Date' : 'Select'}
+          </Button>
+        )}
       </View>
-      <DatePickerModal
-        mode="single"
-        visible={showDatePicker}
-        onDismiss={() => setShowDatePicker(false)}
-        date={eventDate}
-        onConfirm={(params) => {
-          setEventDate(params.date);
-          setShowDatePicker(false);
-        }}
-        locale="en"
-      />
-      <HelperText type="error" visible={!!errors.eventDate}>
-        Event date is required.
-      </HelperText>
 
-      <View style={styles.inputGroup}>
-        <RNTextInput
-          style={styles.input}
-          placeholder="Event Time"
-          value={eventTime || ''}
+      <View style={styles.dateTimeContainer}>
+        <TextInput
+          label="Event Time"
+          value={eventTime.toLocaleTimeString()}
+          style={[styles.input, styles.dateTimeInput]}
+          mode="outlined"
           editable={false}
         />
-        <Button
-          mode="outlined"
-          onPress={() => setShowTimePicker(true)}
-          style={styles.timeButton}>
-          Select Time
-        </Button>
+        {Platform.OS === 'web' ? (
+          <DateTimeSelector
+            mode="time"
+            value={eventTime}
+            onChange={onTimeChange}
+            showPicker={showTimePicker}
+            setShowPicker={setShowTimePicker}
+          />
+        ) : (
+          <Button
+            onPress={() => setShowTimePicker(true)}
+            mode="contained"
+            style={styles.dateTimeButton}
+            compact={Platform.OS !== 'web'}
+            labelStyle={Platform.OS === 'web' ? null : { fontSize: 12 }}
+          >
+            {Platform.OS === 'web' ? 'Choose Time' : 'Select'}
+          </Button>
+        )}
       </View>
-      <TimePickerModal
-        visible={showTimePicker}
-        onDismiss={() => setShowTimePicker(false)}
-        onConfirm={(params) => {
-          setEventTime(`${params.hours}:${params.minutes}`);
-          setShowTimePicker(false);
-        }}
-        locale="en"
-      />
-      <HelperText type="error" visible={!!errors.eventTime}>
-        Event time is required.
-      </HelperText>
 
       <TextInput
-        label="Address"
+        label="Address (optional)"
         value={address}
         onChangeText={setAddress}
         style={styles.input}
+        mode="outlined"
       />
 
       <TextInput
-        label="Description"
+        label="Description (optional)"
         value={description}
         onChangeText={setDescription}
         style={styles.input}
+        mode="outlined"
         multiline
+        numberOfLines={4}
       />
 
       <Button mode="contained" onPress={handleSubmit} style={styles.submitButton}>
-        {eventData ? 'Update Event' : 'Add Event'}
+        Add Event
       </Button>
+
+      {Platform.OS !== 'web' && showDatePicker && (
+        <DateTimeSelector
+          mode="date"
+          value={eventDate}
+          onChange={onDateChange}
+          showPicker={showDatePicker}
+          setShowPicker={setShowDatePicker}
+        />
+      )}
+
+      {Platform.OS !== 'web' && showTimePicker && (
+        <DateTimeSelector
+          mode="time"
+          value={eventTime}
+          onChange={onTimeChange}
+          showPicker={showTimePicker}
+          setShowPicker={setShowTimePicker}
+        />
+      )}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  form: {
+  container: {
+    flex: Platform.OS === 'web' ? 0 : 1,
+    maxWidth: Platform.OS === 'web' ? 600 : '100%',
+    width: '100%',
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5',
+    alignSelf: 'center',
+    ...(Platform.OS === 'web' && {
+      marginHorizontal: 'auto',
+      marginVertical: 20,
+      borderRadius: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    }),
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#3f51b5',
   },
   input: {
-    flex: 1,
-    marginBottom: 10,
+    marginBottom: 15,
+    height: 48,
+    backgroundColor: '#fff',
   },
-  inputGroup: {
+  dateTimeContainer: {
     flexDirection: 'row',
+    marginBottom: 15,
     alignItems: 'center',
-    marginBottom: 10,
   },
-  dateButton: {
-    marginLeft: 10,
-    height: 40,
+  dateTimeInput: {
+    flex: 0.8,
+    marginRight: 10,
+    height: 48,
+    backgroundColor: '#fff',
   },
-  timeButton: {
-    marginLeft: 10,
-    height: 40,
+  dateTimeButton: {
+    backgroundColor: '#3f51b5',
+    ...(Platform.OS === 'web' ? {
+      height: 48,
+      width: 90,
+      justifyContent: 'center',
+    } : {
+      height: 45, // Much smaller height for mobile
+      paddingVertical: 2, // Minimal vertical padding
+      paddingHorizontal: 8, // Reduced horizontal padding
+      minHeight: 0,
+      alignSelf: 'center',
+    }),
   },
   submitButton: {
     marginTop: 20,
+    paddingVertical: 8,
+    backgroundColor: '#3f51b5',
+    alignSelf: 'center',
+    paddingHorizontal: 30,
+    minWidth: 150,
+    maxWidth: 200,
   },
 });
 

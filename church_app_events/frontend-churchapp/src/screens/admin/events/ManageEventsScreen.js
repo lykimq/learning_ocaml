@@ -37,6 +37,13 @@ const ManageEventsScreen = () => {
     );
   };
 
+  // Handle form submission
+  const handleFormSumbit = () => {
+    setShowForm(false); //hide form
+    fetchEvents(); // refresh events
+    setSelectedEvent(null); // clear selected event
+  }
+
   return (
     <View style={styles.container}>
       {showForm ? (
@@ -48,7 +55,14 @@ const ManageEventsScreen = () => {
             data={events}
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => (
-              <EventCard event={item} onDelete={() => handleDelete(item.id)} onEdit={() => { setSelectedEvent(item); setShowForm(true); }} />
+              <EventCard
+                event={item}
+                onDelete={() => handleDelete(item.id)}
+                onEdit={() => {
+                  setSelectedEvent(item);
+                  setShowForm(true);
+                }}
+              />
             )}
           />
         </>
@@ -60,6 +74,8 @@ const ManageEventsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
+    flex: 1,
+    backgroundColor: '#fff',
   },
 });
 
