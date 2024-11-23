@@ -1,15 +1,15 @@
-import React, {useState} from 'react';
-import {View, TextInput, Button, Text, StyleSheet} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import {useAuth} from '../../contexts/AuthContext';
+import React, { useState } from 'react';
+import { View, TextInput, Button, Text, StyleSheet, Platform } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../contexts/AuthContext';
 
-export default function LoginScreen({route}) {
-  const navigation = useNavigation ();
-  const {loginAsAdmin, logout} = useAuth ();
+export default function LoginScreen({ route }) {
+  const navigation = useNavigation();
+  const { loginAsAdmin, logout } = useAuth();
 
-  const [username, setUsername] = useState ('');
-  const [password, setPassword] = useState ('');
-  const [errorMessage, setErrorMessage] = useState ('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Hardcoded credentials for admin only
   const adminCredentials = {
@@ -25,10 +25,10 @@ export default function LoginScreen({route}) {
       password === adminCredentials.password
     ) {
       // Admin login successful, update the login state
-      loginAsAdmin ();
-      navigation.navigate ('AdminNavigator');
+      loginAsAdmin();
+      navigation.navigate('AdminNavigator');
     } else {
-      setErrorMessage ('Invalid username or password');
+      setErrorMessage('Invalid username or password');
     }
   };
 
@@ -63,12 +63,25 @@ export default function LoginScreen({route}) {
   );
 }
 
-const styles = StyleSheet.create ({
+const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: Platform.OS === 'web' ? 0 : 1,
+    maxWidth: Platform.OS === 'web' ? 600 : '100%',
+    width: '100%',
+    padding: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    alignSelf: 'center',
+    ...(Platform.OS === 'web' && {
+      marginHorizontal: 'auto',
+      marginVertical: 20,
+      borderRadius: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      backgroundColor: '#f5f5f5',
+    }),
   },
   title: {
     fontSize: 24,
