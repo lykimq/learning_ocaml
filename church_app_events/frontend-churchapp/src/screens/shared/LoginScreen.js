@@ -32,7 +32,7 @@ export default function LoginScreen({ route }) {
 
   return (
     <View style={styles.pageContainer}>
-      <View style={styles.container}>
+      <View style={styles.contentContainer}>
         <Text style={styles.title}>Login</Text>
 
         <View style={styles.inputContainer}>
@@ -75,43 +75,25 @@ const styles = StyleSheet.create({
   pageContainer: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
     width: '100%',
   },
-  container: {
-    flex: Platform.OS === 'web' ? 0 : 1,
-    maxWidth: Platform.OS === 'web' ? 400 : '100%',
-    width: Platform.OS === 'web' ? '90%' : '100%',
+  contentContainer: {
     padding: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    ...Platform.select({
-      web: {
-        shadowColor: '#000',
-        shadowOffset: {
-          width: 0,
-          height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
-      },
-    }),
+    maxWidth: Platform.OS === 'web' ? 400 : '100%',
+    width: '100%',
+    alignSelf: 'center',
+    marginTop: Platform.OS === 'web' ? 100 : 50, // Add some top margin
   },
   inputContainer: {
     width: '100%',
     gap: 16,
-    maxWidth: Platform.OS === 'web' ? 320 : '90%',
-    alignSelf: 'center',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 24,
     color: '#333',
+    textAlign: 'center',
   },
   input: {
     marginBottom: 12,
@@ -125,7 +107,7 @@ const styles = StyleSheet.create({
   button: {
     marginTop: 8,
     paddingVertical: 6,
-    backgroundColor: '#4A90E2',  // Match the color scheme from EventsList
+    backgroundColor: '#4A90E2',
   },
   buttonLabel: {
     fontSize: 16,
