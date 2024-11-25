@@ -11,6 +11,10 @@ import {
 } from "react-native-paper";
 import { getEvents, searchEvents } from "../../services/eventService";
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useNavigation } from '@react-navigation/native';
+import EventRSVP from "./EventRSVP";
+
+
 
 const ITEMS_PER_PAGE = 10;
 
@@ -68,6 +72,7 @@ const DatePickerField = ({ label, value, onChange }) => {
 };
 
 const EventsScreen = () => {
+  const navigation = useNavigation();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,6 +80,7 @@ const EventsScreen = () => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
     fetchEvents()
@@ -120,6 +126,14 @@ const EventsScreen = () => {
     fetchEvents();
   };
 
+  const handleRegister = (event) => {
+    setSelectedEvent(event);
+  };
+
+  const handleCloseRSVP = () => {
+    setSelectedEvent(null);
+  };
+
   const filteredEvents = events
     .filter((event) =>
       event.event_title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -146,11 +160,16 @@ const EventsScreen = () => {
       <Card.Actions>
         <Button
           mode="contained"
-          onPress={() => { }}>Register</Button>
+          onPress={() => handleRegister(item)}>
+          Register
+        </Button>
       </Card.Actions>
     </Card>
   );
 
+  if (selectedEvent) {
+    return <EventRSVP event={selectedEvent} onClose={handleCloseRSVP} />;
+  }
 
   return (
     <View style={styles.container}>

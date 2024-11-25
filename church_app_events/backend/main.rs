@@ -8,6 +8,7 @@ use sqlx::PgPool;
 use std::env;
 
 mod events;
+mod eventrsvp;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -51,6 +52,17 @@ async fn main() -> std::io::Result<()> {
                     )
                     .route("/{id}", web::delete().to(events::delete_event))
                     .route("/search", web::get().to(events::search_events))
+            )
+            // RSVPs
+            .service(
+                web::scope("events/rsvp")
+                    .route("/add", web::post().to(eventrsvp::create_rsvp))
+                    .route("/edit/{id}", web::put().to(eventrsvp::update_rsvp))
+                    .route("/list", web::get().to(eventrsvp::get_all_rsvps))
+                    .route("/{id}", web::delete().to(eventrsvp::delete_rsvp))
+                    .route("/email/{email}", web::get().to(eventrsvp::get_rsvps_by_email))
+                    .route("/event/{event_id}", web::get().to(eventrsvp::get_rsvps_by_event))
+                    .route("/search", web::get().to(eventrsvp::search_rsvps))
             )
         // Other routes
     })

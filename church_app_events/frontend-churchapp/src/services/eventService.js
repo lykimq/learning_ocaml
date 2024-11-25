@@ -1,15 +1,15 @@
 import { Platform } from 'react-native';
 import axios from 'axios';
-import { API_URL_ANDROID, API_URL_IOS, API_URL_WEB } from '@env';
+import { API_EVENTS_ANDROID, API_EVENTS_IOS, API_EVENTS_WEB } from '@env';
 
 const getApiUrl = () => {
     switch (Platform.OS) {
         case 'android':
-            return API_URL_ANDROID;
+            return API_EVENTS_ANDROID;
         case 'ios':
-            return API_URL_IOS;
+            return API_EVENTS_IOS;
         default: // web
-            return API_URL_WEB;
+            return API_EVENTS_WEB;
     }
 }
 
@@ -93,6 +93,6 @@ export const searchEvents = async (params) => {
 };
 
 // During development, verify the variables are loaded
-console.log('Android URL:', API_URL_ANDROID);
-console.log('iOS URL:', API_URL_IOS);
-console.log('Web URL:', API_URL_WEB);
+console.log('Android URL for events:', API_EVENTS_ANDROID);
+console.log('iOS URL for events:', API_EVENTS_IOS);
+console.log('Web URL for events:', API_EVENTS_WEB);
