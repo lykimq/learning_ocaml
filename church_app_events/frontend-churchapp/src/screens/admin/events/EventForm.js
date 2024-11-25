@@ -29,8 +29,8 @@ const EventForm = ({ eventData, onSubmit }) => {
   useEffect(() => {
     if (eventData) {
       setEventTitle(eventData.event_title || '');
-      setEventDate(eventData.event_date ? new Date(eventData.event_date) : null);
-      setEventTime(eventData.event_time || null);
+      setEventDate(eventData.event_date ? new Date(eventData.event_date) : new Date());
+      setEventTime(eventData.event_time ? new Date(`1970-01-01T${eventData.event_time}`) : new Date());
       setAddress(eventData.address || '');
       setDescription(eventData.description || '');
     }
@@ -49,7 +49,7 @@ const EventForm = ({ eventData, onSubmit }) => {
     const formData = {
       event_title: eventTitle,
       event_date: eventDate.toISOString().split('T')[0], // Format: YYYY-MM-DD
-      event_time: eventTime, // Keep as HH:MM
+      event_time: eventTime.toTimeString().split(' ')[0].slice(0, 5), // Format: HH:MM
       address,
       description,
     };

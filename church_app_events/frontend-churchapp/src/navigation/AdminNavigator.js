@@ -6,19 +6,19 @@ import ManageMediaScreen from '../screens/admin/ManageMediaScreen';
 import ManageServingScreen from '../screens/admin/ManageServingScreen';
 import ManageUsersScreen from '../screens/admin/ManageUsersScreen';
 import ManageGivingScreen from '../screens/admin/ManageGivingScreen';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../contexts/AuthContext';
 import LogoutScreen from '../screens/shared/LogoutScreen';
 
-const Tab = createBottomTabNavigator ();
+const Tab = createBottomTabNavigator();
 
-export default function AdminTabNavigator({ navigation }) {
+export default function AdminTabNavigator() {
 
   return (
     <Tab.Navigator
-      screenOptions={({route}) => ({
-        tabBarIcon: ({color, size}) => {
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ color, size }) => {
           let iconName;
           switch (route.name) {
             case 'Home':
@@ -56,7 +56,15 @@ export default function AdminTabNavigator({ navigation }) {
       {/* Nesting Stack Navigators for each Tab */}
       <Tab.Screen name="Home" component={DashboardScreen} />
       <Tab.Screen name="Media" component={ManageMediaScreen} />
-      <Tab.Screen name="Events" component={ManageEventsScreen} />
+      <Tab.Screen
+        name="Events"
+        component={ManageEventsScreen}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('Events', { reset: Date.now() });
+          },
+        })}
+      />
       <Tab.Screen name="HomeGroups" component={ManageHomeGroupScreen} />
       <Tab.Screen name="Serving" component={ManageServingScreen} />
       <Tab.Screen name="Giving" component={ManageGivingScreen} />
