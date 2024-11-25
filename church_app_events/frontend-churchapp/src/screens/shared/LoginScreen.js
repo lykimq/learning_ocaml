@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, Text, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
+import { TextInput, Button, Text } from 'react-native-paper';
 
 export default function LoginScreen({ route }) {
   const navigation = useNavigation();
@@ -11,20 +12,17 @@ export default function LoginScreen({ route }) {
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Hardcoded credentials for admin only
   const adminCredentials = {
     username: 'admin',
     password: 'admin',
     role: 'admin',
   };
 
-  // Handle login action
   const handleLogin = () => {
     if (
       username === adminCredentials.username &&
       password === adminCredentials.password
     ) {
-      // Admin login successful, update the login state
       loginAsAdmin();
       navigation.navigate('AdminNavigator');
     } else {
@@ -39,23 +37,34 @@ export default function LoginScreen({ route }) {
 
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
-            placeholder="Username"
+            label="Username"
+            mode="outlined"
             value={username}
             onChangeText={setUsername}
+            style={styles.input}
           />
 
           <TextInput
-            style={styles.input}
-            placeholder="Password"
+            label="Password"
+            mode="outlined"
             secureTextEntry
             value={password}
             onChangeText={setPassword}
+            style={styles.input}
           />
 
-          {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+          {errorMessage ? (
+            <Text style={styles.error}>{errorMessage}</Text>
+          ) : null}
 
-          <Button title="Login" onPress={handleLogin} />
+          <Button
+            mode="contained"
+            onPress={handleLogin}
+            style={styles.button}
+            labelStyle={styles.buttonLabel}
+          >
+            Login
+          </Button>
         </View>
       </View>
     </View>
@@ -74,10 +83,23 @@ const styles = StyleSheet.create({
     flex: Platform.OS === 'web' ? 0 : 1,
     maxWidth: Platform.OS === 'web' ? 400 : '100%',
     width: Platform.OS === 'web' ? '90%' : '100%',
-    padding: Platform.OS === 'web' ? 0 : 20,
+    padding: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fff',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    ...Platform.select({
+      web: {
+        shadowColor: '#000',
+        shadowOffset: {
+          width: 0,
+          height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+      },
+    }),
   },
   inputContainer: {
     width: '100%',
@@ -92,18 +114,21 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   input: {
-    width: '100%',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 6,
-    backgroundColor: '#fff',
-    fontSize: 16,
-    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fff',
+    marginBottom: 12,
+    backgroundColor: 'transparent',
   },
   error: {
     color: '#e41e3f',
     marginVertical: 8,
     textAlign: 'center',
+  },
+  button: {
+    marginTop: 8,
+    paddingVertical: 6,
+    backgroundColor: '#4A90E2',  // Match the color scheme from EventsList
+  },
+  buttonLabel: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

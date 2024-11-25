@@ -72,6 +72,26 @@ export const deleteEvent = async (id) => {
     }
 };
 
+export const searchEvents = async (params) => {
+    try {
+        // Convert params to a query string
+        const searchParams = new URLSearchParams();
+
+        if (searchParams.text) params.append('text', searchParams.text);
+        if (searchParams.start_date) params.append('start_date', searchParams.start_date);
+        if (searchParams.end_date) params.append('end_date', searchParams.end_date);
+        if (searchParams.start_time) params.append('start_time', searchParams.start_time);
+        if (searchParams.end_time) params.append('end_time', searchParams.end_time);
+
+        const response = await api.get('/search', { params });
+        console.log('Events searched:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Error searching events:', error);
+        throw error;
+    }
+};
+
 // During development, verify the variables are loaded
 console.log('Android URL:', API_URL_ANDROID);
 console.log('iOS URL:', API_URL_IOS);

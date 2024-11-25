@@ -50,6 +50,7 @@ async fn main() -> std::io::Result<()> {
                         web::get().to(events::get_current_future_events),
                     )
                     .route("/{id}", web::delete().to(events::delete_event))
+                    .route("/search", web::get().to(events::search_events))
             )
         // Other routes
     })

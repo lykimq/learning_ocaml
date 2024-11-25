@@ -3,6 +3,7 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 
+
 #[derive(Debug, Deserialize, Serialize, FromRow)]
 pub struct Event {
     pub id: i32,
@@ -52,6 +53,17 @@ pub struct UpdateEventRequest {
     description: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct EventSearchParams{
+    text: Option<String>,
+    start_date: Option<NaiveDate>,
+    end_date: Option<NaiveDate>,
+    start_time: Option<NaiveTime>,
+    end_time: Option<NaiveTime>,
+    category: Option<String>,
+    limit: Option<i32>,
+    offset: Option<i32>,
+}
 
 pub async fn add_event(
     pool: web::Data<PgPool>,
@@ -277,6 +289,78 @@ pub async fn update_event(
             description: event.description,
         }),
         Err(_) => HttpResponse::InternalServerError().body("Error updating event"),
+    }
+}
+
+pub async fn search_events(
+    pool: web::Data<PgPool>,
+    params: web::Query<EventSearchParams>
+) -> impl Responder {
+    let mut query = sqlx::QueryBuilder::new(
+        "SELECT id, event_title, event_date, event_time, address, description, created_at, updated_at
+         FROM events WHERE 1=1"
+    );
+
+    // Text search
+    if let Some(text) = &params.text {
+        let search_pattern = format!("%{}%", text);
+        query.push(" AND (event_title ILIKE ");
+        query.push_bind(search_pattern.clone());
+        query.push(" OR description ILIKE ");
+        query.push_bind(search_pattern.clone());
+        query.push(" OR address ILIKE ");
+        query.push_bind(search_pattern);
+        query.push(")");
+    }
+
+    // Date range
+    if let Some(start_date) = params.start_date {
+        query.push(" AND event_date >= ");
+        query.push_bind(start_date);
+    }
+
+    if let Some(end_date) = params.end_date {
+        query.push(" AND event_date <= ");
+        query.push_bind(end_date);
+    }
+
+    // Time range
+    if let Some(start_time) = params.start_time {
+        query.push(" AND event_time >= ");
+        query.push_bind(start_time);
+    }
+
+    if let Some(end_time) = params.end_time {
+        query.push(" AND event_time <= ");
+        query.push_bind(end_time);
+    }
+
+    // Category
+    if let Some(category) = &params.category {
+        query.push(" AND category = ");
+        query.push_bind(category.clone());
+    }
+
+    // Add sorting
+    query.push(" ORDER BY event_date ASC, event_time ASC");
+
+    // Add pagination
+    if let (Some(limit), Some(offset)) = (params.limit, params.offset) {
+        query.push(" LIMIT ");
+        query.push_bind(limit);
+        query.push(" OFFSET ");
+        query.push_bind(offset);
+    }
+
+    // Execute the query
+    let query = query.build_query_as::<Event>();
+
+    match query.fetch_all(pool.get_ref()).await {
+        Ok(events) => HttpResponse::Ok().json(events),
+        Err(err) => {
+            eprintln!("Search error: {}", err);
+            HttpResponse::InternalServerError().json("Failed to search events")
+        }
     }
 }
 

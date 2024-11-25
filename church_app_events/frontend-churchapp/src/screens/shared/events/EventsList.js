@@ -7,12 +7,67 @@ import {
     Button,
     Searchbar,
     Text,
-    IconButton
+    IconButton,
+    TextInput
 } from "react-native-paper";
-import { getEvents, deleteEvent } from "../../../services/eventService";
+import { getEvents, deleteEvent, searchEvents } from "../../../services/eventService";
 import EventForm from "../../admin/events/EventForm";
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const ITEMS_PER_PAGE = 10;
+
+const DatePickerField = ({ label, value, onChange }) => {
+    const [show, setShow] = useState(false);
+
+    if (Platform.OS === 'web') {
+        return (
+            <View style={styles.dateContainer}>
+                <Text style={styles.dateLabel}>{label}</Text>
+                <TextInput
+                    value={value ? value.toISOString().split('T')[0] : ''}
+                    mode="outlined"
+                    render={({ style, ...props }) => (
+                        <input
+                            {...props}
+                            type="date"
+                            style={{
+                                height: 40,
+                                width: '100%',
+                                padding: '8px 12px',
+                                borderRadius: 4,
+                                border: '1px solid #ccc'
+                            }}
+                            onChange={(e) => {
+                                const date = new Date(e.target.value);
+                                onChange(date);
+                            }}
+                        />
+                    )}
+                />
+            </View>
+        );
+    }
+
+    return (
+        <View style={styles.dateContainer}>
+            <Button onPress={() => setShow(true)}>
+                {value ? value.toLocaleDateString() : label}
+            </Button>
+            {show && (
+                <DateTimePicker
+                    value={value || new Date()}
+                    mode="date"
+                    onChange={(event, selectedDate) => {
+                        setShow(false);
+                        if (selectedDate) {
+                            onChange(selectedDate);
+                        }
+                    }}
+                />
+            )}
+        </View>
+    );
+};
 
 const EventsList = () => {
     const [events, setEvents] = useState([]);
@@ -20,6 +75,11 @@ const EventsList = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [editingEvent, setEditingEvent] = useState(null);
+    const [startDate, setStartDate] = useState(null);
+    const [endDate, setEndDate] = useState(null);
+    const [showFilters, setShowFilters] = useState(false);
+    const [showStartDate, setShowStartDate] = useState(false);
+    const [showEndDate, setShowEndDate] = useState(false);
 
     useEffect(() => {
         fetchEvents();
@@ -59,9 +119,56 @@ const EventsList = () => {
         fetchEvents();
     };
 
-    const filteredEvents = events.filter((event) =>
-        event.event_title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const handleSearch = async () => {
+        setLoading(true);
+        try {
+            const searchParams = {
+                text: searchQuery,
+                start_date: startDate ? startDate.toISOString().split('T')[0] : null,
+                end_date: endDate ? endDate.toISOString().split('T')[0] : null,
+            };
+
+            const results = await searchEvents(searchParams);
+            setEvents(results);
+            setCurrentPage(1); // Reset to first page
+        } catch (error) {
+            console.error('Search failed:', error);
+            Alert.alert('Error', 'Failed to search events');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const onStartDateChange = (event, selectedDate) => {
+        setShowStartDate(false);
+        if (selectedDate) {
+            setStartDate(selectedDate);
+        }
+    };
+
+    const onEndDateChange = (event, selectedDate) => {
+        setShowEndDate(false);
+        if (selectedDate) {
+            setEndDate(selectedDate);
+        }
+    };
+
+    const handleReset = () => {
+        setSearchQuery('');
+        setStartDate(null);
+        setEndDate(null);
+        fetchEvents();
+    };
+
+    const filteredEvents = events
+        .filter((event) =>
+            event.event_title.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .sort((a, b) => {
+            const dateA = new Date(`${a.event_date} ${a.event_time}`);
+            const dateB = new Date(`${b.event_date} ${b.event_time}`);
+            return dateB - dateA; // Sort in descending order (oldest first)
+        });
 
     const paginatedEvents = filteredEvents.slice(
         (currentPage - 1) * ITEMS_PER_PAGE,
@@ -122,8 +229,47 @@ const EventsList = () => {
                     placeholder="Search events"
                     onChangeText={setSearchQuery}
                     value={searchQuery}
+                    onSubmitEditing={handleSearch}
                     style={styles.searchBar}
                 />
+                <View style={styles.filterRow}>
+                    <Button
+                        mode="outlined"
+                        onPress={() => setShowFilters(!showFilters)}
+                        style={styles.filterButton}
+                    >
+                        Filters
+                    </Button>
+                    <Button
+                        mode="outlined"
+                        onPress={handleReset}
+                        style={styles.filterButton}
+                    >
+                        Reset
+                    </Button>
+                </View>
+
+                {showFilters && (
+                    <View style={styles.filtersContainer}>
+                        <DatePickerField
+                            label="Select Start Date"
+                            value={startDate}
+                            onChange={setStartDate}
+                        />
+                        <DatePickerField
+                            label="Select End Date"
+                            value={endDate}
+                            onChange={setEndDate}
+                        />
+                        <Button
+                            mode="contained"
+                            onPress={handleSearch}
+                            style={styles.searchButton}
+                        >
+                            Search
+                        </Button>
+                    </View>
+                )}
             </View>
 
             {loading ? (
@@ -215,6 +361,33 @@ const styles = StyleSheet.create({
         marginTop: 20,
         fontSize: 16,
         color: '#666',
+    },
+    filterRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10,
+    },
+    filterButton: {
+        flex: 1,
+        marginHorizontal: 5,
+    },
+    filtersContainer: {
+        marginTop: 10,
+        padding: 10,
+        backgroundColor: '#f5f5f5',
+        borderRadius: 5,
+    },
+    dateContainer: {
+        marginVertical: 10,
+        width: '100%',
+    },
+    dateLabel: {
+        fontSize: 16,
+        marginBottom: 8,
+        color: '#000000',
+    },
+    searchButton: {
+        marginTop: 10,
     },
 });
 
