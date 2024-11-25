@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Text, TextInput, Button, Title } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { addEvent } from '../../../services/eventService';
+import { addEvent, updateEvent } from '../../../services/eventService';
 
 const EventForm = ({ eventData, onSubmit }) => {
   const [eventTitle, setEventTitle] = useState('');
@@ -59,14 +59,21 @@ const EventForm = ({ eventData, onSubmit }) => {
 
     // Call the addEvent from eventServices
     try {
-      const result = await addEvent(formData);
-      if (result) {
+      let result;
+      if (eventData?.id) {
+        result = await updateEvent(eventData.id, formData);
         console.log('Event added successfully:', result)
-        onSubmit(formData)
+      } else {
+        // If no ID, create new event
+        result = await addEvent(formData);
+        console.log('Event added successfully:', result)
       }
-
+      if (result) {
+        onSubmit(formData);
+      }
     } catch (error) {
       console.error('Error adding event:', error)
+      Alert.alert('Error', 'Failed to add event');
     }
 
   };
