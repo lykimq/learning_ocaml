@@ -3,6 +3,7 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { Button, Text, Card, Title, IconButton } from 'react-native-paper';
 import EventForm from './EventForm';
 import EventsList from '../../shared/events/EventsList';
+import EventRsvpList from './EventRsvpList';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 const ManageEventsScreen = ({ route }) => {
@@ -45,6 +46,20 @@ const ManageEventsScreen = ({ route }) => {
             <EventsList />
           </View>
         );
+      case 'rsvp':
+        return (
+          <View style={styles.contentContainer}>
+            <View style={styles.headerContainer}>
+              <IconButton
+                icon="arrow-left"
+                size={24}
+                onPress={() => setSelectedOption(null)}
+              />
+              <Title style={styles.headerTitle}>Manage RSVPs</Title>
+            </View>
+            <EventRsvpList />
+          </View>
+        );
       default:
         return (
           <View style={styles.optionsContainer}>
@@ -63,6 +78,14 @@ const ManageEventsScreen = ({ route }) => {
                 <MaterialIcons name="event" size={32} color="#4A90E2" />
                 <Title style={styles.cardTitle}>View & Manage Events</Title>
                 <Text style={styles.cardDescription}>View, edit, or delete existing events</Text>
+              </Card.Content>
+            </Card>
+
+            <Card style={styles.card} onPress={() => setSelectedOption('rsvp')}>
+              <Card.Content style={styles.cardContent}>
+                <MaterialIcons name="people" size={32} color="#4A90E2" />
+                <Title style={styles.cardTitle}>Manage RSVPs</Title>
+                <Text style={styles.cardDescription}>View and manage event registrations</Text>
               </Card.Content>
             </Card>
           </View>
@@ -115,7 +138,7 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' && {
       maxWidth: 600,
       cursor: 'pointer',
-      transition: '0.3s',
+      transition: 'all 0.3s ease',
       ':hover': {
         transform: 'translateY(-2px)',
         boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
