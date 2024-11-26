@@ -4,6 +4,7 @@ import { Button, Text, TextInput, Title, Paragraph } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { addRsvp } from '../../../services/events/eventRsvpService';
 
+
 const EventRSVP = ({ event, onClose }) => {
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
@@ -30,19 +31,13 @@ const EventRSVP = ({ event, onClose }) => {
             await addRsvp(rsvpData);
             setLoading(false);
 
-            Alert.alert(
-                'Success',
-                'You have been registered for this event.',
-                [{
-                    text: 'OK',
-                    onPress: () => {
-                        navigation.navigate('EventsScreen', {
-                            reset: true
-                        });
-                    }
-                }]
-            );
-        } catch (error) {
+            onClose();
+            // Navigate to the Events and reset the search
+            navigation.navigate('Events', {
+                reset: Date.now()
+            });
+        }
+        catch (error) {
             console.error('Registration error:', error);
             setLoading(false);
 

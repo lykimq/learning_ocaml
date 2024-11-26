@@ -11,7 +11,7 @@ import {
 } from "react-native-paper";
 import { getEvents, searchEvents } from "../../../services/events/eventService";
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import EventRSVP from "../../shared/events/EventRSVP";
 
 const ITEMS_PER_PAGE = 10;
@@ -79,10 +79,11 @@ const EventsScreen = () => {
   const [endDate, setEndDate] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const route = useRoute();
 
   useEffect(() => {
     fetchEvents()
-  }, []);
+  }, [route.params?.reset]);
 
   const fetchEvents = async () => {
     setLoading(true);
