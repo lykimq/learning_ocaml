@@ -10,7 +10,7 @@ import {
     IconButton,
     TextInput
 } from "react-native-paper";
-import { getEvents, deleteEvent, searchEvents } from "../../../services/eventService";
+import { getEvents, deleteEvent, searchEvents } from "../../../services/events/eventService";
 import EventForm from "../../admin/events/EventForm";
 import DateTimePicker from '@react-native-community/datetimepicker';
 

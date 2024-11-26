@@ -9,10 +9,10 @@ import {
   Text,
   TextInput
 } from "react-native-paper";
-import { getEvents, searchEvents } from "../../services/eventService";
+import { getEvents, searchEvents } from "../../../services/events/eventService";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
-import EventRSVP from "./EventRSVP";
+import EventRSVP from "../../shared/events/EventRSVP";
 
 const ITEMS_PER_PAGE = 10;
 

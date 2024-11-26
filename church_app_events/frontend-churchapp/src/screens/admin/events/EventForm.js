@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Text, TextInput, Button, Title } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { addEvent, updateEvent } from '../../../services/eventService';
+import { addEvent, updateEvent } from '../../../services/events/eventService';
 
 const EventForm = ({ eventData, onSubmit }) => {
   const [eventTitle, setEventTitle] = useState('');

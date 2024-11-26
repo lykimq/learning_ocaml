@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Alert, StyleSheet } from 'react-native';
 import { Button, Text, TextInput, Title, Paragraph } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
-import { addRsvp } from '../../services/eventRsvpService';
+import { addRsvp } from '../../../services/events/eventRsvpService';
 
 const EventRSVP = ({ event, onClose }) => {
     const [email, setEmail] = useState('');

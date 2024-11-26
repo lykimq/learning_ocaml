@@ -1,22 +1,22 @@
 import React from 'react';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import GivingScreen from '../screens/user/GivingScreen';
 import MediaScreen from '../screens/user/MediaScreen';
 import HomeScreen from '../screens/user/HomeScreen';
 import HomeGroupScreen from '../screens/user/HomeGroupScreen';
 import ServingScreen from '../screens/user/ServingScreen';
-import EventsScreen from '../screens/user/EventsScreen';
+import EventsScreen from '../screens/user/events/EventsScreen';
 import UsersScreen from '../screens/user/UsersScreen';
 import LoginScreen from '../screens/shared/LoginScreen';
 
-const Tab = createBottomTabNavigator ();
+const Tab = createBottomTabNavigator();
 
-export default function UserNavigator () {
+export default function UserNavigator() {
   return (
     <Tab.Navigator
-      screenOptions={({route}) => ({
-        tabBarIcon: ({color, size}) => {
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ color, size }) => {
           let iconName;
           switch (route.name) {
             case 'Home':
