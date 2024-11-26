@@ -54,7 +54,21 @@ export default function UserNavigator() {
       {/* Nesting Stack Navigators for each Tab */}
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Media" component={MediaScreen} />
-      <Tab.Screen name="Events" component={EventsScreen} />
+      {/* Make events screen reset the search when navigating to it */}
+      <Tab.Screen
+        name="Events"
+        component={EventsScreen}
+        options={{ tabBarLabel: 'Events' }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            // Force navigation to Events tab and reset
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Events', params: { reset: Date.now() } }],
+            });
+          },
+        })}
+      />
       <Tab.Screen name="HomeGroups" component={HomeGroupScreen} />
       <Tab.Screen name="Serving" component={ServingScreen} />
       <Tab.Screen name="Giving" component={GivingScreen} />
