@@ -9,6 +9,7 @@ use std::env;
 
 mod events;
 mod eventrsvp;
+mod email;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -55,7 +56,14 @@ async fn main() -> std::io::Result<()> {
                     .service(
                         web::scope("/rsvp")
                             .route("/confirm/{id}", web::post().to(eventrsvp::confirm_rsvp))
-            ))
+                            .route("/decline/{id}", web::post().to(eventrsvp::decline_rsvp))
+                            .service(
+                                web::scope("/email")
+                                    .route("/send-confirmation", web::post().to(email::send_confirmation_email))
+                                    .route("/send-decline", web::post().to(email::send_decline_email))
+                            )
+                    )
+            )
             // RSVPs
             .service(
                 web::scope("events/rsvp")
@@ -67,6 +75,8 @@ async fn main() -> std::io::Result<()> {
                     .route("/event/{event_id}", web::get().to(eventrsvp::get_rsvps_by_event))
                     .route("/search", web::get().to(eventrsvp::search_rsvps))
             )
+            // Add a separate scope for email operations
+
         // Other routes
     })
     .bind(&format!("0.0.0.0:{}", backend_port))?

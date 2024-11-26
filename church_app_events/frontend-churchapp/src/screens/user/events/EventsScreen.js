@@ -12,7 +12,7 @@ import {
 import { getEvents, searchEvents } from "../../../services/events/eventService";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import EventRSVP from "../../shared/events/EventRSVP";
+import EventRSVP from "./EventRSVP";
 
 const ITEMS_PER_PAGE = 10;
 

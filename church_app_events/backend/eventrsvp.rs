@@ -430,3 +430,35 @@ pub async fn confirm_rsvp(
         }
     }
 }
+
+pub async fn decline_rsvp(
+    pool: web::Data<PgPool>,
+    rsvp_id: web::Path<i32>,
+) -> impl Responder {
+    let result = sqlx::query!(
+        r#"
+        UPDATE eventrsvp
+        SET rsvp_status = 'declined'
+        WHERE id = $1 AND rsvp_status = 'pending'
+        RETURNING id, email, event_id, user_id, rsvp_status as "rsvp_status!: RsvpStatus", rsvp_date
+        "#,
+        rsvp_id.into_inner()
+    )
+    .fetch_one(pool.get_ref())
+    .await;
+
+    match result {
+        Ok(rsvp) => HttpResponse::Ok().json(RSVPResponse {
+            id: rsvp.id,
+            email: rsvp.email,
+            event_id: rsvp.event_id,
+            user_id: rsvp.user_id,
+            rsvp_status: rsvp.rsvp_status,
+            rsvp_date: rsvp.rsvp_date,
+        }),
+        Err(e) => {
+            eprintln!("Failed to decline RSVP: {}", e);
+            HttpResponse::InternalServerError().json("Failed to decline RSVP")
+        }
+    }
+}
