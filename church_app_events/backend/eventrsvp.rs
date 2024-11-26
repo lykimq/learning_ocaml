@@ -17,7 +17,8 @@ pub enum RsvpStatus {
 pub struct EventRSVPRequest {
     email: String,
     event_id: i32,
-    user_id: Option<i32>, // If the user is logged in, we will have a user_id
+    user_id: Option<i32>,
+    rsvp_status: RsvpStatus,
 }
 
 #[derive(Serialize)]
@@ -86,16 +87,22 @@ pub async fn create_rsvp(
             HttpResponse::BadRequest().json("This email has already RSVP'd to this event")
         }
         Ok(None) => {
-            // Insert the RSVP into the database
+            // Determine initial status based on the request
+            let initial_status = match rsvp_data.rsvp_status {
+                RsvpStatus::Declined => RsvpStatus::Declined,
+                _ => RsvpStatus::Pending
+            };
+
             let result = sqlx::query!(
                 r#"
                 INSERT INTO eventrsvp (email, event_id, user_id, rsvp_date, rsvp_status)
-                VALUES ($1, $2, $3, CURRENT_DATE, 'pending')
+                VALUES ($1, $2, $3, CURRENT_DATE, $4)
                 RETURNING id, email, event_id, user_id, rsvp_status as "rsvp_status!: RsvpStatus", rsvp_date
                 "#,
                 rsvp_data.email,
                 rsvp_data.event_id,
                 rsvp_data.user_id,
+                initial_status as RsvpStatus,
             )
             .fetch_one(pool.get_ref())
             .await;
@@ -387,6 +394,39 @@ pub async fn delete_rsvp(
         Err(e) => {
             eprintln!("Failed to delete RSVP: {}", e);
             HttpResponse::InternalServerError().json("Failed to delete RSVP")
+        }
+    }
+}
+
+// Add or update the admin confirmation endpoint
+pub async fn confirm_rsvp(
+    pool: web::Data<PgPool>,
+    rsvp_id: web::Path<i32>,
+) -> impl Responder {
+    let result = sqlx::query!(
+        r#"
+        UPDATE eventrsvp
+        SET rsvp_status = 'confirmed'
+        WHERE id = $1 AND rsvp_status = 'pending'
+        RETURNING id, email, event_id, user_id, rsvp_status as "rsvp_status!: RsvpStatus", rsvp_date
+        "#,
+        rsvp_id.into_inner()
+    )
+    .fetch_one(pool.get_ref())
+    .await;
+
+    match result {
+        Ok(rsvp) => HttpResponse::Ok().json(RSVPResponse {
+            id: rsvp.id,
+            email: rsvp.email,
+            event_id: rsvp.event_id,
+            user_id: rsvp.user_id,
+            rsvp_status: rsvp.rsvp_status,
+            rsvp_date: rsvp.rsvp_date,
+        }),
+        Err(e) => {
+            eprintln!("Failed to confirm RSVP: {}", e);
+            HttpResponse::InternalServerError().json("Failed to confirm RSVP")
         }
     }
 }

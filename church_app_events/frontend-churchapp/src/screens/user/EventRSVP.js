@@ -1,74 +1,100 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
-import { Button, Text, TextInput } from 'react-native-paper';
-import { addRsvp } from '../../services/eventrsvpService';
+import { View, Alert, StyleSheet } from 'react-native';
+import { Button, Text, TextInput, Title, Paragraph } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+import { addRsvp } from '../../services/eventRsvpService';
 
 const EventRSVP = ({ event, onClose }) => {
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
+    const navigation = useNavigation();
 
     const handleSubmit = async () => {
-        if (!email) {
-            Alert.alert('Error', 'Please enter your email');
+        if (!email || !email.includes('@')) {
+            Alert.alert('Error', 'Please enter a valid email address');
             return;
         }
 
         setLoading(true);
+
         try {
             const rsvpData = {
                 event_id: event.id,
                 email: email,
-                status: 'going'
+                user_id: null,
+                rsvp_status: "Pending"
             };
 
+            console.log('Submitting RSVP data:', rsvpData);
+
             await addRsvp(rsvpData);
-            Alert.alert('Success', 'Your RSVP has been recorded');
-            onClose();
-        } catch (error) {
-            Alert.alert('Error', 'Failed to submit RSVP');
-            console.error('RSVP submission error:', error);
-        } finally {
             setLoading(false);
+
+            Alert.alert(
+                'Success',
+                'You have been registered for this event.',
+                [{
+                    text: 'OK',
+                    onPress: () => {
+                        navigation.navigate('EventsScreen', {
+                            reset: true
+                        });
+                    }
+                }]
+            );
+        } catch (error) {
+            console.error('Registration error:', error);
+            setLoading(false);
+
+            if (error.message.includes('already')) {
+                Alert.alert(
+                    'Already Registered',
+                    'You are already registered for this event.',
+                    [{ text: 'OK' }]
+                );
+            } else {
+                Alert.alert(
+                    'Error',
+                    error.message || 'Failed to register for the event. Please try again.',
+                    [{ text: 'OK' }]
+                );
+            }
         }
     };
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                <Button
-                    icon="arrow-left"
-                    onPress={onClose}
-                    style={styles.backButton}
-                >
-                    Back to Events
-                </Button>
+            <Title style={styles.title}>{event.event_title}</Title>
+
+            <View style={styles.eventInfo}>
+                <Paragraph>Date: {new Date(event.event_date).toLocaleDateString()}</Paragraph>
+                <Paragraph>Time: {event.event_time}</Paragraph>
+                <Paragraph>Location: {event.address}</Paragraph>
             </View>
 
-            <View style={styles.content}>
-                <Text style={styles.title}>{event.event_title}</Text>
-                <Text style={styles.details}>
-                    Date: {new Date(event.event_date).toLocaleDateString()}
-                </Text>
-                <Text style={styles.details}>Time: {event.event_time}</Text>
-                <Text style={styles.details}>Location: {event.address}</Text>
-
+            <View style={styles.form}>
                 <TextInput
-                    label="Email"
+                    label="Email Address *"
                     value={email}
                     onChangeText={setEmail}
                     mode="outlined"
-                    style={styles.input}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    style={styles.input}
                 />
+
+                <Text style={styles.note}>
+                    * Required information
+                </Text>
 
                 <Button
                     mode="contained"
                     onPress={handleSubmit}
                     loading={loading}
+                    disabled={loading}
                     style={styles.submitButton}
                 >
-                    Confirm RSVP
+                    {loading ? 'Registering...' : 'Register for Event'}
                 </Button>
             </View>
         </View>
@@ -77,39 +103,34 @@ const EventRSVP = ({ event, onClose }) => {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
-    },
-    backButton: {
-        marginRight: 16,
-    },
-    content: {
         padding: 20,
     },
     title: {
         fontSize: 24,
-        fontWeight: 'bold',
         marginBottom: 20,
     },
-    details: {
-        fontSize: 16,
-        marginBottom: 10,
-        color: '#666',
+    eventInfo: {
+        marginBottom: 20,
+        padding: 15,
+        backgroundColor: '#f5f5f5',
+        borderRadius: 8,
+    },
+    form: {
+        gap: 15,
     },
     input: {
-        marginVertical: 20,
+        marginBottom: 10,
+    },
+    note: {
+        fontSize: 12,
+        color: '#666',
+        fontStyle: 'italic',
+        marginBottom: 10,
     },
     submitButton: {
-        marginTop: 20,
+        marginTop: 10,
         paddingVertical: 8,
-    },
+    }
 });
 
 export default EventRSVP;

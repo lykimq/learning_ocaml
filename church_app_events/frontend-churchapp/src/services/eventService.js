@@ -1,15 +1,15 @@
 import { Platform } from 'react-native';
 import axios from 'axios';
-import { API_EVENTS_ANDROID, API_EVENTS_IOS, API_EVENTS_WEB } from '@env';
+import { API_URL_ANDROID, API_URL_IOS, API_URL_WEB } from '@env';
 
 const getApiUrl = () => {
     switch (Platform.OS) {
         case 'android':
-            return API_EVENTS_ANDROID;
+            return API_URL_ANDROID;
         case 'ios':
-            return API_EVENTS_IOS;
+            return API_URL_IOS;
         default: // web
-            return API_EVENTS_WEB;
+            return API_URL_WEB;
     }
 }
 
@@ -24,7 +24,7 @@ const api = axios.create({
 
 export const getEvents = async () => {
     try {
-        const response = await api.get('/list');
+        const response = await api.get('/admin/events/list');
         console.log('Events fetched:', response.data);  // Log response
         return response.data;
     } catch (error) {
@@ -40,7 +40,7 @@ export const addEvent = async (eventData) => {
             throw new Error('Missing required fields');
         }
 
-        const response = await api.post('/add', eventData);
+        const response = await api.post('/admin/events/add', eventData);
         console.log('Event added:', response.data);
         return response.data;
     } catch (error) {
@@ -52,7 +52,7 @@ export const addEvent = async (eventData) => {
 
 export const updateEvent = async (id, eventData) => {
     try {
-        const response = await api.put(`/edit/${id}`, eventData);
+        const response = await api.put(`/admin/events/edit/${id}`, eventData);
         console.log('Event updated:', response.data);  // Add logging
         return response.data;
     } catch (error) {
@@ -63,7 +63,7 @@ export const updateEvent = async (id, eventData) => {
 
 export const deleteEvent = async (id) => {
     try {
-        const response = await api.delete(`/${id}`);
+        const response = await api.delete(`/admin/events/${id}`);
         console.log('Event deleted:', response.data);  // Add logging
         return response.data;
     } catch (error) {
@@ -83,7 +83,7 @@ export const searchEvents = async (params) => {
         if (searchParams.start_time) params.append('start_time', searchParams.start_time);
         if (searchParams.end_time) params.append('end_time', searchParams.end_time);
 
-        const response = await api.get('/search', { params });
+        const response = await api.get('/admin/events/search', { params });
         console.log('Events searched:', response.data);
         return response.data;
     } catch (error) {
@@ -93,6 +93,6 @@ export const searchEvents = async (params) => {
 };
 
 // During development, verify the variables are loaded
-console.log('Android URL for events:', API_EVENTS_ANDROID);
-console.log('iOS URL for events:', API_EVENTS_IOS);
-console.log('Web URL for events:', API_EVENTS_WEB);
+console.log('Android URL for events:', API_URL_ANDROID);
+console.log('iOS URL for events:', API_URL_IOS);
+console.log('Web URL for events:', API_URL_WEB);

@@ -52,7 +52,10 @@ async fn main() -> std::io::Result<()> {
                     )
                     .route("/{id}", web::delete().to(events::delete_event))
                     .route("/search", web::get().to(events::search_events))
-            )
+                    .service(
+                        web::scope("/rsvp")
+                            .route("/confirm/{id}", web::post().to(eventrsvp::confirm_rsvp))
+            ))
             // RSVPs
             .service(
                 web::scope("events/rsvp")

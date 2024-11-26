@@ -14,8 +14,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import EventRSVP from "./EventRSVP";
 
-
-
 const ITEMS_PER_PAGE = 10;
 
 const DatePickerField = ({ label, value, onChange }) => {
