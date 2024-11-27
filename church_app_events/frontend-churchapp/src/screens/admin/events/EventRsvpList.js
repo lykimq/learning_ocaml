@@ -12,7 +12,7 @@ import {
     Portal,
     Dialog
 } from "react-native-paper";
-import { getAllRsvps, declineRsvp, getRsvpsByEmail, confirmRsvpWithEmail, declineRsvpWithEmail }
+import { getAllRsvps, deleteRsvp, getRsvpsByEmail, confirmRsvpWithEmail, declineRsvpWithEmail }
     from "../../../services/events/eventRsvpService";
 
 const ITEMS_PER_PAGE = 10;
