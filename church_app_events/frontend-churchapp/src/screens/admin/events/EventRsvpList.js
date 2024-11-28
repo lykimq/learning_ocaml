@@ -282,12 +282,15 @@ const EventRsvpList = () => {
                 {/* Active Filters Display */}
                 {hasActiveFilters() && (
                     <View style={styles.activeFiltersContainer}>
-                        {searchQuery && (searchType === 'email' || searchType === 'general') && (
+                        {searchQuery && (
                             <Chip
                                 onClose={() => setSearchQuery('')}
                                 style={styles.filterChip}
                             >
-                                Email: {searchQuery}
+                                {/* Update the label based on search type and query content */}
+                                {searchType === 'email' ? 'Email: ' :
+                                    searchType === 'general' && searchQuery.includes('@') ? 'Email: ' :
+                                        'Event: '}{searchQuery}
                             </Chip>
                         )}
                         {eventTitleSearch && searchType === 'event' && (
