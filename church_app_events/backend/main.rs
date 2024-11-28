@@ -57,6 +57,13 @@ async fn main() -> std::io::Result<()> {
                         web::scope("/rsvp")
                             .route("/confirm/{id}", web::post().to(eventrsvp::confirm_rsvp))
                             .route("/decline/{id}", web::post().to(eventrsvp::decline_rsvp))
+                            .route("/search", web::get().to(eventrsvp::search_rsvps))
+                            .route("/list", web::get().to(eventrsvp::get_all_rsvps))
+                            .route("/add", web::post().to(eventrsvp::create_rsvp))
+                            .route("/edit/{id}", web::put().to(eventrsvp::update_rsvp))
+                            .route("/{id}", web::delete().to(eventrsvp::delete_rsvp))
+                            .route("/email/{email}", web::get().to(eventrsvp::get_rsvps_by_email))
+                            .route("/event/{event_id}", web::get().to(eventrsvp::get_rsvps_by_event))
                             .service(
                                 web::scope("/email")
                                     .route("/send-confirmation", web::post().to(email::send_confirmation_email))
@@ -73,7 +80,6 @@ async fn main() -> std::io::Result<()> {
                     .route("/{id}", web::delete().to(eventrsvp::delete_rsvp))
                     .route("/email/{email}", web::get().to(eventrsvp::get_rsvps_by_email))
                     .route("/event/{event_id}", web::get().to(eventrsvp::get_rsvps_by_event))
-                    .route("/search", web::get().to(eventrsvp::search_rsvps))
             )
             // Add a separate scope for email operations
 

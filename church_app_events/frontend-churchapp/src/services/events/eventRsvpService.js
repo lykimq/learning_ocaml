@@ -204,4 +204,85 @@ export const declineRsvpWithEmail = async (rsvpId, email, eventId) => {
     }
 };
 
+// Search event rsvp
+export const searchRsvps = async (searchParams = {}) => {
+    try {
+        console.log('Search params received:', searchParams); // Add debug log
+
+        const params = new URLSearchParams();
+
+        // Add parameters with proper naming and to match backend
+        if (searchParams.status) {
+            params.append('status', searchParams.status.toLowerCase()); // Ensure lowercase
+            console.log('Status param added:', params.toString()); // Add debug log
+        }
+        if (searchParams.email) params.append('email', searchParams.email);
+        if (searchParams.eventTitle) params.append('event_title', searchParams.eventTitle);
+        if (searchParams.userId) params.append('user_id', searchParams.userId);
+
+        const url = `/admin/events/rsvp/search?${params}`;
+        console.log('Final URL:', url); // Add debug log
+
+        const response = await api.get(url);
+        console.log('RSVPs searched:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Error searching RSVPs:', error);
+        throw error;
+    }
+};
+
+// Search by email and status
+export const searchRsvpsWithEmail = async (searchCriteria) => {
+    try {
+        const { query, status } = searchCriteria;
+
+        if (!query) {
+            throw new Error('Email is required');
+        }
+
+        if (!query.includes('@')) {
+            throw new Error('Invalid email format');
+        }
+
+        return await searchRsvps({
+            email: query.trim(),
+            status: status
+        });
+
+
+    } catch (error) {
+        console.error('Error searching RSVPs by email:', error);
+        throw error;
+    }
+};
+
+// Search by status
+export const searchRsvpsByStatus = async (status) => {
+    try {
+        console.log('Attempting to search with status:', status); // Debug log
+        const response = await searchRsvps({ status: status });
+        console.log('Raw API Response:', response); // Debug log
+        return response;
+    } catch (error) {
+        console.error('Error searching RSVPs by status:', error);
+        throw error;
+    }
+};
+
+// Search by event title
+export const searchRsvpsByEventTitle = async (eventTitle) => {
+    try {
+        const response = await searchRsvps({ eventTitle });
+        console.log('RSVPs searched by event title:', response);
+        return response;
+    } catch (error) {
+        console.error('Error searching RSVPs by event title:', error);
+        if (error.response?.data) {
+            throw new Error(error.response.data);
+        }
+        throw new Error('Failed to search RSVPs by event title');
+    }
+};
+
 

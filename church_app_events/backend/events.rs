@@ -61,6 +61,7 @@ pub struct EventSearchParams{
     start_time: Option<NaiveTime>,
     end_time: Option<NaiveTime>,
     category: Option<String>,
+    date_filter: Option<String>,
     limit: Option<i32>,
     offset: Option<i32>,
 }
@@ -296,12 +297,43 @@ pub async fn search_events(
     pool: web::Data<PgPool>,
     params: web::Query<EventSearchParams>
 ) -> impl Responder {
+    // Get current date for relative date calculations
+    let current_date = chrono::Utc::now().date_naive();
+
+    // Handle date range logic
+    let (effective_start_date, effective_end_date) = match (params.start_date, params.end_date) {
+        // Case 1: Both dates provided - validate and use them
+        (Some(start), Some(end)) => {
+            if end < start {
+                return HttpResponse::BadRequest().json("End date cannot be earlier than start date");
+            }
+            (start, end)
+        },
+        // Case 2: Only start date - search from start date to 30 days ahead
+        (Some(start), None) => {
+            let default_end = start + chrono::Duration::days(30);
+            (start, default_end)
+        },
+        // Case 3: Only end date - search from 30 days before to end date
+        (None, Some(end)) => {
+            let default_start = end - chrono::Duration::days(30);
+            (default_start, end)
+        },
+        // Case 4: No dates provided - use predefined filters or default to upcoming events
+        (None, None) => {
+            (
+                current_date - chrono::Duration::days(30),  // Default to last 30 days
+                current_date + chrono::Duration::days(30)   // and next 30 days
+            )
+        }
+    };
+
     let mut query = sqlx::QueryBuilder::new(
         "SELECT id, event_title, event_date, event_time, address, description, created_at, updated_at
          FROM events WHERE 1=1"
     );
 
-    // Text search
+    // Common search filters
     if let Some(text) = &params.text {
         let search_pattern = format!("%{}%", text);
         query.push(" AND (event_title ILIKE ");
@@ -313,18 +345,42 @@ pub async fn search_events(
         query.push(")");
     }
 
-    // Date range
-    if let Some(start_date) = params.start_date {
-        query.push(" AND event_date >= ");
-        query.push_bind(start_date);
+    // Add predefined date range filters
+    match params.date_filter.as_deref() {
+        Some("today") => {
+            query.push(" AND event_date = ");
+            query.push_bind(current_date);
+        },
+        Some("tomorrow") => {
+            query.push(" AND event_date = ");
+            query.push_bind(current_date + chrono::Duration::days(1));
+        },
+        Some("this_week") => {
+            let week_end = current_date + chrono::Duration::days(7);
+            query.push(" AND event_date >= ");
+            query.push_bind(current_date);
+            query.push(" AND event_date <= ");
+            query.push_bind(week_end);
+        },
+        Some("upcoming") => {
+            query.push(" AND event_date >= ");
+            query.push_bind(current_date);
+        },
+        Some("past") => {
+            query.push(" AND event_date < ");
+            query.push_bind(current_date);
+        },
+        // Custom date range using effective dates
+        None => {
+            query.push(" AND event_date >= ");
+            query.push_bind(effective_start_date);
+            query.push(" AND event_date <= ");
+            query.push_bind(effective_end_date);
+        },
+        _ => {}
     }
 
-    if let Some(end_date) = params.end_date {
-        query.push(" AND event_date <= ");
-        query.push_bind(end_date);
-    }
-
-    // Time range
+    // Time range if provided
     if let Some(start_time) = params.start_time {
         query.push(" AND event_time >= ");
         query.push_bind(start_time);
@@ -335,14 +391,18 @@ pub async fn search_events(
         query.push_bind(end_time);
     }
 
-    // Category
+    // Category filter
     if let Some(category) = &params.category {
         query.push(" AND category = ");
         query.push_bind(category.clone());
     }
 
-    // Add sorting
-    query.push(" ORDER BY event_date ASC, event_time ASC");
+    // Add smart sorting based on search context
+    if params.date_filter == Some("past".to_string()) {
+        query.push(" ORDER BY event_date DESC, event_time DESC"); // Past events newest first
+    } else {
+        query.push(" ORDER BY event_date ASC, event_time ASC"); // Future events soonest first
+    }
 
     // Add pagination
     if let (Some(limit), Some(offset)) = (params.limit, params.offset) {
@@ -352,9 +412,8 @@ pub async fn search_events(
         query.push_bind(offset);
     }
 
-    // Execute the query
+    // Execute query
     let query = query.build_query_as::<Event>();
-
     match query.fetch_all(pool.get_ref()).await {
         Ok(events) => HttpResponse::Ok().json(events),
         Err(err) => {
