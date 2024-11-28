@@ -118,73 +118,61 @@ const EventRsvpList = () => {
     const handleSearch = async () => {
         setLoading(true);
         try {
-            let searchResults = [];
+            // Build search criteria object
+            const searchCriteria = {};
 
-            switch (searchType) {
-                case 'email':
-                    try {
-                        searchResults = await searchRsvpsWithEmail({
-                            query: searchQuery,
-                            status: selectedStatus
-                        });
-                    } catch (error) {
-                        showAlert('Error', error.message);
-                    }
-                    break;
-
-                case 'event':
-                    try {
-                        const eventResults = await searchRsvpsByEventTitle(eventTitleSearch);
-                        console.log('Event search results:', eventResults); // Debug log
-                        searchResults = eventResults;
-                    } catch (error) {
-                        console.error('Event search error:', error); // Debug log
-                        showAlert('Error', error.message);
-                    }
-                    break;
-
-                case 'status':
-                    try {
-                        searchResults = await searchRsvpsByStatus(selectedStatus);
-                    } catch (error) {
-                        showAlert('Error', error.message);
-                    }
-                    break;
-
-                default:
-                    try {
-                        const response = await getAllRsvps();
-                        const allRsvps = Array.isArray(response) ? response : response.rsvps || [];
-                        searchResults = allRsvps.filter(rsvp =>
-                            rsvp.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            rsvp.event_title?.toLowerCase().includes(searchQuery.toLowerCase())
-                        );
-                    } catch (error) {
-                        console.error('Error in general search:', error);
-                        showAlert('Error', error.message);
-                    }
-                    break;
+            // Add email criteria if there's a search query
+            if (searchQuery) {
+                if (searchType === 'email' || (searchType === 'general' && searchQuery.includes('@'))) {
+                    searchCriteria.email = searchQuery;
+                }
             }
 
-            // Ensure searchResults is properly structured
+            // Add event title criteria
+            if (searchType === 'event' && eventTitleSearch) {
+                searchCriteria.event_title = eventTitleSearch;
+            } else if (searchType === 'general' && searchQuery && !searchQuery.includes('@')) {
+                searchCriteria.event_title = searchQuery;
+            }
+
+            // Add status if selected (can be combined with any search)
+            if (selectedStatus) {
+                searchCriteria.status = selectedStatus;
+            }
+
+            // If no search criteria, fetch all RSVPs
+            if (Object.keys(searchCriteria).length === 0) {
+                const response = await getAllRsvps();
+                setRsvpData({
+                    rsvps: response || [],
+                    total: response.length || 0,
+                    status_counts: {
+                        confirmed: response.filter(r => r.rsvp_status === 'confirmed').length,
+                        pending: response.filter(r => r.rsvp_status === 'pending').length,
+                        declined: response.filter(r => r.rsvp_status === 'declined').length
+                    }
+                });
+                return;
+            }
+
+            console.log('Searching with criteria:', searchCriteria); // Debug log
+
+            // Perform the search with combined criteria
+            const searchResults = await searchRsvps(searchCriteria);
+
+            // Ensure proper data structure
             const results = Array.isArray(searchResults) ? searchResults :
                 searchResults?.rsvps ? searchResults.rsvps : [];
 
-            // Apply status filter if needed
-            const filteredResults = selectedStatus && searchType !== 'status'
-                ? results.filter(rsvp => rsvp.rsvp_status.toLowerCase() === selectedStatus.toLowerCase())
-                : results;
+            console.log('Search results:', results); // Debug log
 
-            console.log('Filtered results:', filteredResults); // Debug log
-
-            // Update rsvpData with the filtered results
             setRsvpData({
-                rsvps: filteredResults,
-                total: filteredResults.length,
+                rsvps: results,
+                total: results.length,
                 status_counts: {
-                    confirmed: filteredResults.filter(r => r.rsvp_status === 'confirmed').length,
-                    pending: filteredResults.filter(r => r.rsvp_status === 'pending').length,
-                    declined: filteredResults.filter(r => r.rsvp_status === 'declined').length
+                    confirmed: results.filter(r => r.rsvp_status === 'confirmed').length,
+                    pending: results.filter(r => r.rsvp_status === 'pending').length,
+                    declined: results.filter(r => r.rsvp_status === 'declined').length
                 }
             });
 
@@ -195,7 +183,7 @@ const EventRsvpList = () => {
         } finally {
             setLoading(false);
         }
-    }
+    };
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -273,35 +261,55 @@ const EventRsvpList = () => {
     );
 
     const renderSearchInput = () => {
-        switch (searchType) {
-            case 'email':
-                return (
-                    <Searchbar
-                        placeholder="Search by email"
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        style={styles.searchBar}
-                    />
-                );
-            case 'event':
-                return (
+        return (
+            <View style={styles.searchInputContainer}>
+                {searchType === 'event' ? (
                     <Searchbar
                         placeholder="Search by event title"
                         value={eventTitleSearch}
                         onChangeText={setEventTitleSearch}
                         style={styles.searchBar}
                     />
-                );
-            default:
-                return (
+                ) : (
                     <Searchbar
-                        placeholder="Search RSVPs"
+                        placeholder={searchType === 'email' ? "Search by email" : "Search RSVPs"}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         style={styles.searchBar}
                     />
-                );
-        }
+                )}
+
+                {/* Active Filters Display */}
+                {hasActiveFilters() && (
+                    <View style={styles.activeFiltersContainer}>
+                        {searchQuery && (searchType === 'email' || searchType === 'general') && (
+                            <Chip
+                                onClose={() => setSearchQuery('')}
+                                style={styles.filterChip}
+                            >
+                                Email: {searchQuery}
+                            </Chip>
+                        )}
+                        {eventTitleSearch && searchType === 'event' && (
+                            <Chip
+                                onClose={() => setEventTitleSearch('')}
+                                style={styles.filterChip}
+                            >
+                                Event: {eventTitleSearch}
+                            </Chip>
+                        )}
+                        {selectedStatus && (
+                            <Chip
+                                onClose={() => setSelectedStatus(null)}
+                                style={styles.filterChip}
+                            >
+                                Status: {selectedStatus}
+                            </Chip>
+                        )}
+                    </View>
+                )}
+            </View>
+        );
     };
 
     const renderStatusButtons = () => (
@@ -354,46 +362,33 @@ const EventRsvpList = () => {
     );
 
     const handleStatusFilter = async (status) => {
-        setLoading(true);
-        try {
-            console.log('Status filter clicked:', status);
-
-            if (selectedStatus === status) {
-                console.log('Clearing status filter');
-                setSelectedStatus(null);
-                await fetchRsvps();
-            } else {
-                console.log('Setting status filter:', status);
-                setSelectedStatus(status);
-                const results = await searchRsvps({ status: status });
-                console.log('Search results:', results);
-
-                // Update this to use rsvpData structure
-                setRsvpData({
-                    rsvps: Array.isArray(results) ? results : results.rsvps || [],
-                    total: Array.isArray(results) ? results.length : results.total || 0,
-                    status_counts: results.status_counts || {}
-                });
-            }
-
-            setCurrentPage(1);
-        } catch (error) {
-            console.error('Error filtering by status:', error);
-            showAlert('Error', 'Failed to filter by status');
-        } finally {
-            setLoading(false);
+        if (selectedStatus === status) {
+            setSelectedStatus(null);
+        } else {
+            setSelectedStatus(status);
         }
-    }
 
+        // Trigger search with updated status
+        // Small delay to ensure state is updated
+        setTimeout(() => {
+            handleSearch();
+        }, 0);
+    };
 
+    // Add a helper function to check if there are active filters
+    const hasActiveFilters = () => {
+        return searchQuery || eventTitleSearch || selectedStatus;
+    };
+
+    // Update handleReset to properly clear all filters
     const handleReset = () => {
         setSearchQuery('');
         setEventTitleSearch('');
         setSelectedStatus(null);
-        setSearchType('default');
+        setSearchType('general');
         setCurrentPage(1);
         fetchRsvps();
-    }
+    };
 
     // Pagination
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -667,7 +662,20 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#666',
         marginBottom: 4,
-    }
+    },
+    searchInputContainer: {
+        marginBottom: 10,
+    },
+    activeFiltersContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 8,
+        gap: 8,
+    },
+    filterChip: {
+        marginRight: 8,
+        marginBottom: 4,
+    },
 });
 
 
