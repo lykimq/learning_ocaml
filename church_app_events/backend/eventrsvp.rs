@@ -454,7 +454,6 @@ pub async fn search_rsvps(
     pool: web::Data<PgPool>,
     params: web::Query<SearchQuery>
 ) -> impl Responder {
-    println!("Received search request with params: {:?}", params);
 
     let mut query = sqlx::QueryBuilder::new(
         "SELECT r.id, r.email, r.event_id, r.user_id,
@@ -468,7 +467,6 @@ pub async fn search_rsvps(
 
     // Apply status filter if provided
     if let Some(status) = &params.status {
-        println!("Applying status filter: {:?}", status);
         query.push(" AND r.rsvp_status = ");
         query.push_bind(status);
     }
@@ -496,16 +494,11 @@ pub async fn search_rsvps(
     // Default sorting by event date and time
     query.push(" ORDER BY e.event_date ASC, e.event_time ASC");
 
-    // Debug print the final query
-    let sql = query.sql();
-    println!("Generated SQL: {}", sql);
-
     // Execute the query
     let query = query.build_query_as::<RSVPSearchResponse>();
 
     match query.fetch_all(pool.get_ref()).await {
         Ok(rsvps) => {
-            println!("Found {} RSVPs matching filter", rsvps.len());
 
             let total = rsvps.len();
 
