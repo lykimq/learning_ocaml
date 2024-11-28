@@ -10,6 +10,7 @@ use std::env;
 mod events;
 mod eventrsvp;
 mod email;
+mod homegroup;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -71,7 +72,17 @@ async fn main() -> std::io::Result<()> {
                             )
                     )
             )
-            // RSVPs
+            // Add home group routes
+            .service(
+                web::scope("/admin/home_group")
+                    .route("/add", web::post().to(homegroup::add_home_group))
+                    .route("/edit/{id}", web::put().to(homegroup::update_home_group))
+                    .route("/list", web::get().to(homegroup::get_all_home_groups))
+                    .route("/{id}", web::get().to(homegroup::get_home_group))
+                    .route("/{id}", web::delete().to(homegroup::delete_home_group))
+                    .route("/search", web::get().to(homegroup::search_home_groups))
+            )
+            // Event RSVPs
             .service(
                 web::scope("events/rsvp")
                     .route("/add", web::post().to(eventrsvp::create_rsvp))
