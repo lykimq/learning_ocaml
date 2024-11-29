@@ -4,7 +4,7 @@ import ManageEventsScreen from '../screens/admin/events/ManageEventsScreen';
 import ManageHomeGroupScreen from '../screens/admin/homegroups/ManageHomeGroupScreen';
 import ManageMediaScreen from '../screens/admin/ManageMediaScreen';
 import ManageServingScreen from '../screens/admin/ManageServingScreen';
-import ManageUsersScreen from '../screens/admin/ManageUsersScreen';
+import ManageUsersScreen from '../screens/admin/users/ManageUsersScreen';
 import ManageGivingScreen from '../screens/admin/ManageGivingScreen';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
