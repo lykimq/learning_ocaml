@@ -54,8 +54,20 @@ export default function AdminTabNavigator() {
       })}
     >
       {/* Nesting Stack Navigators for each Tab */}
-      <Tab.Screen name="Home" component={DashboardScreen} />
-      <Tab.Screen name="Media" component={ManageMediaScreen} />
+      <Tab.Screen name="Home" component={DashboardScreen}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('Home', { reset: Date.now() });
+          },
+        })}
+      />
+      <Tab.Screen name="Media" component={ManageMediaScreen}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('Media', { reset: Date.now() });
+          },
+        })}
+      />
       <Tab.Screen
         name="Events"
         component={ManageEventsScreen}
@@ -65,13 +77,42 @@ export default function AdminTabNavigator() {
           },
         })}
       />
-      <Tab.Screen name="HomeGroups" component={ManageHomeGroupScreen} />
-      <Tab.Screen name="Serving" component={ManageServingScreen} />
-      <Tab.Screen name="Giving" component={ManageGivingScreen} />
-      <Tab.Screen name="Users" component={ManageUsersScreen} />
+      <Tab.Screen name="HomeGroups" component={ManageHomeGroupScreen}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('HomeGroups', { reset: Date.now() });
+          },
+        })}
+      />
+      <Tab.Screen name="Serving" component={ManageServingScreen}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('Serving', { reset: Date.now() });
+          },
+        })}
+      />
+      <Tab.Screen name="Giving" component={ManageGivingScreen}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('Giving', { reset: Date.now() });
+          },
+        })}
+      />
+      <Tab.Screen name="Users" component={ManageUsersScreen}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('Users', { reset: Date.now() });
+          },
+        })}
+      />
       <Tab.Screen
         name="Logout"
         component={LogoutScreen}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('Logout', { reset: Date.now() });
+          },
+        })}
       />
     </Tab.Navigator>
   );

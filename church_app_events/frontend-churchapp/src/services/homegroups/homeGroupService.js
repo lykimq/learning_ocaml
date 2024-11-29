@@ -22,6 +22,34 @@ const api = axios.create({
     },
 });
 
+// Add request interceptor for debugging
+api.interceptors.request.use(request => {
+    console.log('Starting Request:', {
+        url: request.url,
+        method: request.method,
+        baseURL: request.baseURL,
+        data: request.data
+    });
+    return request;
+});
+
+// Add response interceptor for debugging
+api.interceptors.response.use(
+    response => {
+        console.log('Response:', response);
+        return response;
+    },
+    error => {
+        console.log('Response Error:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            config: error.config
+        });
+        return Promise.reject(error);
+    }
+);
+
 export const getHomeGroups = async () => {
     try {
         const response = await api.get("/admin/home_group/list");
@@ -35,17 +63,32 @@ export const getHomeGroups = async () => {
 
 export const addHomeGroup = async (homeGroupData) => {
     try {
-        // Validate the data format before sending
-        if (!homeGroupData.name ||
-            !homeGroupData.created_by) {
-            throw new Error('Missing required fields');
-        }
+        console.log('Sending home group data:', homeGroupData);
 
-        const response = await api.post("/admin/home_group/add", homeGroupData);
+        const formattedData = {
+            name: homeGroupData.name,
+            description: homeGroupData.description || '',
+            location: homeGroupData.location,
+            language: homeGroupData.language,
+            profile_picture: homeGroupData.profile_picture || '',
+            max_capacity: parseInt(homeGroupData.max_capacity),
+            meeting_day: homeGroupData.meeting_day,
+            meeting_time: homeGroupData.meeting_time,
+            created_by: homeGroupData.created_by
+        };
+
+        console.log('Formatted data being sent:', formattedData);
+
+        const response = await api.post("/admin/home_group/add", formattedData);
         console.log("Home group added:", response.data);
         return response.data;
     } catch (error) {
-        console.error("Error adding home group:", error);
+        console.error('Error details:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            data: error.response?.config?.data
+        });
         throw new Error(error.response?.data?.message || 'Failed to add home group');
     }
 }
@@ -53,12 +96,13 @@ export const addHomeGroup = async (homeGroupData) => {
 
 export const updateHomeGroup = async (id, homeGroupData) => {
     try {
+        console.log('Updating home group:', { id, data: homeGroupData });
         const response = await api.put(`/admin/home_group/edit/${id}`, homeGroupData);
         console.log("Home group updated:", response.data);
         return response.data;
     } catch (error) {
-        console.error("Error updating home group:", error);
-        throw new Error(error.response?.data?.message || 'Failed to update home group');
+        console.error('Error updating home group:', error.response?.data);
+        throw error;
     }
 }
 
@@ -104,3 +148,4 @@ export const getHomeGroupById = async (id) => {
 console.log('Android URL:', API_URL_ANDROID);
 console.log('iOS URL:', API_URL_IOS);
 console.log('Web URL:', API_URL_WEB);
+console.log('API URL for home groups:', apiUrl);

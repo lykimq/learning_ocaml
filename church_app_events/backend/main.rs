@@ -11,6 +11,7 @@ mod events;
 mod eventrsvp;
 mod email;
 mod homegroup;
+mod user;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -38,7 +39,16 @@ async fn main() -> std::io::Result<()> {
                     .max_age(3600),
             )
             // Authentication routes
-            // Users
+            .service(
+                web::scope("/admin/users")
+                    .route("/add", web::post().to(user::add_user))
+                    .route("/edit/{id}", web::put().to(user::update_user))
+                    .route("/list", web::get().to(user::get_all_users))
+                    .route("/{id}", web::get().to(user::get_user))
+                    .route("/{id}", web::delete().to(user::delete_user))
+                    .route("/search", web::get().to(user::search_users))
+                    .route("/email/{email}", web::get().to(user::get_user_by_email))
+            )
             // Events
             .service(
                 web::scope("/admin/events")
