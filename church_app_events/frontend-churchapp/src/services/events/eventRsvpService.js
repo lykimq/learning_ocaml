@@ -260,9 +260,9 @@ export const searchRsvpsWithEmail = async (searchCriteria) => {
 // Search by status
 export const searchRsvpsByStatus = async (status) => {
     try {
-        console.log('Attempting to search with status:', status); // Debug log
+        console.log('Attempting to search with status:', status);
         const response = await searchRsvps({ status: status });
-        console.log('Raw API Response:', response); // Debug log
+        console.log('Raw API Response:', response);
         return response;
     } catch (error) {
         console.error('Error searching RSVPs by status:', error);
