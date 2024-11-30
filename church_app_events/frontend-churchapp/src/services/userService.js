@@ -60,9 +60,15 @@ export const getUserByEmail = async (email) => {
 // add user
 export const addUser = async (user) => {
     try {
-        // Validate the data format before sending
-        if (!user.email || !user.password || !user.name || !user.role) {
-            throw new Error('Missing required fields');
+
+        if (!user.email || !user.password || !user.username || !user.role) {
+            const missingFields = [];
+            if (!user.email) missingFields.push('email');
+            if (!user.password) missingFields.push('password');
+            if (!user.username) missingFields.push('username');
+            if (!user.role) missingFields.push('role');
+
+            throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
         }
 
         const response = await api.post('/admin/users/add', user);
@@ -70,7 +76,12 @@ export const addUser = async (user) => {
         return response.data;
     } catch (error) {
         console.error('Error adding user:', error);
-        throw new Error(error.response?.data?.message || 'Failed to add user');
+        // Check if the error response has a message
+        if (error.response?.data?.message?.includes("already exists")) {
+            throw new Error("Email already exists");
+        } else {
+            throw new Error(error.response?.data?.message || 'Failed to add user');
+        }
     }
 };
 
@@ -106,7 +117,7 @@ export const searchUsers = async (params) => {
         const searchParams = new URLSearchParams();
 
         if (params.email) searchParams.append('email', params.email);
-        if (params.name) searchParams.append('name', params.name);
+        if (params.username) searchParams.append('username', params.username);
         if (params.role) searchParams.append('role', params.role)
 
         const response = await api.get(`/admin/users/search?${query}`);

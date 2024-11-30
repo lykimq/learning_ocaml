@@ -7,6 +7,15 @@ use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, QueryBuilder};
 use serde_json::json;
+use regex::Regex;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref EMAIL_REGEX: Regex =
+    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
+    static ref USERNAME_REGEX: Regex =
+    Regex::new(r"^[a-zA-Z0-9_-]{3,20}$").unwrap();
+}
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "user_role", rename_all = "lowercase")]
@@ -45,7 +54,7 @@ pub struct User {
     pub id: i32,
     pub email: String,
     pub password_hash: String,
-    pub name: String,
+    pub username: String,
     pub role: UserRole,
     pub profile_picture: Option<String>,
     pub created_at: Option<NaiveDateTime>,
@@ -56,7 +65,7 @@ pub struct User {
 pub struct CreateUserData {
     pub email: String,
     pub password: String,
-    pub name: String,
+    pub username: String,
     pub role: UserRole,
     pub profile_picture: Option<String>,
 }
@@ -65,7 +74,7 @@ pub struct CreateUserData {
 pub struct UpdateUserData {
     pub email: Option<String>,
     pub password: Option<String>,
-    pub name: Option<String>,
+    pub username: Option<String>,
     pub role: Option<UserRole>,
     pub profile_picture: Option<String>,
 }
@@ -73,8 +82,22 @@ pub struct UpdateUserData {
 #[derive(Deserialize)]
 pub struct SearchUserParams {
     pub email: Option<String>,
-    pub name: Option<String>,
+    pub username: Option<String>,
     pub role: Option<UserRole>,
+}
+
+fn validate_username(username: &str) -> Result<(), String> {
+    if !USERNAME_REGEX.is_match(username) {
+        return Err("Username must be between 3 and 20 characters, and can only contain letters, numbers, and underscores".to_string());
+    }
+    Ok(())
+}
+
+fn validate_email(email: &str) -> Result<(), String> {
+    if !EMAIL_REGEX.is_match(email) {
+        return Err("Invalid email format".to_string());
+    }
+    Ok(())
 }
 
 // Create a new user
@@ -82,17 +105,32 @@ pub async fn add_user(
     pool: web::Data<PgPool>,
     new_user: web::Json<CreateUserData>,
 ) -> impl Responder {
+
+    // Validate username
+    if let Err(e) = validate_username(&new_user.username) {
+        return HttpResponse::BadRequest().json(json!({
+            "message": e
+        }));
+    }
+
+    // Validate email
+    if let Err(e) = validate_email(&new_user.email) {
+        return HttpResponse::BadRequest().json(json!({
+            "message": e
+        }));
+    }
+
     let result = sqlx::query_as!(
         User,
         r#"
-        INSERT INTO users (email, password_hash, name, role, profile_picture)
+        INSERT INTO users (email, password_hash, username, role, profile_picture)
         VALUES ($1, crypt($2, gen_salt('bf')), $3, $4, $5)
-        RETURNING id, email, password_hash, name, role as "role!: UserRole",
+        RETURNING id, email, password_hash, username, role as "role!: UserRole",
         profile_picture, created_at, updated_at
         "#,
         new_user.email,
         new_user.password,
-        new_user.name,
+        new_user.username,
         new_user.role.clone() as UserRole,
         new_user.profile_picture,
     )
@@ -103,7 +141,31 @@ pub async fn add_user(
         Ok(user) => HttpResponse::Ok().json(user),
         Err(e) => {
             eprintln!("Error adding user: {:?}", e);
-            HttpResponse::InternalServerError().body("Failed to add user")
+            // Check for duplicate email
+            if let sqlx::Error::Database(db_error) = e {
+                match db_error.constraint() {
+                    Some("users_email_key") => {
+                        return HttpResponse::BadRequest().json(json!({
+                            "message": "Email already exists"
+                        }));
+                    }
+                    Some("users_username_key") => {
+                        return HttpResponse::BadRequest().json(json!({
+                            "message": "Username already exists"
+                        }));
+                    }
+                    Some("username_format") => {
+                    return HttpResponse::BadRequest().json(json!({
+                        "message": "Username must be between 3 and 20 characters, and can only contain letters, numbers, and underscores"
+                        }));
+                    }
+                    _ => {}
+                }
+            }
+            // If it's not a duplicate email, return a generic error
+            HttpResponse::InternalServerError().json(json!({
+                "message": "Failed to add user"
+            }))
         }
     }
 }
@@ -113,7 +175,7 @@ pub async fn get_user(pool: web::Data<PgPool>, id: web::Path<i32>) -> impl Respo
     let result = sqlx::query_as!(
         User,
         r#"
-        SELECT id, email, password_hash, name, role as "role: UserRole",
+        SELECT id, email, password_hash, username, role as "role: UserRole",
         profile_picture, created_at, updated_at
         FROM users WHERE id = $1
         "#,
@@ -138,6 +200,24 @@ pub async fn update_user(
     id: web::Path<i32>,
     update_data: web::Json<UpdateUserData>
 ) -> impl Responder {
+    // Validate username if provided
+    if let Some(username) = &update_data.username {
+        if let Err(e) = validate_username(username) {
+            return HttpResponse::BadRequest().json(json!({
+                "message": e
+            }));
+        }
+    }
+
+    // Validate email if provided
+    if let Some(email) = &update_data.email {
+        if let Err(e) = validate_email(email) {
+            return HttpResponse::BadRequest().json(json!({
+                "message": e
+            }));
+        }
+    }
+
     let mut query_builder = QueryBuilder::new(
         "UPDATE users SET updated_at = CURRENT_TIMESTAMP"
     );
@@ -153,9 +233,9 @@ pub async fn update_user(
         query_builder.push(", gen_salt('bf'))");
     }
 
-    if let Some(name) = &update_data.name {
-        query_builder.push(", name = ");
-        query_builder.push_bind(name);
+    if let Some(username) = &update_data.username {
+        query_builder.push(", username = ");
+        query_builder.push_bind(username);
     }
 
     if let Some(role) = &update_data.role {
@@ -170,7 +250,17 @@ pub async fn update_user(
 
     query_builder.push(" WHERE id = ");
     query_builder.push_bind(id.into_inner());
-    query_builder.push(" RETURNING id, email, password_hash, name, role as \"role: UserRole\", profile_picture, created_at, updated_at");
+    query_builder.push(
+        " RETURNING
+        id,
+        email,
+        password_hash,
+        username,
+        role as \"role: UserRole\",
+        profile_picture,
+        created_at,
+        updated_at"
+    );
 
     let result = query_builder
         .build_query_as::<User>()
@@ -182,7 +272,29 @@ pub async fn update_user(
         Ok(None) => HttpResponse::NotFound().body("User not found"),
         Err(e) => {
             eprintln!("Error updating user: {:?}", e);
-            HttpResponse::InternalServerError().body("Failed to update user")
+            if let sqlx::Error::Database(db_error) = e {
+                match db_error.constraint() {
+                    Some("users_email_key") => {
+                        return HttpResponse::BadRequest().json(json!({
+                            "message": "Email already exists"
+                        }));
+                    }
+                    Some("users_username_key") => {
+                        return HttpResponse::BadRequest().json(json!({
+                            "message": "Username already exists"
+                        }));
+                    }
+                    Some("username_format") => {
+                        return HttpResponse::BadRequest().json(json!({
+                            "message": "Username must be between 3 and 20 characters, and can only contain letters, numbers, and underscores"
+                        }));
+                    }
+                    _ => {}
+                }
+            }
+            HttpResponse::InternalServerError().json(json!({
+                "message": "Failed to update user"
+            }))
         }
     }
 }
@@ -224,9 +336,9 @@ pub async fn search_users(
         query_builder.push_bind(format!("%{}%", email));
     }
 
-    if let Some(name) = &params.name {
-        query_builder.push(" AND name ILIKE ");
-        query_builder.push_bind(format!("%{}%", name));
+    if let Some(username) = &params.username {
+        query_builder.push(" AND username ILIKE ");
+        query_builder.push_bind(format!("%{}%", username));
     }
 
     if let Some(role) = &params.role {
@@ -253,7 +365,7 @@ pub async fn get_all_users(pool: web::Data<PgPool>) -> impl Responder {
     let result = sqlx::query_as!(
         User,
         r#"
-        SELECT id, email, password_hash, name, role as "role: UserRole",
+        SELECT id, email, password_hash, username, role as "role: UserRole",
         profile_picture, created_at, updated_at
         FROM users
         ORDER BY id
@@ -278,7 +390,7 @@ pub async fn get_user_by_email(
     let result = sqlx::query_as!(
         User,
         r#"
-        SELECT id, email, password_hash, name, role as "role!: UserRole",
+        SELECT id, email, password_hash, username, role as "role!: UserRole",
         profile_picture, created_at, updated_at
         FROM users
         WHERE email = $1
