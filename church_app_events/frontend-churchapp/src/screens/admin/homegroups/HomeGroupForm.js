@@ -20,6 +20,9 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
     const [errors, setErrors] = useState({});
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
+    const [dialogMessage, setDialogMessage] = useState(null);
+    const [dialogVisible, setDialogVisible] = useState(false);
+    const [dialogCallback, setDialogCallback] = useState(null);
 
     useEffect(() => {
         if (homeGroupData) {
@@ -40,9 +43,14 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
         </Text>
     );
 
+    const handleAlert = (title, message, callback = null) => {
+        showAlert(title, message, callback, setDialogMessage, setDialogVisible, setDialogCallback);
+    };
+
+
     const handleSubmit = async () => {
         if (!isAdmin) {
-            showAlert('Error', 'Only administrators can create or modify home groups');
+            handleAlert('Error', 'Only administrators can create or modify home groups');
             return;
         }
 
@@ -57,7 +65,7 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
         setErrors(validationErrors);
 
         if (Object.keys(validationErrors).length > 0) {
-            showAlert('Error', 'Please fill in all required fields');
+            handleAlert('Error', 'Please fill in all required fields');
             return;
         }
 
@@ -77,17 +85,17 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
             let result;
             if (homeGroupData?.id) {
                 result = await updateHomeGroup(homeGroupData.id, formData);
-                showAlert('Success', 'Home Group updated successfully');
+                handleAlert('Success', 'Home Group updated successfully');
             } else {
                 result = await addHomeGroup(formData);
-                showAlert('Success', 'Home Group added successfully');
+                handleAlert('Success', 'Home Group added successfully');
             }
             if (result) {
                 onSubmit(formData);
             }
         } catch (error) {
             console.error('Error saving home group:', error);
-            showAlert('Error', 'Failed to save home group');
+            handleAlert('Error', 'Failed to save home group');
         }
     };
 

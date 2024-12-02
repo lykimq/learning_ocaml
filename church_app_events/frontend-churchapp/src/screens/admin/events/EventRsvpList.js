@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { View, FlatList, Alert, ScrollView, StyleSheet, Platform } from "react-native";
+import { View, FlatList, ScrollView, StyleSheet, Platform } from "react-native";
 import {
     Card,
     Title,
-    Paragraph,
     Button,
     Searchbar,
     Text,
@@ -25,7 +24,6 @@ import { showAlert } from '../../constants/constants';
 const ITEMS_PER_PAGE = 10;
 
 const EventRsvpList = () => {
-    const [data, setData] = useState({ summary: { total: 0, status_counts: {} }, rsvps: [] });
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);

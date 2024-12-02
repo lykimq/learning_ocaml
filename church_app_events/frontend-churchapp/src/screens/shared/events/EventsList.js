@@ -16,7 +16,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { showAlert, onDateChange as handleDateChange, onTimeChange as handleTimeChange } from
     "../../constants/constants";
 
-
 const ITEMS_PER_PAGE = 10;
 
 const DatePickerField = ({ label, value, onChange }) => {
@@ -96,12 +95,9 @@ const EventsList = () => {
         fetchEvents();
     }, []);
 
-
     const handleAlert = (title, message, callback = null) => {
         showAlert(title, message, callback, setDialogMessage, setDialogVisible, setDialogCallback);
     };
-
-
 
     const fetchEvents = async () => {
         setLoading(true);

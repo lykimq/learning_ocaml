@@ -237,11 +237,13 @@ const styles = StyleSheet.create({
         color: 'red',
     },
     submitButton: {
-        marginTop: 16,
-        paddingVertical: 6,
-        backgroundColor: '#4A90E2',
+        marginTop: 20,
+        paddingVertical: 8,
+        backgroundColor: '#3f51b5',
         alignSelf: 'center',
         paddingHorizontal: 30,
+        minWidth: 150,
+        maxWidth: 200,
     },
     errorContainer: {
         backgroundColor: '#ffebee',

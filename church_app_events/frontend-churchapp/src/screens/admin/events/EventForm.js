@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Platform, KeyboardAvoidingView, ScrollView, Alert } from 'react-native';
-import { Text, TextInput, Button, Title, useTheme } from 'react-native-paper';
+import { View, StyleSheet, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { Text, TextInput, Button, Title } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { addEvent, updateEvent } from '../../../services/events/eventService';
 import { format } from 'date-fns';
+import { showAlert } from '../../constants/constants';
 
 const EventForm = ({ eventData, onSubmit }) => {
-  const theme = useTheme();
   const [eventTitle, setEventTitle] = useState('');
   const [eventDate, setEventDate] = useState(new Date());
   const [eventTime, setEventTime] = useState(new Date());
@@ -15,6 +15,13 @@ const EventForm = ({ eventData, onSubmit }) => {
   const [errors, setErrors] = useState({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [dialogMessage, setDialogMessage] = useState(null);
+  const [dialogVisible, setDialogVisible] = useState(false);
+  const [dialogCallback, setDialogCallback] = useState(null);
+
+  const handleAlert = (title, message, callback = null) => {
+    showAlert(title, message, callback, setDialogMessage, setDialogVisible, setDialogCallback);
+  };
 
   useEffect(() => {
     if (eventData) {
@@ -63,8 +70,7 @@ const EventForm = ({ eventData, onSubmit }) => {
       }
     } catch (error) {
       console.error('Error adding event:', error)
-      // TODO call showAlert here
-      Alert.alert('Error', 'Failed to add event');
+      handleAlert('Error', 'Failed to add event');
     }
 
   };
