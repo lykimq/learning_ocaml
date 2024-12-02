@@ -52,10 +52,66 @@ export const getUserByEmail = async (email) => {
         console.log('User fetched by email:', response.data);
         return response.data;
     } catch (error) {
-        console.error('Error fetching user by email:', error);
-        throw error;
+        if (error.response?.status === 404) {
+            return null;
+        }
+        throw new Error(error.response?.data?.message || 'Failed to fetch user by email');
     }
 };
+
+// get user by username
+export const getUserByUsername = async (username) => {
+    try {
+        const response = await api.get(`/admin/users/username/${username}`);
+        console.log('User fetched by username:', response.data);
+        return response.data;
+    } catch (error) {
+        if (error.response?.status === 404) {
+            return null;
+        }
+        throw new Error(error.response?.data?.message || 'Failed to fetch user by username');
+    }
+};
+
+
+// Verify password with support for both email and username login
+export const verifyPassword = async (loginData) => {
+    try {
+        const requestData = {
+            identifier: loginData.identifier,
+            password: loginData.password
+        };
+
+        console.log('Attempting to verify password for:', requestData.identifier);
+
+        const response = await api.post('/admin/users/verify-password', requestData);
+
+        console.log('Response status:', response.status);
+        console.log('Response data:', JSON.stringify(response.data, null, 2));
+
+        if (response.data.valid && response.data.user) {
+            console.log('Successfully authenticated user:', response.data.user.username);
+            return response.data.user;
+        } else {
+            console.log('Authentication failed - Invalid credentials');
+            throw new Error('Invalid username/email or password');
+        }
+    } catch (error) {
+        console.error('Authentication error:', {
+            status: error.response?.status,
+            message: error.response?.data?.message || error.message
+        });
+
+        if (error.response?.status === 404) {
+            throw new Error('User not found');
+        } else if (error.response?.status === 401) {
+            throw new Error('Invalid password');
+        } else {
+            throw new Error(error.response?.data?.message || 'Authentication failed');
+        }
+    }
+};
+
 
 // add user
 export const addUser = async (user) => {
@@ -120,6 +176,8 @@ export const searchUsers = async (params) => {
         if (params.username) searchParams.append('username', params.username);
         if (params.role) searchParams.append('role', params.role)
 
+        const query = searchParams.toString();
+
         const response = await api.get(`/admin/users/search?${query}`);
         console.log('Users searched:', response.data);
         return response.data;
@@ -129,7 +187,36 @@ export const searchUsers = async (params) => {
     }
 };
 
-// LOG
-console.log('Android URL for users:', API_URL_ANDROID);
-console.log('iOS URL for users:', API_URL_IOS);
-console.log('Web URL for users:', API_URL_WEB);
+// Combined login function that matches your LoginScreen
+export const login = async (loginData) => {
+    try {
+        const user = await verifyPassword(loginData);
+        return user;
+    } catch (error) {
+        console.error('Login error:', error);
+        throw error;
+    }
+};
+
+// Check if username exists (for registration)
+export const checkUsernameAvailability = async (username) => {
+    try {
+        const user = await getUserByUsername(username);
+        return !user;
+    } catch (error) {
+        console.error('Error checking username:', error);
+        throw new Error(error.response?.data?.message || 'Failed to check username availability');
+    }
+};
+
+
+// Check if email exists (for registration)
+export const checkEmailAvailability = async (email) => {
+    try {
+        const user = await getUserByEmail(email);
+        return !user;
+    } catch (error) {
+        console.error('Error checking email:', error);
+        throw new Error(error.response?.data?.message || 'Failed to check email availability');
+    }
+};

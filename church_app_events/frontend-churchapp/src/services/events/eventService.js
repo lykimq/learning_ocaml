@@ -83,7 +83,9 @@ export const searchEvents = async (params) => {
         if (searchParams.start_time) params.append('start_time', searchParams.start_time);
         if (searchParams.end_time) params.append('end_time', searchParams.end_time);
 
-        const response = await api.get('/admin/events/search', { params });
+        const query = searchParams.toString();
+
+        const response = await api.get(`/admin/events/search?${query}`);
         console.log('Events searched:', response.data);
         return response.data;
     } catch (error) {
@@ -92,7 +94,3 @@ export const searchEvents = async (params) => {
     }
 };
 
-// During development, verify the variables are loaded
-console.log('Android URL for events:', API_URL_ANDROID);
-console.log('iOS URL for events:', API_URL_IOS);
-console.log('Web URL for events:', API_URL_WEB);

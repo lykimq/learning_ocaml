@@ -1,33 +1,59 @@
-import React, {useState} from 'react';
-import {createStackNavigator} from '@react-navigation/stack';
+import React from 'react';
+import { createStackNavigator } from '@react-navigation/stack';
+import { useAuth } from '../contexts/AuthContext';
+
+// Screens and Navigators
 import LoginScreen from '../screens/shared/LoginScreen';
 import AdminNavigator from './AdminNavigator';
 import UserNavigator from './UserNavigator';
+import LogoutScreen from '../screens/shared/LogoutScreen';
+import ProfileScreen from '../screens/shared/ProfileScreen';
 
-const Stack = createStackNavigator ();
+const Stack = createStackNavigator();
 
-export default function AuthNavigator () {
-  const [isAdmin, setIsAdmin] = useState (false); // Track if user is logged in as admin
+export default function AuthNavigator() {
+  const { user, isAdmin } = useAuth();
+
+  console.log('AuthNavigator - Current user:', user);
+  console.log('AuthNavigator - Is admin:', isAdmin);
 
   return (
     <Stack.Navigator
-      initialRouteName={isAdmin ? 'AdminNavigator' : 'UserNavigator'}
+      screenOptions={{
+        headerShown: false,
+        gestureEnabled: false
+      }}
     >
+      {/* Always available screens */}
       <Stack.Screen
         name="UserNavigator"
         component={UserNavigator}
-        options={{headerShown: false}}
       />
-      <Stack.Screen
-        name="AdminNavigator"
-        component={AdminNavigator}
-        options={{headerShown: false}}
-      />
+
       <Stack.Screen
         name="LoginScreen"
         component={LoginScreen}
-        options={{headerShown: false}}
-        initialParams={{setIsAdmin}} // Pass setIsAdmin to LoginScreen to update login state
+      />
+
+      <Stack.Screen
+        name="AdminNavigator"
+        component={AdminNavigator}
+        options={{
+          headerShown: false,
+        }}
+      />
+
+      <Stack.Screen
+        name="ProfileScreen"
+        component={ProfileScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+
+      <Stack.Screen
+        name="Logout"
+        component={LogoutScreen}
       />
     </Stack.Navigator>
   );

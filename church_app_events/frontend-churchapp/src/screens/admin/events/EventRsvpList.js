@@ -18,11 +18,9 @@ import {
     deleteRsvp,
     confirmRsvpWithEmail,
     declineRsvpWithEmail,
-    searchRsvpsByStatus,
-    searchRsvps,
-    searchRsvpsByEventTitle,
-    searchRsvpsWithEmail
+    searchRsvps
 } from "../../../services/events/eventRsvpService";
+import { showAlert } from '../../constants/constants';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -48,19 +46,10 @@ const EventRsvpList = () => {
         fetchRsvps();
     }, []);
 
-    // Cross-platform alert function
-    const showAlert = (title, message, onOk) => {
-        if (Platform.OS === 'web') {
-            setDialogMessage({ title, message });
-            setDialogVisible(true);
-            // Store callback for web dialog
-            if (onOk) {
-                setDialogCallback(() => onOk);
-            }
-        } else {
-            Alert.alert(title, message, [{ text: 'OK', onPress: onOk }]);
-        }
+    const handleAlert = (title, message, callback = null) => {
+        showAlert(title, message, callback, setDialogMessage, setDialogVisible, setDialogCallback);
     };
+
 
     const fetchRsvps = async () => {
         setLoading(true);
@@ -76,7 +65,7 @@ const EventRsvpList = () => {
 
         } catch (error) {
             console.error('Error fetching RSVPs:', error);
-            showAlert('Error', 'Failed to fetch RSVPs');
+            handleAlert('Error', 'Failed to fetch RSVPs');
         } finally {
             setLoading(false);
         }
@@ -86,10 +75,10 @@ const EventRsvpList = () => {
         try {
             await deleteRsvp(rsvpId);
             fetchRsvps();
-            showAlert('Success', 'RSVP deleted successfully');
+            handleAlert('Success', 'RSVP deleted successfully');
         } catch (error) {
             console.error('Error deleting RSVP:', error);
-            showAlert('Error', 'Failed to delete RSVP');
+            handleAlert('Error', 'Failed to delete RSVP');
         }
     }
 
@@ -97,10 +86,10 @@ const EventRsvpList = () => {
         try {
             await confirmRsvpWithEmail(rsvp.id, rsvp.email, rsvp.event_id);
             fetchRsvps();
-            showAlert('Success', 'RSVP confirmed and email sent');
+            handleAlert('Success', 'RSVP confirmed and email sent');
         } catch (error) {
             console.error('Error confirming RSVP:', error);
-            showAlert('Error', 'Failed to confirm RSVP');
+            handleAlert('Error', 'Failed to confirm RSVP');
         }
     };
 
@@ -108,10 +97,10 @@ const EventRsvpList = () => {
         try {
             await declineRsvpWithEmail(rsvp.id, rsvp.email, rsvp.event_id);
             fetchRsvps();
-            showAlert('Success', 'RSVP declined and email sent');
+            handleAlert('Success', 'RSVP declined and email sent');
         } catch (error) {
             console.error('Error declining RSVP:', error);
-            showAlert('Error', 'Failed to decline RSVP');
+            handleAlert('Error', 'Failed to decline RSVP');
         }
     };
 
@@ -179,7 +168,7 @@ const EventRsvpList = () => {
             setCurrentPage(1);
         } catch (error) {
             console.error('Error searching RSVPs:', error);
-            showAlert('Error', 'Failed to search RSVPs');
+            handleAlert('Error', 'Failed to search RSVPs');
         } finally {
             setLoading(false);
         }
@@ -187,74 +176,177 @@ const EventRsvpList = () => {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'confirmed': return '#4CAF50';
-            case 'declined': return '#F44336';
-            case 'pending': return '#FFC107';
-            default: return '#9E9E9E';
+            case 'confirmed':
+                return '#4CAF50';  // Darker green
+            case 'pending':
+                return '#FF9800';  // Darker orange
+            case 'declined':
+                return '#F44336';  // Darker red
+            default:
+                return '#757575';  // Default gray
         }
-    }
+    };
     const renderItem = ({ item }) => (
         <Card style={styles.rsvpCard}>
-            <Card.Content>
-                <Title>{item.event_title}</Title>
-                <Paragraph>Email: {item.email}</Paragraph>
-                <Paragraph>Date: {new Date(item.event_date).toLocaleDateString()}</Paragraph>
-                <Chip
-                    style={[styles.statusChip, { backgroundColor: getStatusColor(item.rsvp_status) }]}
-                >
-                    {item.rsvp_status}
-                </Chip>
+            <Card.Content style={styles.cardContent}>
+                <View style={styles.rsvpContainer}>
+                    <View style={styles.eventInfoSection}>
+                        <Title style={styles.eventTitle}>{item.event_title}</Title>
+                        <View style={styles.infoRow}>
+                            <IconButton
+                                icon="email-outline"
+                                size={16}
+                                color="#666"
+                                style={styles.infoIcon}
+                            />
+                            <Text style={styles.infoText}>{item.email}</Text>
+                        </View>
+                        <View style={styles.infoRow}>
+                            <IconButton
+                                icon="calendar-outline"
+                                size={16}
+                                color="#666"
+                                style={styles.infoIcon}
+                            />
+                            <Text style={styles.infoText}>
+                                {new Date(item.event_date).toLocaleDateString()}
+                            </Text>
+                        </View>
+                    </View>
+                    <View style={styles.statusSection}>
+                        <Chip
+                            style={[
+                                styles.statusChip,
+                                { backgroundColor: getStatusColor(item.rsvp_status) }
+                            ]}
+                            textStyle={styles.statusText}
+                        >
+                            {item.rsvp_status.charAt(0).toUpperCase() + item.rsvp_status.slice(1)}
+                        </Chip>
+                    </View>
+                </View>
             </Card.Content>
-            <Card.Actions>
+            <Card.Actions style={styles.cardActions}>
                 <Button
-                    mode="contained"
+                    mode="outlined"
                     onPress={() => handleConfirmRsvp(item)}
                     disabled={item.rsvp_status === 'confirmed'}
-                    style={styles.actionButton}
+                    style={[styles.actionButton, !item.rsvp_status === 'confirmed' && styles.confirmButton]}
+                    labelStyle={styles.actionButtonLabel}
+                    icon="check-circle"
                 >
                     Confirm
                 </Button>
                 <Button
-                    mode="contained"
+                    mode="outlined"
                     onPress={() => handleDeclineRsvp(item)}
                     disabled={item.rsvp_status === 'declined'}
-                    style={[styles.actionButton, styles.declineButton]}
+                    style={[styles.actionButton, !item.rsvp_status === 'declined' && styles.declineButton]}
+                    labelStyle={[styles.actionButtonLabel, styles.declineButtonLabel]}
+                    icon="close-circle"
                 >
                     Decline
                 </Button>
-                <IconButton
-                    icon="delete"
-                    color="#F44336"
+                <Button
+                    mode="outlined"
                     onPress={() => handleDeleteRsvp(item.id)}
-                />
+                    style={[styles.actionButton, styles.deleteButton]}
+                    labelStyle={[styles.actionButtonLabel, styles.deleteButtonLabel]}
+                    icon="delete"
+                >
+                    Delete
+                </Button>
             </Card.Actions>
         </Card>
     );
 
     // Add these new render functions
-    const renderSearchTypeSelector = () => (
-        <View style={styles.searchTypeContainer}>
+    const renderSearchTypeAndStatusSelector = () => (
+        <View style={styles.searchTypeAndStatusContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <Chip
                     selected={searchType === 'general'}
                     onPress={() => setSearchType('general')}
-                    style={styles.chipStyle}
+                    style={[
+                        styles.chipStyle,
+                        searchType === 'general' && styles.chipSelected
+                    ]}
+                    textStyle={[
+                        styles.chipTextStyle,
+                        searchType === 'general' && styles.chipTextSelected
+                    ]}
                 >
                     General
                 </Chip>
                 <Chip
                     selected={searchType === 'email'}
                     onPress={() => setSearchType('email')}
-                    style={styles.chipStyle}
+                    style={[
+                        styles.chipStyle,
+                        searchType === 'email' && styles.chipSelected
+                    ]}
+                    textStyle={[
+                        styles.chipTextStyle,
+                        searchType === 'email' && styles.chipTextSelected
+                    ]}
                 >
                     Email
                 </Chip>
                 <Chip
                     selected={searchType === 'event'}
                     onPress={() => setSearchType('event')}
-                    style={styles.chipStyle}
+                    style={[
+                        styles.chipStyle,
+                        searchType === 'event' && styles.chipSelected
+                    ]}
+                    textStyle={[
+                        styles.chipTextStyle,
+                        searchType === 'event' && styles.chipTextSelected
+                    ]}
                 >
                     Event Title
+                </Chip>
+                <Chip
+                    selected={selectedStatus === 'pending'}
+                    onPress={() => handleStatusFilter('pending')}
+                    style={[
+                        styles.chipStyle,
+                        selectedStatus === 'pending' && { backgroundColor: getStatusColor('pending') }
+                    ]}
+                    textStyle={[
+                        styles.chipTextStyle,
+                        selectedStatus === 'pending' && { color: 'white' }
+                    ]}
+                >
+                    Pending
+                </Chip>
+                <Chip
+                    selected={selectedStatus === 'confirmed'}
+                    onPress={() => handleStatusFilter('confirmed')}
+                    style={[
+                        styles.chipStyle,
+                        selectedStatus === 'confirmed' && { backgroundColor: getStatusColor('confirmed') }
+                    ]}
+                    textStyle={[
+                        styles.chipTextStyle,
+                        selectedStatus === 'confirmed' && { color: 'white' }
+                    ]}
+                >
+                    Confirmed
+                </Chip>
+                <Chip
+                    selected={selectedStatus === 'declined'}
+                    onPress={() => handleStatusFilter('declined')}
+                    style={[
+                        styles.chipStyle,
+                        selectedStatus === 'declined' && { backgroundColor: getStatusColor('declined') }
+                    ]}
+                    textStyle={[
+                        styles.chipTextStyle,
+                        selectedStatus === 'declined' && { color: 'white' }
+                    ]}
+                >
+                    Declined
                 </Chip>
             </ScrollView>
         </View>
@@ -280,14 +372,13 @@ const EventRsvpList = () => {
                 )}
 
                 {/* Active Filters Display */}
-                {hasActiveFilters() && (
+                {(searchQuery || eventTitleSearch) && (
                     <View style={styles.activeFiltersContainer}>
                         {searchQuery && (
                             <Chip
                                 onClose={() => setSearchQuery('')}
                                 style={styles.filterChip}
                             >
-                                {/* Update the label based on search type and query content */}
                                 {searchType === 'email' ? 'Email: ' :
                                     searchType === 'general' && searchQuery.includes('@') ? 'Email: ' :
                                         'Event: '}{searchQuery}
@@ -298,15 +389,7 @@ const EventRsvpList = () => {
                                 onClose={() => setEventTitleSearch('')}
                                 style={styles.filterChip}
                             >
-                                Event: {eventTitleSearch}
-                            </Chip>
-                        )}
-                        {selectedStatus && (
-                            <Chip
-                                onClose={() => setSelectedStatus(null)}
-                                style={styles.filterChip}
-                            >
-                                Status: {selectedStatus}
+                                {eventTitleSearch}
                             </Chip>
                         )}
                     </View>
@@ -314,55 +397,6 @@ const EventRsvpList = () => {
             </View>
         );
     };
-
-    const renderStatusButtons = () => (
-        <View style={styles.statusButtonsContainer}>
-            <Button
-                mode={selectedStatus === 'pending' ? 'contained' : 'outlined'}
-                onPress={() => handleStatusFilter('pending')}
-                style={[
-                    styles.statusButton,
-                    selectedStatus === 'pending' && { backgroundColor: getStatusColor('pending') }
-                ]}
-                labelStyle={[
-                    styles.statusButtonLabel,
-                    selectedStatus === 'pending' && { color: 'white' }
-                ]}
-            >
-                Pending
-            </Button>
-
-            <Button
-                mode={selectedStatus === 'confirmed' ? 'contained' : 'outlined'}
-                onPress={() => handleStatusFilter('confirmed')}
-                style={[
-                    styles.statusButton,
-                    selectedStatus === 'confirmed' && { backgroundColor: getStatusColor('confirmed') }
-                ]}
-                labelStyle={[
-                    styles.statusButtonLabel,
-                    selectedStatus === 'confirmed' && { color: 'white' }
-                ]}
-            >
-                Confirmed
-            </Button>
-
-            <Button
-                mode={selectedStatus === 'declined' ? 'contained' : 'outlined'}
-                onPress={() => handleStatusFilter('declined')}
-                style={[
-                    styles.statusButton,
-                    selectedStatus === 'declined' && { backgroundColor: getStatusColor('declined') }
-                ]}
-                labelStyle={[
-                    styles.statusButtonLabel,
-                    selectedStatus === 'declined' && { color: 'white' }
-                ]}
-            >
-                Declined
-            </Button>
-        </View>
-    );
 
     const handleStatusFilter = async (status) => {
         if (selectedStatus === status) {
@@ -380,7 +414,7 @@ const EventRsvpList = () => {
 
     // Add a helper function to check if there are active filters
     const hasActiveFilters = () => {
-        return searchQuery || eventTitleSearch || selectedStatus;
+        return searchQuery || eventTitleSearch;
     };
 
     // Update handleReset to properly clear all filters
@@ -406,10 +440,8 @@ const EventRsvpList = () => {
     return (
         <View style={styles.container}>
             <View style={styles.searchContainer}>
-                {renderSearchTypeSelector()}
+                {renderSearchTypeAndStatusSelector()}
                 {renderSearchInput()}
-
-                {renderStatusButtons()}
 
                 <View style={styles.filterRow}>
                     <Button
@@ -532,10 +564,125 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderBottomWidth: 1,
         borderBottomColor: '#e0e0e0',
-        elevation: 2,
     },
     searchBar: {
         elevation: 0,
+        backgroundColor: '#f5f5f5',
+        borderRadius: 8,
+    },
+    rsvpCard: {
+        marginBottom: 16,
+        borderRadius: 12,
+        backgroundColor: '#ffffff',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        borderWidth: Platform.OS === 'ios' ? 1 : 0,
+        borderColor: '#e0e0e0',
+    },
+    cardContent: {
+        padding: 16,
+    },
+    rsvpContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+    },
+    eventInfoSection: {
+        flex: 1,
+        marginRight: 16,
+    },
+    statusSection: {
+        alignItems: 'flex-end',
+    },
+    eventTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 8,
+    },
+    infoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    infoIcon: {
+        margin: 0,
+        marginRight: 4,
+    },
+    infoText: {
+        color: '#333',
+        fontSize: 14,
+        flex: 1,
+    },
+    statusChip: {
+        paddingHorizontal: 12,
+        height: 28,
+        backgroundColor: '#f0f0f0',
+    },
+    statusText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#333',
+    },
+    cardActions: {
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+        justifyContent: 'flex-end',
+        paddingHorizontal: 8,
+        flexWrap: 'wrap',
+    },
+    actionButton: {
+        marginHorizontal: 4,
+        borderRadius: 8,
+    },
+    actionButtonLabel: {
+        fontSize: 13,
+        color: '#555',
+    },
+    confirmButton: {
+        borderColor: '#4CAF50',
+    },
+    confirmButtonLabel: {
+        color: '#4CAF50',
+    },
+    declineButton: {
+        borderColor: '#F44336',
+    },
+    declineButtonLabel: {
+        color: '#F44336',
+    },
+    deleteButton: {
+        borderColor: '#757575',
+    },
+    deleteButtonLabel: {
+        color: '#757575',
+    },
+    searchTypeAndStatusContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 10,
+        paddingHorizontal: 8,
+    },
+    chipStyle: {
+        marginRight: 8,
+        marginBottom: 8,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 20,
+    },
+    chipTextStyle: {
+        color: '#333',
+        fontSize: 12,
+        fontWeight: '500',
+    },
+    chipSelected: {
+        backgroundColor: '#757575',
+    },
+    chipTextSelected: {
+        color: '#fff',
+        fontWeight: '600',
     },
     filterRow: {
         flexDirection: 'row',
@@ -545,129 +692,18 @@ const styles = StyleSheet.create({
     filterButton: {
         flex: 1,
         marginHorizontal: 5,
-    },
-    listContainer: {
-        padding: 16,
-    },
-    rsvpCard: {
-        marginBottom: 16,
-    },
-    statusChip: {
-        marginTop: 8,
-        alignSelf: 'flex-start',
-    },
-    actionButton: {
-        marginRight: 8,
-    },
-    declineButton: {
-        backgroundColor: '#F44336',
-    },
-    paginationContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 16,
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#e0e0e0',
-    },
-    pageText: {
-        marginHorizontal: 16,
-        color: '#666',
-    },
-    loadingText: {
-        textAlign: 'center',
-        marginTop: 20,
-        fontSize: 16,
-        color: '#666',
-    },
-    searchTypeContainer: {
-        marginBottom: 10,
-    },
-    chipStyle: {
-        marginRight: 8,
-        marginBottom: 8,
-    },
-    statusButtonsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 10,
-        paddingHorizontal: 5,
-    },
-    statusButton: {
-        flex: 1,
-        marginHorizontal: 5,
-        borderRadius: 20,
-    },
-    statusButtonLabel: {
-        fontSize: 12,
-    },
-    statsContainer: {
-        padding: 16,
-        backgroundColor: '#fff',
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
-        marginBottom: 10,
-    },
-    dialogContainer: {
-        padding: 20,
-        backgroundColor: '#fff',
         borderRadius: 8,
+        borderColor: '#757575',
+        backgroundColor: '#f5f5f5',
     },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
+    filterButtonLabel: {
+        color: '#333',
     },
-    statusText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#666',
-    },
-    searchSection: {
-        marginBottom: 15,
-    },
-    chipContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        padding: 5,
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-    },
-    emptyText: {
-        fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
-    },
-    button: {
-        marginVertical: 5,
-        borderRadius: 8,
-    },
-    buttonLabel: {
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    cardContent: {
+    filtersContainer: {
+        marginTop: 10,
         padding: 16,
-    },
-    cardTitle: {
-        fontSize: 18,
-        marginBottom: 8,
-    },
-    cardText: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 4,
-    },
-    searchInputContainer: {
-        marginBottom: 10,
+        backgroundColor: '#f8f8f8',
+        borderRadius: 12,
     },
     activeFiltersContainer: {
         flexDirection: 'row',
@@ -676,8 +712,85 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     filterChip: {
+        backgroundColor: '#f0f0f0',
         marginRight: 8,
         marginBottom: 4,
+    },
+    filterChipText: {
+        color: '#333',
+    },
+    statsContainer: {
+        padding: 16,
+        backgroundColor: '#fff',
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+        marginBottom: 10,
+        flexWrap: 'wrap',
+    },
+    statusText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#333',
+        marginHorizontal: 8,
+        marginVertical: 4,
+    },
+    statusTextSelected: {
+        color: '#fff',
+        fontWeight: '600',
+    },
+    paginationContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 16,
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+    },
+    pageText: {
+        marginHorizontal: 16,
+        color: '#333',
+        fontSize: 14,
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 40,
+    },
+    emptyText: {
+        fontSize: 16,
+        color: '#333',
+        textAlign: 'center',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    dialogContainer: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        maxWidth: 400,
+        width: '90%',
+        alignSelf: 'center',
+    },
+    statusButtonsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 10,
+        gap: 8,
+    },
+    statusButton: {
+        borderRadius: 20,
+        marginHorizontal: 4,
+    },
+    statusButtonLabel: {
+        fontSize: 12,
+        color: '#555',
     },
 });
 

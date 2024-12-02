@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Platform, ScrollView } from 'react-native';
+import { View, StyleSheet, Platform, ScrollView, KeyboardAvoidingView } from 'react-native';
 import { Text, TextInput, Button, Title, Portal, Dialog } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { addHomeGroup, updateHomeGroup } from '../../../services/homegroups/homeGroupService';
 import { useAuth } from '../../../contexts/AuthContext';
+import { onDateChange, onTimeChange, showAlert } from '../../constants/constants';
+import { format } from 'date-fns';
 
 const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
     const { isAdmin } = useAuth();
@@ -18,21 +20,6 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
     const [errors, setErrors] = useState({});
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
-    const [dialogVisible, setDialogVisible] = useState(false);
-    const [dialogMessage, setDialogMessage] = useState({ title: '', message: '' });
-    const [dialogCallback, setDialogCallback] = useState(null);
-
-    const onDateChange = (event, selectedDate) => {
-        const currentDate = selectedDate || meetingDay;
-        setShowDatePicker(Platform.OS === 'ios');
-        setMeetingDay(currentDate);
-    };
-
-    const onTimeChange = (event, selectedTime) => {
-        const currentTime = selectedTime || meetingTime;
-        setShowTimePicker(Platform.OS === 'ios');
-        setMeetingTime(currentTime);
-    };
 
     useEffect(() => {
         if (homeGroupData) {
@@ -46,18 +33,6 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
             setMeetingTime(homeGroupData.meeting_time ? new Date(`1970-01-01T${homeGroupData.meeting_time}`) : new Date());
         }
     }, [homeGroupData]);
-
-    const showAlert = (title, message, onOk) => {
-        if (Platform.OS === 'web') {
-            setDialogMessage({ title, message });
-            setDialogVisible(true);
-            if (onOk) {
-                setDialogCallback(() => onOk);
-            }
-        } else {
-            Alert.alert(title, message, [{ text: 'OK', onPress: onOk }]);
-        }
-    };
 
     const RequiredLabel = ({ label }) => (
         <Text>
@@ -116,6 +91,15 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
         }
     };
 
+    const handleMeetingDayChange = (event, selectedDate) => {
+        onDateChange(event, selectedDate, meetingDay, setShowDatePicker, setMeetingDay);
+    };
+
+
+    const handleMeetingTimeChange = (event, selectedTime) => {
+        onTimeChange(event, selectedTime, meetingTime, setShowTimePicker, setMeetingTime);
+    };
+
     const DateTimeSelector = ({ mode, value, onChange, showPicker, setShowPicker }) => {
         if (Platform.OS === 'web') {
             return (
@@ -137,235 +121,163 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
                         }
                         onChange({ type: 'set', nativeEvent: { timestamp: newDate } }, newDate);
                     }}
-                    style={{
-                        padding: 10,
-                        borderRadius: 4,
-                        borderWidth: 1,
-                        borderColor: '#ccc',
-                        marginRight: 10,
-                        flex: 1,
-                    }}
+                    style={styles.webDateTimeInput}
                 />
             );
         }
 
-        return showPicker && (
-            <DateTimePicker
-                testID="dateTimePicker"
-                value={value}
-                mode={mode}
-                is24Hour={true}
-                display="default"
-                onChange={onChange}
-            />
+        const handleButtonPress = () => {
+            setShowPicker(true);
+        };
+
+        return (
+            <>
+                <Button
+                    onPress={handleButtonPress}
+                    mode="outlined"
+                    style={styles.dateTimeButton}
+                >
+                    {format(value, mode === 'date' ? 'MMM dd, yyyy' : 'hh:mm a')}
+                </Button>
+                {showPicker && (
+                    <DateTimePicker
+                        testID={`${mode}Picker`}
+                        value={value}
+                        mode={mode}
+                        is24Hour={true}
+                        display="default"
+                        onChange={(event, selectedValue) => {
+                            setShowPicker(false);
+                            if (event.type === 'set' && selectedValue) {
+                                onChange(event, selectedValue);
+                            }
+                        }}
+                    />
+                )}
+            </>
         );
     };
 
     return (
-        <ScrollView style={styles.scrollContainer}>
-            <View style={styles.container}>
-                <Title style={styles.title}>Create New Home Group</Title>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.keyboardAvoidingView}
+        >
+            <ScrollView contentContainerStyle={styles.scrollContainer}>
+                <View style={styles.container}>
+                    <Title style={styles.title}>
+                        {homeGroupData?.id ? 'Edit Home Group' : 'Create New Home Group'}
+                    </Title>
 
-                <TextInput
-                    label={<RequiredLabel label="Group Name" />}
-                    value={name}
-                    onChangeText={setName}
-                    style={styles.input}
-                    mode="outlined"
-                    error={errors.name}
-                />
-
-                <TextInput
-                    label="Description"
-                    value={description}
-                    onChangeText={setDescription}
-                    style={[styles.input, styles.multilineInput]}
-                    mode="outlined"
-                    multiline
-                    numberOfLines={4}
-                />
-
-                <TextInput
-                    label={<RequiredLabel label="Location" />}
-                    value={location}
-                    onChangeText={setLocation}
-                    style={styles.input}
-                    mode="outlined"
-                    error={errors.location}
-                />
-
-                <TextInput
-                    label={<RequiredLabel label="Language" />}
-                    value={language}
-                    onChangeText={setLanguage}
-                    style={styles.input}
-                    mode="outlined"
-                    error={errors.language}
-                />
-
-                <TextInput
-                    label="Profile Picture URL"
-                    value={profilePicture}
-                    onChangeText={setProfilePicture}
-                    style={styles.input}
-                    mode="outlined"
-                />
-
-                <TextInput
-                    label={<RequiredLabel label="Max Capacity" />}
-                    value={maxCapacity}
-                    onChangeText={setMaxCapacity}
-                    style={styles.input}
-                    mode="outlined"
-                    keyboardType="numeric"
-                    error={errors.maxCapacity}
-                />
-
-                <View style={styles.dateTimeContainer}>
                     <TextInput
-                        label={<RequiredLabel label="Meeting Day" />}
-                        value={meetingDay.toDateString()}
-                        style={[styles.input, styles.dateTimeInput]}
+                        label="Group Name"
+                        value={name}
+                        onChangeText={setName}
+                        style={styles.input}
                         mode="outlined"
-                        editable={false}
-                        error={errors.meetingDay}
+                        error={errors.name}
                     />
-                    {Platform.OS === 'web' ? (
+
+                    <View style={styles.dateTimeContainer}>
+                        <Text style={styles.dateTimeLabel}>Meeting Day:</Text>
                         <DateTimeSelector
                             mode="date"
                             value={meetingDay}
-                            onChange={onDateChange}
+                            onChange={(_, selectedDate) => setMeetingDay(selectedDate || meetingDay)}
                             showPicker={showDatePicker}
                             setShowPicker={setShowDatePicker}
                         />
-                    ) : (
-                        <Button
-                            onPress={() => setShowDatePicker(true)}
-                            mode="contained"
-                            style={styles.dateTimeButton}
-                            compact={Platform.OS !== 'web'}
-                            labelStyle={Platform.OS === 'web' ? null : { fontSize: 12 }}
-                        >
-                            {Platform.OS === 'web' ? 'Choose Day' : 'Select'}
-                        </Button>
-                    )}
-                </View>
+                    </View>
 
-                <View style={styles.dateTimeContainer}>
-                    <TextInput
-                        label={<RequiredLabel label="Meeting Time" />}
-                        value={meetingTime.toLocaleTimeString()}
-                        style={[styles.input, styles.dateTimeInput]}
-                        mode="outlined"
-                        editable={false}
-                        error={errors.meetingTime}
-                    />
-                    {Platform.OS === 'web' ? (
+                    <View style={styles.dateTimeContainer}>
+                        <Text style={styles.dateTimeLabel}>Meeting Time:</Text>
                         <DateTimeSelector
                             mode="time"
                             value={meetingTime}
-                            onChange={onTimeChange}
+                            onChange={(_, selectedTime) => setMeetingTime(selectedTime || meetingTime)}
                             showPicker={showTimePicker}
                             setShowPicker={setShowTimePicker}
                         />
-                    ) : (
-                        <Button
-                            onPress={() => setShowTimePicker(true)}
-                            mode="contained"
-                            style={styles.dateTimeButton}
-                            compact={Platform.OS !== 'web'}
-                            labelStyle={Platform.OS === 'web' ? null : { fontSize: 12 }}
-                        >
-                            {Platform.OS === 'web' ? 'Choose Time' : 'Select'}
-                        </Button>
-                    )}
+                    </View>
+
+                    <TextInput
+                        label="Location"
+                        value={location}
+                        onChangeText={setLocation}
+                        style={styles.input}
+                        mode="outlined"
+                        error={errors.location}
+                    />
+
+                    <TextInput
+                        label="Language"
+                        value={language}
+                        onChangeText={setLanguage}
+                        style={styles.input}
+                        mode="outlined"
+                        error={errors.language}
+                    />
+
+                    <TextInput
+                        label="Max Capacity"
+                        value={maxCapacity}
+                        onChangeText={setMaxCapacity}
+                        style={styles.input}
+                        mode="outlined"
+                        keyboardType="numeric"
+                        error={errors.maxCapacity}
+                    />
+
+                    <TextInput
+                        label="Description"
+                        value={description}
+                        onChangeText={setDescription}
+                        style={[styles.input, styles.textArea]}
+                        mode="outlined"
+                        multiline
+                        numberOfLines={4}
+                    />
+
+                    <Button
+                        mode="contained"
+                        onPress={handleSubmit}
+                        style={styles.submitButton}
+                        labelStyle={styles.submitButtonLabel}
+                    >
+                        {homeGroupData?.id ? 'Update Home Group' : 'Add Home Group'}
+                    </Button>
                 </View>
-
-                <Button
-                    mode="contained"
-                    onPress={handleSubmit}
-                    style={styles.submitButton}
-                >
-                    {homeGroupData?.id ? 'Update Home Group' : 'Add Home Group'}
-                </Button>
-
-                {Platform.OS !== 'web' && showDatePicker && (
-                    <DateTimeSelector
-                        mode="date"
-                        value={meetingDay}
-                        onChange={onDateChange}
-                        showPicker={showDatePicker}
-                        setShowPicker={setShowDatePicker}
-                    />
-                )}
-
-                {Platform.OS !== 'web' && showTimePicker && (
-                    <DateTimeSelector
-                        mode="time"
-                        value={meetingTime}
-                        onChange={onTimeChange}
-                        showPicker={showTimePicker}
-                        setShowPicker={setShowTimePicker}
-                    />
-                )}
-            </View>
-
-            <Portal>
-                <Dialog
-                    visible={dialogVisible}
-                    onDismiss={() => {
-                        setDialogVisible(false);
-                        if (dialogCallback) {
-                            dialogCallback();
-                            setDialogCallback(null);
-                        }
-                    }}
-                    style={styles.dialogContainer}
-                >
-                    <Dialog.Title>{dialogMessage.title}</Dialog.Title>
-                    <Dialog.Content>
-                        <Text>{dialogMessage.message}</Text>
-                    </Dialog.Content>
-                    <Dialog.Actions>
-                        <Button
-                            mode="contained"
-                            onPress={() => {
-                                setDialogVisible(false);
-                                if (dialogCallback) {
-                                    dialogCallback();
-                                    setDialogCallback(null);
-                                }
-                            }}
-                            style={styles.dialogButton}
-                        >
-                            OK
-                        </Button>
-                    </Dialog.Actions>
-                </Dialog>
-            </Portal>
-        </ScrollView>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 };
 
 const styles = StyleSheet.create({
-    scrollContainer: {
+    keyboardAvoidingView: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+    },
+    scrollContainer: {
+        flexGrow: 1,
     },
     container: {
+        flex: Platform.OS === 'web' ? 0 : 1,
         maxWidth: Platform.OS === 'web' ? 600 : '100%',
         width: '100%',
-        padding: 20,
-        backgroundColor: '#f5f5f5',
+        padding: 24,
+        backgroundColor: '#fff',
         alignSelf: 'center',
-        ...(Platform.OS === 'web' && {
-            marginHorizontal: 'auto',
-            marginVertical: 20,
-            borderRadius: 8,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
+        borderRadius: 16,
+        ...Platform.select({
+            web: {
+                boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
+            },
+            default: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+                elevation: 3,
+            },
         }),
     },
     title: {
@@ -382,43 +294,40 @@ const styles = StyleSheet.create({
     },
     dateTimeContainer: {
         flexDirection: 'row',
-        marginBottom: 15,
+        marginBottom: 12,
         alignItems: 'center',
     },
-    dateTimeInput: {
-        flex: 0.8,
-        marginRight: 10,
-        height: 48,
-        backgroundColor: '#fff',
+    dateTimeLabel: {
+        fontSize: 16,
+        marginRight: 8,
+        color: '#333',
+        width: 100,
     },
     dateTimeButton: {
-        backgroundColor: '#3f51b5',
-        ...(Platform.OS === 'web' ? {
-            height: 48,
-            width: 90,
-            justifyContent: 'center',
-        } : {
-            height: 45,
-            paddingVertical: 2,
-            paddingHorizontal: 8,
-            minHeight: 0,
-            alignSelf: 'center',
-        }),
+        flex: 1,
+        borderRadius: 8,
+        borderColor: '#6200ee',
+    },
+    webDateTimeInput: {
+        flex: 1,
+        padding: 10,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#6200ee',
+        fontSize: 16,
     },
     submitButton: {
-        marginTop: 20,
-        paddingVertical: 8,
-        backgroundColor: '#3f51b5',
+        marginTop: 16,
+        paddingVertical: 6,
+        backgroundColor: '#4A90E2',
         alignSelf: 'center',
         paddingHorizontal: 30,
-        minWidth: 150,
-        maxWidth: 200,
     },
     required: {
         color: 'red',
         fontSize: 16,
     },
-    multilineInput: {
+    textArea: {
         height: 100,
     },
     dialogContainer: {

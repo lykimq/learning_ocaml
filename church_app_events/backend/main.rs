@@ -48,6 +48,8 @@ async fn main() -> std::io::Result<()> {
                     .route("/{id}", web::delete().to(user::delete_user))
                     .route("/search", web::get().to(user::search_users))
                     .route("/email/{email}", web::get().to(user::get_user_by_email))
+                    .route("/username/{username}", web::get().to(user::get_user_by_username))
+                    .route("/verify-password", web::post().to(user::verify_password))
             )
             // Events
             .service(

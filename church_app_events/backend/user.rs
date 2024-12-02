@@ -9,6 +9,7 @@ use sqlx::{PgPool, QueryBuilder};
 use serde_json::json;
 use regex::Regex;
 use lazy_static::lazy_static;
+use bcrypt;
 
 lazy_static! {
     static ref EMAIL_REGEX: Regex =
@@ -86,6 +87,18 @@ pub struct SearchUserParams {
     pub role: Option<UserRole>,
 }
 
+#[derive(Deserialize)]
+pub struct VerifyPasswordRequest {
+    pub identifier: String,  // Can be email or username
+    pub password: String,
+}
+
+#[derive(Serialize)]
+pub struct VerifyPasswordResponse {
+    pub valid: bool,
+    pub user: Option<User>,
+}
+
 fn validate_username(username: &str) -> Result<(), String> {
     if !USERNAME_REGEX.is_match(username) {
         return Err("Username must be between 3 and 20 characters, and can only contain letters, numbers, and underscores".to_string());
@@ -99,7 +112,6 @@ fn validate_email(email: &str) -> Result<(), String> {
     }
     Ok(())
 }
-
 // Create a new user
 pub async fn add_user(
     pool: web::Data<PgPool>,
@@ -408,5 +420,86 @@ pub async fn get_user_by_email(
         Err(e) => HttpResponse::InternalServerError().json(json!({
             "message": format!("Database error: {}", e)
         }))
+    }
+}
+
+pub async fn get_user_by_username(
+    pool: web::Data<PgPool>,
+    username: web::Path<String>,
+) -> impl Responder {
+    let result = sqlx::query_as!(User, r#"
+        SELECT id, email, password_hash, username, role as "role!: UserRole",
+        profile_picture, created_at, updated_at
+        FROM users
+        WHERE username = $1
+        "#,
+        username.into_inner()
+    )
+    .fetch_optional(pool.get_ref())
+    .await;
+
+    match result {
+        Ok(Some(user)) => HttpResponse::Ok().json(user),
+        Ok(None) => HttpResponse::NotFound().json(json!({
+            "message": "User not found"
+        })),
+        Err(e) => HttpResponse::InternalServerError().json(json!({
+            "message": format!("Database error: {}", e)
+        }))
+    }
+}
+
+pub async fn verify_password(
+    pool: web::Data<PgPool>,
+    request: web::Json<VerifyPasswordRequest>,
+) -> impl Responder {
+    // First, find the user by email or username
+    let user_query = sqlx::query_as!(
+        User,
+        r#"
+        SELECT id, email, password_hash, username, role as "role!: UserRole",
+        profile_picture, created_at, updated_at
+        FROM users
+        WHERE email = $1 OR username = $1
+        "#,
+        request.identifier
+    )
+    .fetch_optional(&**pool)
+    .await;
+
+    match user_query {
+        Ok(Some(user)) => {
+            // Verify the password using bcrypt
+            let is_valid = bcrypt::verify(&request.password, &user.password_hash)
+                .unwrap_or(false);
+
+            if is_valid {
+                // If password is valid, return user data (excluding password_hash)
+                let user_response = User {
+                    password_hash: "".to_string(), // Don't send password hash
+                    ..user
+                };
+
+                HttpResponse::Ok().json(VerifyPasswordResponse {
+                    valid: true,
+                    user: Some(user_response),
+                })
+            } else {
+                HttpResponse::Ok().json(VerifyPasswordResponse {
+                    valid: false,
+                    user: None,
+                })
+            }
+        }
+        Ok(None) => HttpResponse::Ok().json(VerifyPasswordResponse {
+            valid: false,
+            user: None,
+        }),
+        Err(e) => {
+            eprintln!("Database error during password verification: {:?}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "message": "Internal server error during authentication"
+            }))
+        }
     }
 }

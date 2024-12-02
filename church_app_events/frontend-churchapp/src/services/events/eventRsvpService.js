@@ -207,21 +207,23 @@ export const declineRsvpWithEmail = async (rsvpId, email, eventId) => {
 // Search event rsvp
 export const searchRsvps = async (searchParams = {}) => {
     try {
-        console.log('Search params received:', searchParams); // Add debug log
+        console.log('Search params received:', searchParams);
 
         const params = new URLSearchParams();
 
         // Add parameters with proper naming and to match backend
         if (searchParams.status) {
-            params.append('status', searchParams.status.toLowerCase()); // Ensure lowercase
-            console.log('Status param added:', params.toString()); // Add debug log
+            params.append('status', searchParams.status.toLowerCase());
+            console.log('Status param added:', params.toString());
         }
         if (searchParams.email) params.append('email', searchParams.email);
         if (searchParams.eventTitle) params.append('event_title', searchParams.eventTitle);
         if (searchParams.userId) params.append('user_id', searchParams.userId);
 
-        const url = `/admin/events/rsvp/search?${params}`;
-        console.log('Final URL:', url); // Add debug log
+        // Convert URLSearchParams to string
+        const queryString = params.toString();
+        const url = `/admin/events/rsvp/search?${queryString}`;
+        console.log('Final URL:', url);
 
         const response = await api.get(url);
         console.log('RSVPs searched:', response.data);

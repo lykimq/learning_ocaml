@@ -1,38 +1,30 @@
 import React from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
-import AuthNavigator from './src/navigation/AuthNavigator'; // Import AuthNavigator
+import { Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import { PaperProvider } from 'react-native-paper';
 import { AuthProvider } from './src/contexts/AuthContext';
-import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
-
-// Optional: Customize theme
-const theme = {
-  ...DefaultTheme,
-  // Add your custom theme options here if needed
-  colors: {
-    ...DefaultTheme.colors,
-    // primary: '#your-primary-color',
-    // accent: '#your-accent-color',
-  },
-};
+import AuthNavigator from './src/navigation/AuthNavigator';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <PaperProvider theme={theme}>
-        <NavigationContainer>
-          <AuthNavigator />
-        </NavigationContainer>
+    <SafeAreaProvider>
+      <PaperProvider>
+        <AuthProvider>
+          <NavigationContainer
+            fallback={
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <Text>Loading...</Text>
+              </View>
+            }
+            onError={(error) => {
+              console.error('Navigation error:', error);
+            }}
+          >
+            <AuthNavigator />
+          </NavigationContainer>
+        </AuthProvider>
       </PaperProvider>
-    </AuthProvider>
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});

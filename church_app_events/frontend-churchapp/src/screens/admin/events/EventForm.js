@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
-import { Text, TextInput, Button, Title } from 'react-native-paper';
+import { View, StyleSheet, Platform, KeyboardAvoidingView, ScrollView, Alert } from 'react-native';
+import { Text, TextInput, Button, Title, useTheme } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { addEvent, updateEvent } from '../../../services/events/eventService';
+import { format } from 'date-fns';
 
 const EventForm = ({ eventData, onSubmit }) => {
+  const theme = useTheme();
   const [eventTitle, setEventTitle] = useState('');
   const [eventDate, setEventDate] = useState(new Date());
   const [eventTime, setEventTime] = useState(new Date());
@@ -13,18 +15,6 @@ const EventForm = ({ eventData, onSubmit }) => {
   const [errors, setErrors] = useState({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-
-  const onDateChange = (event, selectedDate) => {
-    const currentDate = selectedDate || eventDate;
-    setShowDatePicker(Platform.OS === 'ios');
-    setEventDate(currentDate);
-  };
-
-  const onTimeChange = (event, selectedTime) => {
-    const currentTime = selectedTime || eventTime;
-    setShowTimePicker(Platform.OS === 'ios');
-    setEventTime(currentTime);
-  };
 
   useEffect(() => {
     if (eventData) {
@@ -73,6 +63,7 @@ const EventForm = ({ eventData, onSubmit }) => {
       }
     } catch (error) {
       console.error('Error adding event:', error)
+      // TODO call showAlert here
       Alert.alert('Error', 'Failed to add event');
     }
 
@@ -99,209 +90,192 @@ const EventForm = ({ eventData, onSubmit }) => {
             }
             onChange({ type: 'set', nativeEvent: { timestamp: newDate } }, newDate);
           }}
-          style={{
-            padding: 10,
-            borderRadius: 4,
-            borderWidth: 1,
-            borderColor: '#ccc',
-            marginRight: 10,
-            flex: 1,
-          }}
+          style={styles.webDateTimeInput}
         />
       );
     }
 
-    return showPicker && (
-      <DateTimePicker
-        testID="dateTimePicker"
-        value={value}
-        mode={mode}
-        is24Hour={true}
-        display="default"
-        onChange={onChange}
-      />
+    const handleButtonPress = () => {
+      setShowPicker(true);
+    };
+
+    return (
+      <>
+        <Button
+          onPress={handleButtonPress}
+          mode="outlined"
+          style={styles.dateTimeButton}
+        >
+          {format(value, mode === 'date' ? 'MMM dd, yyyy' : 'hh:mm a')}
+        </Button>
+        {showPicker && (
+          <DateTimePicker
+            testID={`${mode}Picker`}
+            value={value}
+            mode={mode}
+            is24Hour={true}
+            display="default"
+            onChange={(event, selectedValue) => {
+              setShowPicker(false);
+              if (event.type === 'set' && selectedValue) {
+                onChange(event, selectedValue);
+              }
+            }}
+          />
+        )}
+      </>
     );
   };
 
+
   return (
-    <View style={styles.container}>
-      <Title style={styles.title}>Create New Event</Title>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.keyboardAvoidingView}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.container}>
+          <Title style={styles.title}>
+            {eventData?.id ? 'Edit Event' : 'Create New Event'}
+          </Title>
 
-      <TextInput
-        label="Event Title"
-        value={eventTitle}
-        onChangeText={setEventTitle}
-        style={styles.input}
-        mode="outlined"
-      />
-
-      <View style={styles.dateTimeContainer}>
-        <TextInput
-          label="Event Date"
-          value={eventDate.toDateString()}
-          style={[styles.input, styles.dateTimeInput]}
-          mode="outlined"
-          editable={false}
-        />
-        {Platform.OS === 'web' ? (
-          <DateTimeSelector
-            mode="date"
-            value={eventDate}
-            onChange={onDateChange}
-            showPicker={showDatePicker}
-            setShowPicker={setShowDatePicker}
+          <TextInput
+            label="Event Title"
+            value={eventTitle}
+            onChangeText={setEventTitle}
+            style={styles.input}
+            mode="outlined"
+            error={errors.eventTitle}
           />
-        ) : (
-          <Button
-            onPress={() => setShowDatePicker(true)}
-            mode="contained"
-            style={styles.dateTimeButton}
-            compact={Platform.OS !== 'web'}
-            labelStyle={Platform.OS === 'web' ? null : { fontSize: 12 }}
-          >
-            {Platform.OS === 'web' ? 'Choose Date' : 'Select'}
-          </Button>
-        )}
-      </View>
 
-      <View style={styles.dateTimeContainer}>
-        <TextInput
-          label="Event Time"
-          value={eventTime.toLocaleTimeString()}
-          style={[styles.input, styles.dateTimeInput]}
-          mode="outlined"
-          editable={false}
-        />
-        {Platform.OS === 'web' ? (
-          <DateTimeSelector
-            mode="time"
-            value={eventTime}
-            onChange={onTimeChange}
-            showPicker={showTimePicker}
-            setShowPicker={setShowTimePicker}
+          <View style={styles.dateTimeContainer}>
+            <Text style={styles.dateTimeLabel}>Date:</Text>
+            <DateTimeSelector
+              mode="date"
+              value={eventDate}
+              onChange={(_, selectedDate) => setEventDate(selectedDate || eventDate)}
+              showPicker={showDatePicker}
+              setShowPicker={setShowDatePicker}
+            />
+          </View>
+
+          <View style={styles.dateTimeContainer}>
+            <Text style={styles.dateTimeLabel}>Time:</Text>
+            <DateTimeSelector
+              mode="time"
+              value={eventTime}
+              onChange={(_, selectedTime) => setEventTime(selectedTime || eventTime)}
+              showPicker={showTimePicker}
+              setShowPicker={setShowTimePicker}
+            />
+          </View>
+
+          <TextInput
+            label="Address (optional)"
+            value={address}
+            onChangeText={setAddress}
+            style={styles.input}
+            mode="outlined"
           />
-        ) : (
+
+          <TextInput
+            label="Description (optional)"
+            value={description}
+            onChangeText={setDescription}
+            style={[styles.input, styles.textArea]}
+            mode="outlined"
+            multiline
+            numberOfLines={4}
+          />
+
           <Button
-            onPress={() => setShowTimePicker(true)}
             mode="contained"
-            style={styles.dateTimeButton}
-            compact={Platform.OS !== 'web'}
-            labelStyle={Platform.OS === 'web' ? null : { fontSize: 12 }}
+            onPress={handleSubmit}
+            style={styles.submitButton}
+            labelStyle={styles.submitButtonLabel}
           >
-            {Platform.OS === 'web' ? 'Choose Time' : 'Select'}
+            {eventData?.id ? 'Update Event' : 'Add Event'}
           </Button>
-        )}
-      </View>
-
-      <TextInput
-        label="Address (optional)"
-        value={address}
-        onChangeText={setAddress}
-        style={styles.input}
-        mode="outlined"
-      />
-
-      <TextInput
-        label="Description (optional)"
-        value={description}
-        onChangeText={setDescription}
-        style={styles.input}
-        mode="outlined"
-        multiline
-        numberOfLines={4}
-      />
-
-      <Button mode="contained" onPress={handleSubmit} style={styles.submitButton}>
-        Add Event
-      </Button>
-
-      {Platform.OS !== 'web' && showDatePicker && (
-        <DateTimeSelector
-          mode="date"
-          value={eventDate}
-          onChange={onDateChange}
-          showPicker={showDatePicker}
-          setShowPicker={setShowDatePicker}
-        />
-      )}
-
-      {Platform.OS !== 'web' && showTimePicker && (
-        <DateTimeSelector
-          mode="time"
-          value={eventTime}
-          onChange={onTimeChange}
-          showPicker={showTimePicker}
-          setShowPicker={setShowTimePicker}
-        />
-      )}
-    </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
-}
+};
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+  },
   container: {
     flex: Platform.OS === 'web' ? 0 : 1,
     maxWidth: Platform.OS === 'web' ? 600 : '100%',
     width: '100%',
-    padding: 20,
-    backgroundColor: '#f5f5f5',
+    padding: 24,
+    backgroundColor: '#fff',
     alignSelf: 'center',
-    ...(Platform.OS === 'web' && {
-      marginHorizontal: 'auto',
-      marginVertical: 20,
-      borderRadius: 8,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
+    borderRadius: 16,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 3,
+      },
     }),
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 24,
     textAlign: 'center',
-    color: '#3f51b5',
+    color: '#333',
   },
   input: {
-    marginBottom: 15,
-    height: 48,
-    backgroundColor: '#fff',
+    marginBottom: 12,
+    backgroundColor: '#f7f7f7',
+    borderRadius: 4,
   },
   dateTimeContainer: {
     flexDirection: 'row',
-    marginBottom: 15,
+    marginBottom: 12,
     alignItems: 'center',
   },
-  dateTimeInput: {
-    flex: 0.8,
-    marginRight: 10,
-    height: 48,
-    backgroundColor: '#fff',
+  dateTimeLabel: {
+    fontSize: 16,
+    marginRight: 8,
+    color: '#333',
+    width: 50
   },
   dateTimeButton: {
-    backgroundColor: '#3f51b5',
-    ...(Platform.OS === 'web' ? {
-      height: 48,
-      width: 90,
-      justifyContent: 'center',
-    } : {
-      height: 45, // Much smaller height for mobile
-      paddingVertical: 2, // Minimal vertical padding
-      paddingHorizontal: 8, // Reduced horizontal padding
-      minHeight: 0,
-      alignSelf: 'center',
-    }),
+    flex: 1,
+    borderRadius: 8,
+    borderColor: '#6200ee',
+  },
+  webDateTimeInput: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#6200ee',
+    fontSize: 16,
+  },
+  textArea: {
+    height: 100,
   },
   submitButton: {
-    marginTop: 20,
-    paddingVertical: 8,
-    backgroundColor: '#3f51b5',
-    alignSelf: 'center',
-    paddingHorizontal: 30,
-    minWidth: 150,
-    maxWidth: 200,
+    marginTop: 16,
+    paddingVertical: 6,
+    backgroundColor: '#4A90E2',
+  },
+  submitButtonLabel: {
+    fontSize: 16,
   },
 });
-
 export default EventForm;
