@@ -6,6 +6,7 @@ import { addHomeGroup, updateHomeGroup } from '../../../services/homegroups/home
 import { useAuth } from '../../../contexts/AuthContext';
 import { onDateChange, onTimeChange, showAlert } from '../../constants/constants';
 import { format } from 'date-fns';
+import formStyles from '../../styles/formStyles';
 
 const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
     const { isAdmin } = useAuth();
@@ -39,7 +40,7 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
 
     const RequiredLabel = ({ label }) => (
         <Text>
-            {label} <Text style={styles.required}>*</Text>
+            {label} <Text style={formStyles.required}>*</Text>
         </Text>
     );
 
@@ -129,7 +130,7 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
                         }
                         onChange({ type: 'set', nativeEvent: { timestamp: newDate } }, newDate);
                     }}
-                    style={styles.webDateTimeInput}
+                    style={formStyles.webDateTimeInput}
                 />
             );
         }
@@ -143,7 +144,7 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
                 <Button
                     onPress={handleButtonPress}
                     mode="outlined"
-                    style={styles.dateTimeButton}
+                    style={formStyles.dateTimeButton}
                 >
                     {format(value, mode === 'date' ? 'MMM dd, yyyy' : 'hh:mm a')}
                 </Button>
@@ -169,11 +170,11 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.keyboardAvoidingView}
+            style={formStyles.keyboardAvoidingView}
         >
-            <ScrollView contentContainerStyle={styles.scrollContainer}>
-                <View style={styles.container}>
-                    <Title style={styles.title}>
+            <ScrollView contentContainerStyle={formStyles.scrollContainer}>
+                <View style={formStyles.container}>
+                    <Title style={formStyles.title}>
                         {homeGroupData?.id ? 'Edit Home Group' : 'Create New Home Group'}
                     </Title>
 
@@ -181,13 +182,13 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
                         label="Group Name"
                         value={name}
                         onChangeText={setName}
-                        style={styles.input}
+                        style={formStyles.input}
                         mode="outlined"
                         error={errors.name}
                     />
 
-                    <View style={styles.dateTimeContainer}>
-                        <Text style={styles.dateTimeLabel}>Meeting Day:</Text>
+                    <View style={formStyles.dateTimeContainer}>
+                        <Text style={formStyles.dateTimeLabel}>Day:</Text>
                         <DateTimeSelector
                             mode="date"
                             value={meetingDay}
@@ -197,8 +198,8 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
                         />
                     </View>
 
-                    <View style={styles.dateTimeContainer}>
-                        <Text style={styles.dateTimeLabel}>Meeting Time:</Text>
+                    <View style={formStyles.dateTimeContainer}>
+                        <Text style={formStyles.dateTimeLabel}>Time:</Text>
                         <DateTimeSelector
                             mode="time"
                             value={meetingTime}
@@ -212,7 +213,7 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
                         label="Location"
                         value={location}
                         onChangeText={setLocation}
-                        style={styles.input}
+                        style={formStyles.input}
                         mode="outlined"
                         error={errors.location}
                     />
@@ -221,7 +222,7 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
                         label="Language"
                         value={language}
                         onChangeText={setLanguage}
-                        style={styles.input}
+                        style={formStyles.input}
                         mode="outlined"
                         error={errors.language}
                     />
@@ -230,7 +231,7 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
                         label="Max Capacity"
                         value={maxCapacity}
                         onChangeText={setMaxCapacity}
-                        style={styles.input}
+                        style={formStyles.input}
                         mode="outlined"
                         keyboardType="numeric"
                         error={errors.maxCapacity}
@@ -240,7 +241,7 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
                         label="Description"
                         value={description}
                         onChangeText={setDescription}
-                        style={[styles.input, styles.textArea]}
+                        style={[formStyles.input, formStyles.textArea]}
                         mode="outlined"
                         multiline
                         numberOfLines={4}
@@ -249,8 +250,8 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
                     <Button
                         mode="contained"
                         onPress={handleSubmit}
-                        style={styles.submitButton}
-                        labelStyle={styles.submitButtonLabel}
+                        style={formStyles.submitButton}
+                        labelStyle={formStyles.submitButtonLabel}
                     >
                         {homeGroupData?.id ? 'Update Home Group' : 'Add Home Group'}
                     </Button>
@@ -259,94 +260,5 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
         </KeyboardAvoidingView>
     );
 };
-
-const styles = StyleSheet.create({
-    keyboardAvoidingView: {
-        flex: 1,
-    },
-    scrollContainer: {
-        flexGrow: 1,
-    },
-    container: {
-        flex: Platform.OS === 'web' ? 0 : 1,
-        maxWidth: Platform.OS === 'web' ? 600 : '100%',
-        width: '100%',
-        padding: 24,
-        backgroundColor: '#fff',
-        alignSelf: 'center',
-        borderRadius: 16,
-        ...Platform.select({
-            web: {
-                boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
-            },
-            default: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 3,
-            },
-        }),
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 20,
-        textAlign: 'center',
-        color: '#3f51b5',
-    },
-    input: {
-        marginBottom: 15,
-        height: 48,
-        backgroundColor: '#fff',
-    },
-    dateTimeContainer: {
-        flexDirection: 'row',
-        marginBottom: 12,
-        alignItems: 'center',
-    },
-    dateTimeLabel: {
-        fontSize: 16,
-        marginRight: 8,
-        color: '#333',
-        width: 100,
-    },
-    dateTimeButton: {
-        flex: 1,
-        borderRadius: 8,
-        borderColor: '#6200ee',
-    },
-    webDateTimeInput: {
-        flex: 1,
-        padding: 10,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#6200ee',
-        fontSize: 16,
-    },
-    submitButton: {
-        marginTop: 16,
-        paddingVertical: 6,
-        backgroundColor: '#4A90E2',
-        alignSelf: 'center',
-        paddingHorizontal: 30,
-    },
-    required: {
-        color: 'red',
-        fontSize: 16,
-    },
-    textArea: {
-        height: 100,
-    },
-    dialogContainer: {
-        maxWidth: 400,
-        alignSelf: 'center',
-        backgroundColor: 'white',
-    },
-    dialogButton: {
-        marginLeft: 10,
-        marginBottom: 10,
-    },
-});
 
 export default HomeGroupForm;

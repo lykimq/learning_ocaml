@@ -144,7 +144,7 @@ const formStyles = StyleSheet.create({
         width: '100%',
         maxWidth: Math.min(LAYOUT.maxWidth, width * 0.9),
         marginHorizontal: 'auto',
-    },
+    }
 });
 
 
