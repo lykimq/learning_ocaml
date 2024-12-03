@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform, ScrollView, Alert } from 'react-native';
 import { Text, TextInput, Button, Title, HelperText } from 'react-native-paper';
 import { addUser, updateUser } from '../../../services/userService';
+import formStyles from '../../styles/formStyles';
 
 const UserForm = ({ userData, onSubmit }) => {
     const [email, setEmail] = useState('');
@@ -30,7 +31,7 @@ const UserForm = ({ userData, onSubmit }) => {
 
     const renderRequiredLabel = (label) => (
         <Text>
-            {label} <Text style={styles.required}>*</Text>
+            {label} <Text style={formStyles.required}>*</Text>
         </Text>
     );
 
@@ -103,14 +104,14 @@ const UserForm = ({ userData, onSubmit }) => {
     };
 
     return (
-        <ScrollView style={styles.scrollContainer}>
-            <View style={styles.container}>
-                <Title style={styles.title}>
+        <ScrollView style={formStyles.scrollContainer}>
+            <View style={formStyles.container}>
+                <Title style={formStyles.title}>
                     {userData ? 'Edit User' : 'Create New User'}
                 </Title>
                 {submitError && (
-                    <View style={styles.submitError}>
-                        <Text style={styles.errorText}>
+                    <View style={formStyles.errorContainer}>
+                        <Text style={formStyles.errorText}>
                             {submitError}
                         </Text>
                     </View>
@@ -120,7 +121,7 @@ const UserForm = ({ userData, onSubmit }) => {
                     label={renderRequiredLabel("Email")}
                     value={email}
                     onChangeText={setEmail}
-                    style={styles.input}
+                    style={formStyles.input}
                     mode="outlined"
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -136,7 +137,7 @@ const UserForm = ({ userData, onSubmit }) => {
                     label={userData ? "New Password (leave blank to keep current)" : renderRequiredLabel("Password")}
                     value={password}
                     onChangeText={setPassword}
-                    style={[styles.input, styles.passwordInput]}
+                    style={[formStyles.input, formStyles.passwordInput]}
                     mode="outlined"
                     secureTextEntry={!showPassword}
                     error={!!errors.password}
@@ -156,7 +157,7 @@ const UserForm = ({ userData, onSubmit }) => {
                     label={renderRequiredLabel("Username")}
                     value={username}
                     onChangeText={setUsername}
-                    style={styles.input}
+                    style={formStyles.input}
                     mode="outlined"
                     error={!!errors.username}
                 />
@@ -170,7 +171,7 @@ const UserForm = ({ userData, onSubmit }) => {
                     label={renderRequiredLabel("Role")}
                     value={role}
                     onChangeText={setRole}
-                    style={styles.input}
+                    style={formStyles.input}
                     mode="outlined"
                     error={!!errors.role}
                 />
@@ -184,14 +185,14 @@ const UserForm = ({ userData, onSubmit }) => {
                     label="Profile Picture URL (optional)"
                     value={profilePicture}
                     onChangeText={setProfilePicture}
-                    style={styles.input}
+                    style={formStyles.input}
                     mode="outlined"
                 />
 
                 <Button
                     mode="contained"
                     onPress={handleSubmit}
-                    style={styles.submitButton}
+                    style={formStyles.submitButton}
                 >
                     {userData ? 'Update User' : 'Add User'}
                 </Button>
@@ -200,63 +201,5 @@ const UserForm = ({ userData, onSubmit }) => {
     );
 };
 
-const styles = StyleSheet.create({
-    scrollContainer: {
-        flex: 1,
-        backgroundColor: '#f5f5f5',
-    },
-    container: {
-        flex: Platform.OS === 'web' ? 0 : 1,
-        maxWidth: Platform.OS === 'web' ? 600 : '100%',
-        width: '100%',
-        padding: 20,
-        backgroundColor: '#f5f5f5',
-        alignSelf: 'center',
-        ...(Platform.OS === 'web' && {
-            marginHorizontal: 'auto',
-            marginVertical: 20,
-            borderRadius: 8,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-        }),
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 20,
-        textAlign: 'center',
-        color: '#3f51b5',
-    },
-    input: {
-        marginBottom: 8,
-        backgroundColor: '#fff',
-    },
-    required: {
-        color: 'red',
-    },
-    submitButton: {
-        marginTop: 20,
-        paddingVertical: 8,
-        backgroundColor: '#3f51b5',
-        alignSelf: 'center',
-        paddingHorizontal: 30,
-        minWidth: 150,
-        maxWidth: 200,
-    },
-    errorContainer: {
-        backgroundColor: '#ffebee',
-        padding: 10,
-        borderRadius: 4,
-        marginBottom: 15,
-        borderWidth: 1,
-        borderColor: '#ffcdd2',
-    },
-    errorText: {
-        color: '#c62828',
-        textAlign: 'center',
-    },
-});
 
 export default UserForm;

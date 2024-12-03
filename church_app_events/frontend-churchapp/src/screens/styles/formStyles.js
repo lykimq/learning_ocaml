@@ -72,6 +72,10 @@ const formStyles = StyleSheet.create({
         backgroundColor: COLORS.inputBackground,
         marginBottom: 8,
     },
+    labelText: {
+        fontSize: 16,
+        color: COLORS.text
+    },
     required: {
         color: COLORS.required,
     },
