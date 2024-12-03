@@ -1,79 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, StyleSheet, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { Text, TextInput, Button, Title } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { addEvent, updateEvent } from '../../../services/events/eventService';
 import { format } from 'date-fns';
-import { showAlert } from '../../constants/constants';
+import formStyles from '../../styles/formStyles';
+import useEventForm from './useEventForm';
 
-const EventForm = ({ eventData, onSubmit }) => {
-  const [eventTitle, setEventTitle] = useState('');
-  const [eventDate, setEventDate] = useState(new Date());
-  const [eventTime, setEventTime] = useState(new Date());
-  const [address, setAddress] = useState('');
-  const [description, setDescription] = useState('');
-  const [errors, setErrors] = useState({});
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [dialogMessage, setDialogMessage] = useState(null);
-  const [dialogVisible, setDialogVisible] = useState(false);
-  const [dialogCallback, setDialogCallback] = useState(null);
-
-  const handleAlert = (title, message, callback = null) => {
-    showAlert(title, message, callback, setDialogMessage, setDialogVisible, setDialogCallback);
-  };
-
-  useEffect(() => {
-    if (eventData) {
-      setEventTitle(eventData.event_title || '');
-      setEventDate(eventData.event_date ? new Date(eventData.event_date) : new Date());
-      setEventTime(eventData.event_time ? new Date(`1970-01-01T${eventData.event_time}`) : new Date());
-      setAddress(eventData.address || '');
-      setDescription(eventData.description || '');
-    }
-  }, [eventData]);
-
-  const handleSubmit = async () => {
-    const validationErrors = {};
-    if (!eventTitle) validationErrors.eventTitle = true;
-    if (!eventDate) validationErrors.eventDate = true;
-    if (!eventTime) validationErrors.eventTime = true;
-
-    setErrors(validationErrors);
-
-    if (Object.keys(validationErrors).length > 0) return;
-
-    const formData = {
-      event_title: eventTitle,
-      event_date: eventDate.toISOString().split('T')[0], // Format: YYYY-MM-DD
-      event_time: eventTime.toTimeString().split(' ')[0].slice(0, 5), // Format: HH:MM
-      address,
-      description,
-    };
-
-    // Log the form data to ensure it's correct
-    console.log('Submitting form data:', formData);
-
-    // Call the addEvent from eventServices
-    try {
-      let result;
-      if (eventData?.id) {
-        result = await updateEvent(eventData.id, formData);
-        console.log('Event added successfully:', result)
-      } else {
-        // If no ID, create new event
-        result = await addEvent(formData);
-        console.log('Event added successfully:', result)
-      }
-      if (result) {
-        onSubmit(formData);
-      }
-    } catch (error) {
-      console.error('Error adding event:', error)
-      handleAlert('Error', 'Failed to add event');
-    }
-
-  };
+const EventForm = ({ eventData = null, onSubmit }) => {
+  // Event Form Hook
+  const {
+    errors, setErrors,
+    eventTitle, setEventTitle,
+    eventDate, setEventDate,
+    eventTime, setEventTime,
+    address, setAddress,
+    description, setDescription,
+    showDatePicker, setShowDatePicker,
+    showTimePicker, setShowTimePicker,
+    handleSubmit
+  } = useEventForm(eventData, onSubmit);
 
   const DateTimeSelector = ({ mode, value, onChange, showPicker, setShowPicker }) => {
     if (Platform.OS === 'web') {
@@ -96,7 +41,7 @@ const EventForm = ({ eventData, onSubmit }) => {
             }
             onChange({ type: 'set', nativeEvent: { timestamp: newDate } }, newDate);
           }}
-          style={styles.webDateTimeInput}
+          style={formStyles.webDateTimeInput}
         />
       );
     }
@@ -110,7 +55,7 @@ const EventForm = ({ eventData, onSubmit }) => {
         <Button
           onPress={handleButtonPress}
           mode="outlined"
-          style={styles.dateTimeButton}
+          style={formStyles.dateTimeButton}
         >
           {format(value, mode === 'date' ? 'MMM dd, yyyy' : 'hh:mm a')}
         </Button>
@@ -137,11 +82,11 @@ const EventForm = ({ eventData, onSubmit }) => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.keyboardAvoidingView}
+      style={formStyles.keyboardAvoidingView}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.container}>
-          <Title style={styles.title}>
+      <ScrollView contentContainerStyle={formStyles.scrollContainer}>
+        <View style={formStyles.container}>
+          <Title style={formStyles.title}>
             {eventData?.id ? 'Edit Event' : 'Create New Event'}
           </Title>
 
@@ -149,13 +94,13 @@ const EventForm = ({ eventData, onSubmit }) => {
             label="Event Title"
             value={eventTitle}
             onChangeText={setEventTitle}
-            style={styles.input}
+            style={formStyles.input}
             mode="outlined"
-            error={errors.eventTitle}
+            error={!!errors.eventTitle}
           />
 
-          <View style={styles.dateTimeContainer}>
-            <Text style={styles.dateTimeLabel}>Date:</Text>
+          <View style={formStyles.dateTimeContainer}>
+            <Text style={formStyles.dateTimeLabel}>Date:</Text>
             <DateTimeSelector
               mode="date"
               value={eventDate}
@@ -165,8 +110,8 @@ const EventForm = ({ eventData, onSubmit }) => {
             />
           </View>
 
-          <View style={styles.dateTimeContainer}>
-            <Text style={styles.dateTimeLabel}>Time:</Text>
+          <View style={formStyles.dateTimeContainer}>
+            <Text style={formStyles.dateTimeLabel}>Time:</Text>
             <DateTimeSelector
               mode="time"
               value={eventTime}
@@ -180,7 +125,7 @@ const EventForm = ({ eventData, onSubmit }) => {
             label="Address (optional)"
             value={address}
             onChangeText={setAddress}
-            style={styles.input}
+            style={formStyles.input}
             mode="outlined"
           />
 
@@ -188,7 +133,7 @@ const EventForm = ({ eventData, onSubmit }) => {
             label="Description (optional)"
             value={description}
             onChangeText={setDescription}
-            style={[styles.input, styles.textArea]}
+            style={[formStyles.input, formStyles.textArea]}
             mode="outlined"
             multiline
             numberOfLines={4}
@@ -197,8 +142,8 @@ const EventForm = ({ eventData, onSubmit }) => {
           <Button
             mode="contained"
             onPress={handleSubmit}
-            style={styles.submitButton}
-            labelStyle={styles.submitButtonLabel}
+            style={formStyles.submitButton}
+            labelStyle={formStyles.submitButtonLabel}
           >
             {eventData?.id ? 'Update Event' : 'Add Event'}
           </Button>
@@ -208,80 +153,5 @@ const EventForm = ({ eventData, onSubmit }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-  },
-  container: {
-    flex: Platform.OS === 'web' ? 0 : 1,
-    maxWidth: Platform.OS === 'web' ? 600 : '100%',
-    width: '100%',
-    padding: 24,
-    backgroundColor: '#fff',
-    alignSelf: 'center',
-    borderRadius: 16,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
-      },
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 3,
-      },
-    }),
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    textAlign: 'center',
-    color: '#333',
-  },
-  input: {
-    marginBottom: 12,
-    backgroundColor: '#f7f7f7',
-    borderRadius: 4,
-  },
-  dateTimeContainer: {
-    flexDirection: 'row',
-    marginBottom: 12,
-    alignItems: 'center',
-  },
-  dateTimeLabel: {
-    fontSize: 16,
-    marginRight: 8,
-    color: '#333',
-    width: 50
-  },
-  dateTimeButton: {
-    flex: 1,
-    borderRadius: 8,
-    borderColor: '#6200ee',
-  },
-  webDateTimeInput: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#6200ee',
-    fontSize: 16,
-  },
-  textArea: {
-    height: 100,
-  },
-  submitButton: {
-    marginTop: 16,
-    paddingVertical: 6,
-    backgroundColor: '#4A90E2',
-  },
-  submitButtonLabel: {
-    fontSize: 16,
-  },
-});
+
 export default EventForm;
