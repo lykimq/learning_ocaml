@@ -100,10 +100,21 @@ const ManageEventsScreen = ({ route }) => {
   );
 };
 
+const COLORS = {
+  background: '#f5f5f5', // light gray background
+  white: '#fff', // white
+  border: '#e0e0e0', // light gray border
+  text: '#333', // dark gray text
+  icon: '#4A90E2', // blue icon color
+  card: '#fff', // white card background
+  shadow: '#000', // shadow color
+  hover: '#e0e0e0', // light gray hover color
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.background,
   },
   contentContainer: {
     flex: 1,
@@ -112,9 +123,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: COLORS.border,
   },
   headerTitle: {
     fontSize: 20,
@@ -128,20 +139,20 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 30,
-    color: '#4A90E2',
+    color: COLORS.icon,
   },
   card: {
     width: '100%',
     marginBottom: 20,
     elevation: 4,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.card,
     ...(Platform.OS === 'web' && {
       maxWidth: 600,
       cursor: 'pointer',
       transition: 'all 0.3s ease',
       ':hover': {
         transform: 'translateY(-2px)',
-        boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+        boxShadow: `0 4px 8px ${COLORS.shadow}`,
       },
     }),
   },
@@ -152,11 +163,11 @@ const styles = StyleSheet.create({
   cardTitle: {
     marginTop: 10,
     fontSize: 18,
-    color: '#333',
+    color: COLORS.text,
   },
   cardDescription: {
     marginTop: 5,
-    color: '#666',
+    color: COLORS.text,
     textAlign: 'center',
   },
 });

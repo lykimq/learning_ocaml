@@ -362,76 +362,111 @@ const EventsList = () => {
     );
 };
 
+const COLORS = {
+    white: '#fff', // white
+    background: '#f5f5f5', // light gray
+    border: '#e0e0e0', // gray
+    shadow: '#000', // black
+    blue: '#3f51b5', // blue
+    text: '#333', // dark text
+    error: '#c62828', // red
+    errorBorder: '#F44336', // red
+};
+
+const LAYOUT = {
+    padding: 16,
+    borderRadius: 8,
+    maxWidth: 600,
+};
+
+const TYPOGRAPHY = {
+    title: {
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    label: {
+        fontSize: 16,
+    },
+    button: {
+        fontSize: 16,
+    },
+};
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: COLORS.background,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
-        backgroundColor: '#fff',
+        padding: LAYOUT.padding,
+        backgroundColor: COLORS.white,
         borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        borderBottomColor: COLORS.border,
     },
     headerTitle: {
-        fontSize: 20,
+        fontSize: TYPOGRAPHY.title.fontSize,
         marginLeft: 10,
     },
     searchContainer: {
-        padding: 16,
-        backgroundColor: '#fff',
+        padding: LAYOUT.padding,
+        backgroundColor: COLORS.white,
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        borderBottomColor: COLORS.border,
         elevation: 2,
-        shadowColor: '#000',
+        shadowColor: COLORS.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
     searchBar: {
         elevation: 0,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: COLORS.background,
         borderRadius: 8,
     },
+    searchButton: {
+        marginTop: 16,
+        borderRadius: 8,
+        backgroundColor: COLORS.blue,
+    },
     listContainer: {
-        padding: 16,
+        padding: LAYOUT.padding,
     },
     eventCard: {
         marginBottom: 16,
         borderRadius: 12,
-        backgroundColor: '#ffffff',
+        backgroundColor: COLORS.white,
         elevation: 2,
-        shadowColor: '#000',
+        shadowColor: COLORS.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         borderWidth: Platform.OS === 'ios' ? 1 : 0,
-        borderColor: '#e0e0e0',
+        borderColor: COLORS.border,
     },
     cardContent: {
-        padding: 16,
+        padding: LAYOUT.padding,
     },
     dateContainer: {
         flexDirection: 'row',
         alignItems: 'flex-start',
     },
     dateBox: {
-        backgroundColor: '#3f51b5',
+        backgroundColor: COLORS.blue,
         borderRadius: 8,
         padding: 8,
         alignItems: 'center',
         minWidth: 60,
     },
     dateMonth: {
-        color: '#fff',
+        color: COLORS.white,
         fontSize: 12,
         fontWeight: '600',
         textTransform: 'uppercase',
     },
     dateDay: {
-        color: '#fff',
+        color: COLORS.white,
         fontSize: 20,
         fontWeight: 'bold',
     },
@@ -442,7 +477,7 @@ const styles = StyleSheet.create({
     eventTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#1a1a1a',
+        color: COLORS.text,
         marginBottom: 8,
     },
     eventInfo: {
@@ -455,37 +490,37 @@ const styles = StyleSheet.create({
         marginRight: 4,
     },
     infoText: {
-        color: '#666',
-        fontSize: 14,
+        color: COLORS.text,
+        fontSize: TYPOGRAPHY.label.fontSize,
         flex: 1,
     },
     description: {
         marginTop: 12,
-        color: '#666',
-        fontSize: 14,
+        color: COLORS.text,
+        fontSize: TYPOGRAPHY.label.fontSize,
         lineHeight: 20,
     },
     cardActions: {
         borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
+        borderTopColor: COLORS.border,
         justifyContent: 'flex-end',
         paddingHorizontal: 8,
     },
     actionButton: {
         marginHorizontal: 4,
         borderRadius: 8,
-        borderColor: '#3f51b5',
+        borderColor: COLORS.blue,
     },
     actionButtonLabel: {
-        color: '#3f51b5',
-        fontSize: 12,
+        color: COLORS.blue,
+        fontSize: TYPOGRAPHY.button.fontSize,
     },
     deleteButton: {
-        borderColor: '#F44336',
+        borderColor: COLORS.errorBorder,
     },
     deleteButtonLabel: {
-        color: '#F44336',
-        fontSize: 12,
+        color: COLORS.error,
+        fontSize: TYPOGRAPHY.button.fontSize,
     },
     filterRow: {
         flexDirection: 'row',
@@ -496,38 +531,33 @@ const styles = StyleSheet.create({
         flex: 1,
         marginHorizontal: 5,
         borderRadius: 8,
-        borderColor: '#3f51b5',
+        borderColor: COLORS.blue,
     },
     filtersContainer: {
         marginTop: 10,
-        padding: 16,
-        backgroundColor: '#f8f8f8',
+        padding: LAYOUT.padding,
+        backgroundColor: COLORS.background,
         borderRadius: 12,
-    },
-    searchButton: {
-        marginTop: 16,
-        borderRadius: 8,
-        backgroundColor: '#3f51b5',
     },
     paginationContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 16,
-        backgroundColor: '#fff',
+        padding: LAYOUT.padding,
+        backgroundColor: COLORS.white,
         borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
+        borderTopColor: COLORS.border,
     },
     pageText: {
         marginHorizontal: 16,
-        color: '#666',
-        fontSize: 14,
+        color: COLORS.text,
+        fontSize: TYPOGRAPHY.label.fontSize,
     },
     loadingText: {
         textAlign: 'center',
         marginTop: 20,
-        fontSize: 16,
-        color: '#666',
+        fontSize: TYPOGRAPHY.label.fontSize,
+        color: COLORS.text,
     },
 });
 

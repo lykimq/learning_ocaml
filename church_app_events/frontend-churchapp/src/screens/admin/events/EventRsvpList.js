@@ -21,6 +21,7 @@ import {
 } from "../../../services/events/eventRsvpService";
 import { showAlert } from '../../constants/constants';
 
+
 const ITEMS_PER_PAGE = 10;
 
 const EventRsvpList = () => {
@@ -552,36 +553,67 @@ const EventRsvpList = () => {
     );
 };
 
+const COLORS = {
+    background: '#f5f5f5', // light gray background
+    white: '#fff', // white
+    border: '#e0e0e0', // light gray border
+    text: '#333', // dark gray text
+    success: '#4CAF50', // green
+    error: '#F44336', // red
+    shadow: '#000', // shadow color
+    chip: '#e0e0e0', // light gray chip background
+    chipText: '#333', // dark gray chip text
+    filterButton: '#e0e0e0', // light gray filter button background
+    filterButtonText: '#333', // dark gray filter button text
+    pageText: '#333', // dark gray page text
+    emptyText: '#333', // dark gray empty text
+};
+
+const LAYOUT = {
+    padding: 16,
+    borderRadius: 8,
+    maxWidth: 600,
+};
+
+const TYPOGRAPHY = {
+    label: {
+        fontSize: 16,
+    },
+    button: {
+        fontSize: 16,
+    },
+};
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: COLORS.background,
     },
     searchContainer: {
-        padding: 16,
-        backgroundColor: '#fff',
+        padding: LAYOUT.padding,
+        backgroundColor: COLORS.white,
         borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        borderBottomColor: COLORS.border,
     },
     searchBar: {
         elevation: 0,
-        backgroundColor: '#f5f5f5',
-        borderRadius: 8,
+        backgroundColor: COLORS.background,
+        borderRadius: LAYOUT.borderRadius,
     },
     rsvpCard: {
         marginBottom: 16,
-        borderRadius: 12,
-        backgroundColor: '#ffffff',
+        borderRadius: LAYOUT.borderRadius,
+        backgroundColor: COLORS.white,
         elevation: 2,
-        shadowColor: '#000',
+        shadowColor: COLORS.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         borderWidth: Platform.OS === 'ios' ? 1 : 0,
-        borderColor: '#e0e0e0',
+        borderColor: COLORS.border,
     },
     cardContent: {
-        padding: 16,
+        padding: LAYOUT.padding,
     },
     rsvpContainer: {
         flexDirection: 'row',
@@ -598,7 +630,7 @@ const styles = StyleSheet.create({
     eventTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#333',
+        color: COLORS.text,
         marginBottom: 8,
     },
     infoRow: {
@@ -611,23 +643,23 @@ const styles = StyleSheet.create({
         marginRight: 4,
     },
     infoText: {
-        color: '#333',
-        fontSize: 14,
+        color: COLORS.text,
+        fontSize: TYPOGRAPHY.label.fontSize,
         flex: 1,
     },
     statusChip: {
         paddingHorizontal: 12,
         height: 28,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: COLORS.background,
     },
     statusText: {
         fontSize: 14,
         fontWeight: '500',
-        color: '#333',
+        color: COLORS.text,
     },
     cardActions: {
         borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
+        borderTopColor: COLORS.border,
         justifyContent: 'flex-end',
         paddingHorizontal: 8,
         flexWrap: 'wrap',
@@ -637,26 +669,26 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     actionButtonLabel: {
-        fontSize: 13,
-        color: '#555',
+        fontSize: TYPOGRAPHY.button.fontSize,
+        color: COLORS.text,
     },
     confirmButton: {
-        borderColor: '#4CAF50',
+        borderColor: COLORS.success,
     },
     confirmButtonLabel: {
-        color: '#4CAF50',
+        color: COLORS.success,
     },
     declineButton: {
-        borderColor: '#F44336',
+        borderColor: COLORS.error,
     },
     declineButtonLabel: {
-        color: '#F44336',
+        color: COLORS.error,
     },
     deleteButton: {
-        borderColor: '#757575',
+        borderColor: COLORS.text,
     },
     deleteButtonLabel: {
-        color: '#757575',
+        color: COLORS.text,
     },
     searchTypeAndStatusContainer: {
         flexDirection: 'row',
@@ -667,19 +699,19 @@ const styles = StyleSheet.create({
     chipStyle: {
         marginRight: 8,
         marginBottom: 8,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: COLORS.background,
         borderRadius: 20,
     },
     chipTextStyle: {
-        color: '#333',
+        color: COLORS.text,
         fontSize: 12,
         fontWeight: '500',
     },
     chipSelected: {
-        backgroundColor: '#757575',
+        backgroundColor: COLORS.text,
     },
     chipTextSelected: {
-        color: '#fff',
+        color: COLORS.white,
         fontWeight: '600',
     },
     filterRow: {
@@ -691,90 +723,53 @@ const styles = StyleSheet.create({
         flex: 1,
         marginHorizontal: 5,
         borderRadius: 8,
-        borderColor: '#757575',
-        backgroundColor: '#f5f5f5',
+        borderColor: COLORS.text,
+        backgroundColor: COLORS.background,
     },
     filterButtonLabel: {
-        color: '#333',
+        color: COLORS.text,
     },
     filtersContainer: {
         marginTop: 10,
-        padding: 16,
-        backgroundColor: '#f8f8f8',
-        borderRadius: 12,
+        padding: LAYOUT.padding,
+        backgroundColor: COLORS.background,
+        borderRadius: LAYOUT.borderRadius,
     },
+    filterChip: {
+        backgroundColor: COLORS.background,
+        marginRight: 8,
+        marginBottom: 4,
+    },
+    filterChipText: {
+        color: COLORS.text,
+    },
+
     activeFiltersContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         marginTop: 8,
         gap: 8,
     },
-    filterChip: {
-        backgroundColor: '#f0f0f0',
-        marginRight: 8,
-        marginBottom: 4,
-    },
-    filterChipText: {
-        color: '#333',
-    },
     statsContainer: {
-        padding: 16,
+        padding: LAYOUT.padding,
         backgroundColor: '#fff',
         flexDirection: 'row',
         justifyContent: 'space-around',
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        borderBottomColor: COLORS.border,
         marginBottom: 10,
         flexWrap: 'wrap',
     },
     statusText: {
         fontSize: 14,
         fontWeight: '500',
-        color: '#333',
+        color: COLORS.text,
         marginHorizontal: 8,
         marginVertical: 4,
     },
     statusTextSelected: {
-        color: '#fff',
+        color: COLORS.white,
         fontWeight: '600',
-    },
-    paginationContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 16,
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
-    },
-    pageText: {
-        marginHorizontal: 16,
-        color: '#333',
-        fontSize: 14,
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 40,
-    },
-    emptyText: {
-        fontSize: 16,
-        color: '#333',
-        textAlign: 'center',
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-    },
-    dialogContainer: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        maxWidth: 400,
-        width: '90%',
-        alignSelf: 'center',
     },
     statusButtonsContainer: {
         flexDirection: 'row',
@@ -788,7 +783,45 @@ const styles = StyleSheet.create({
     },
     statusButtonLabel: {
         fontSize: 12,
-        color: '#555',
+        color: COLORS.text,
+    },
+    paginationContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 16,
+        backgroundColor: COLORS.white,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.border,
+    },
+    pageText: {
+        marginHorizontal: 16,
+        color: COLORS.text,
+        fontSize: TYPOGRAPHY.label.fontSize,
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 40,
+    },
+    emptyText: {
+        fontSize: TYPOGRAPHY.label.fontSize,
+        color: COLORS.text,
+        textAlign: 'center',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    dialogContainer: {
+        backgroundColor: COLORS.white,
+        borderRadius: LAYOUT.borderRadius,
+        maxWidth: 400,
+        width: '90%',
+        alignSelf: 'center',
     },
 });
 

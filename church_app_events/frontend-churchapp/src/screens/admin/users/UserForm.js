@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, TextInput, Button, Title, HelperText } from 'react-native-paper';
+import { Picker } from '@react-native-picker/picker';
 import { addUser, updateUser } from '../../../services/userService';
 import formStyles from '../../styles/formStyles';
 
@@ -167,19 +168,23 @@ const UserForm = ({ userData, onSubmit }) => {
                     </HelperText>
                 )}
 
-                <TextInput
-                    label={renderRequiredLabel("Role")}
-                    value={role}
-                    onChangeText={setRole}
-                    style={formStyles.input}
-                    mode="outlined"
-                    error={!!errors.role}
-                />
-                {errors.role && (
-                    <HelperText type="error" visible={true}>
-                        {errors.role}
-                    </HelperText>
-                )}
+                <View style={formStyles.input}>
+                    <Text>{renderRequiredLabel("Role")}</Text>
+                    <Picker
+                        selectedValue={role}
+                        onValueChange={(itemValue) => setRole(itemValue)}
+                        mode="dropdown"
+                    >
+                        <Picker.Item label="Admin" value="admin" />
+                        <Picker.Item label="User" value="user" />
+                        <Picker.Item label="Guest" value="guest" />
+                    </Picker>
+                    {errors.role && (
+                        <HelperText type="error" visible={true}>
+                            {errors.role}
+                        </HelperText>
+                    )}
+                </View>
 
                 <TextInput
                     label="Profile Picture URL (optional)"
