@@ -142,14 +142,25 @@ export const addUser = async (user) => {
 };
 
 // update user
-export const updateUser = async (id, user) => {
+export const updateUser = async (id, userData) => {
     try {
-        const response = await api.put(`/admin/users/edit/${id}`, user);
+        // Ensure we're not sending the role field
+        const { role, ...updateData } = userData;
+
+        console.log('Updating user with data:', updateData);
+
+        const response = await api.put(`/admin/users/edit/${id}`, updateData);
         console.log('User updated:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error updating user:', error);
-        throw error;
+        if (error.response?.data?.message) {
+            throw new Error(error.response.data.message);
+        } else if (error.response?.status === 500) {
+            throw new Error('Server error occurred while updating user');
+        } else {
+            throw new Error('Failed to update user: ' + (error.message || 'Unknown error'));
+        }
     }
 };
 

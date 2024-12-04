@@ -30,11 +30,17 @@ const UserForm = ({ userData, onSubmit }) => {
         return emailRegex.test(email);
     };
 
-    const renderRequiredLabel = (label) => (
-        <Text>
-            {label} <Text style={formStyles.required}>*</Text>
-        </Text>
-    );
+    const renderRequiredLabel = (label) => {
+        return {
+            label: label,
+            render: () => (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ color: '#000' }}>{label}</Text>
+                    <Text style={{ color: '#FF0000' }}> *</Text>
+                </View>
+            )
+        };
+    };
 
     const handleSubmit = async () => {
         setSubmitError('');
@@ -76,10 +82,14 @@ const UserForm = ({ userData, onSubmit }) => {
         const formData = {
             email: trimmedEmail,
             username: trimmedUsername,
-            role: trimmedRole,
             ...(trimmedPassword && { password: trimmedPassword }),
             ...(profilePicture.trim() && { profile_picture: profilePicture.trim() }),
         };
+
+        // Only include role for new users
+        if (!userData) {
+            formData.role = trimmedRole;
+        }
 
         console.log('Submitting user data:', formData);
 
@@ -119,7 +129,7 @@ const UserForm = ({ userData, onSubmit }) => {
                 )}
 
                 <TextInput
-                    label={renderRequiredLabel("Email")}
+                    label={renderRequiredLabel("Email").render}
                     value={email}
                     onChangeText={setEmail}
                     style={formStyles.input}
@@ -135,7 +145,7 @@ const UserForm = ({ userData, onSubmit }) => {
                 )}
 
                 <TextInput
-                    label={userData ? "New Password (leave blank to keep current)" : renderRequiredLabel("Password")}
+                    label={userData ? "New Password (leave blank to keep current)" : renderRequiredLabel("Password").render}
                     value={password}
                     onChangeText={setPassword}
                     style={[formStyles.input, formStyles.passwordInput]}
@@ -155,7 +165,7 @@ const UserForm = ({ userData, onSubmit }) => {
                 )}
 
                 <TextInput
-                    label={renderRequiredLabel("Username")}
+                    label={renderRequiredLabel("Username").render}
                     value={username}
                     onChangeText={setUsername}
                     style={formStyles.input}
@@ -168,23 +178,26 @@ const UserForm = ({ userData, onSubmit }) => {
                     </HelperText>
                 )}
 
-                <View style={formStyles.input}>
-                    <Text>{renderRequiredLabel("Role")}</Text>
-                    <Picker
-                        selectedValue={role}
-                        onValueChange={(itemValue) => setRole(itemValue)}
-                        mode="dropdown"
-                    >
-                        <Picker.Item label="Admin" value="admin" />
-                        <Picker.Item label="User" value="user" />
-                        <Picker.Item label="Guest" value="guest" />
-                    </Picker>
-                    {errors.role && (
-                        <HelperText type="error" visible={true}>
-                            {errors.role}
-                        </HelperText>
-                    )}
-                </View>
+                {/* Only show role picker for new users */}
+                {!userData && (
+                    <View style={formStyles.input}>
+                        <Text>{renderRequiredLabel("Role").render}</Text>
+                        <Picker
+                            selectedValue={role}
+                            onValueChange={(itemValue) => setRole(itemValue)}
+                            mode="dropdown"
+                        >
+                            <Picker.Item label="Admin" value="admin" />
+                            <Picker.Item label="User" value="user" />
+                            <Picker.Item label="Guest" value="guest" />
+                        </Picker>
+                        {errors.role && (
+                            <HelperText type="error" visible={true}>
+                                {errors.role}
+                            </HelperText>
+                        )}
+                    </View>
+                )}
 
                 <TextInput
                     label="Profile Picture URL (optional)"

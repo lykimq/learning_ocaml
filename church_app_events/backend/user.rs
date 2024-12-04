@@ -5,7 +5,7 @@ use actix_web::{
 };
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, QueryBuilder};
+use sqlx::{PgPool, QueryBuilder, Execute};
 use serde_json::json;
 use regex::Regex;
 use lazy_static::lazy_static;
@@ -62,7 +62,7 @@ pub struct User {
     pub updated_at: Option<NaiveDateTime>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct CreateUserData {
     pub email: String,
     pub password: String,
@@ -71,12 +71,11 @@ pub struct CreateUserData {
     pub profile_picture: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct UpdateUserData {
     pub email: Option<String>,
     pub password: Option<String>,
     pub username: Option<String>,
-    pub role: Option<UserRole>,
     pub profile_picture: Option<String>,
 }
 
@@ -212,31 +211,23 @@ pub async fn update_user(
     id: web::Path<i32>,
     update_data: web::Json<UpdateUserData>
 ) -> impl Responder {
-    // Validate username if provided
-    if let Some(username) = &update_data.username {
-        if let Err(e) = validate_username(username) {
-            return HttpResponse::BadRequest().json(json!({
-                "message": e
-            }));
-        }
-    }
-
-    // Validate email if provided
-    if let Some(email) = &update_data.email {
-        if let Err(e) = validate_email(email) {
-            return HttpResponse::BadRequest().json(json!({
-                "message": e
-            }));
-        }
-    }
+    let id_value = id.into_inner();
 
     let mut query_builder = QueryBuilder::new(
         "UPDATE users SET updated_at = CURRENT_TIMESTAMP"
     );
 
+    // Log the incoming data
+    println!("Updating user {} with data: {:?}", id_value, update_data);
+
     if let Some(email) = &update_data.email {
         query_builder.push(", email = ");
         query_builder.push_bind(email);
+    }
+
+    if let Some(username) = &update_data.username {
+        query_builder.push(", username = ");
+        query_builder.push_bind(username);
     }
 
     if let Some(password) = &update_data.password {
@@ -245,33 +236,17 @@ pub async fn update_user(
         query_builder.push(", gen_salt('bf'))");
     }
 
-    if let Some(username) = &update_data.username {
-        query_builder.push(", username = ");
-        query_builder.push_bind(username);
-    }
-
-    if let Some(role) = &update_data.role {
-        query_builder.push(", role = ");
-        query_builder.push_bind(role);
-    }
-
     if let Some(profile_picture) = &update_data.profile_picture {
         query_builder.push(", profile_picture = ");
         query_builder.push_bind(profile_picture);
     }
 
     query_builder.push(" WHERE id = ");
-    query_builder.push_bind(id.into_inner());
+    query_builder.push_bind(id_value);
     query_builder.push(
-        " RETURNING
-        id,
-        email,
-        password_hash,
-        username,
-        role as \"role: UserRole\",
-        profile_picture,
-        created_at,
-        updated_at"
+        " RETURNING id, email, password_hash, username, \
+         (SELECT role::text)::user_role as role, \
+         profile_picture, created_at, updated_at"
     );
 
     let result = query_builder
@@ -281,31 +256,16 @@ pub async fn update_user(
 
     match result {
         Ok(Some(user)) => HttpResponse::Ok().json(user),
-        Ok(None) => HttpResponse::NotFound().body("User not found"),
+        Ok(None) => {
+            println!("User not found with id: {}", id_value);
+            HttpResponse::NotFound().json(json!({
+                "message": "User not found"
+            }))
+        },
         Err(e) => {
-            eprintln!("Error updating user: {:?}", e);
-            if let sqlx::Error::Database(db_error) = e {
-                match db_error.constraint() {
-                    Some("users_email_key") => {
-                        return HttpResponse::BadRequest().json(json!({
-                            "message": "Email already exists"
-                        }));
-                    }
-                    Some("users_username_key") => {
-                        return HttpResponse::BadRequest().json(json!({
-                            "message": "Username already exists"
-                        }));
-                    }
-                    Some("username_format") => {
-                        return HttpResponse::BadRequest().json(json!({
-                            "message": "Username must be between 3 and 20 characters, and can only contain letters, numbers, and underscores"
-                        }));
-                    }
-                    _ => {}
-                }
-            }
+            eprintln!("Database error while updating user: {:?}", e);
             HttpResponse::InternalServerError().json(json!({
-                "message": "Failed to update user"
+                "message": format!("Failed to update user: {}", e)
             }))
         }
     }
@@ -339,7 +299,7 @@ pub async fn search_users(
     params: web::Query<SearchUserParams>
 ) -> impl Responder {
     let mut query_builder = QueryBuilder::new(
-        "SELECT id, email, password_hash, name, role as \"role: UserRole\", \
+        "SELECT id, email, password_hash, username, role as \"role: UserRole\", \
          profile_picture, created_at, updated_at FROM users WHERE 1=1"
     );
 
