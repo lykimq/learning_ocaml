@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation, CommonActions } from '@react-navigation/native';
-import { TouchableOpacity, StyleSheet, Text, View } from 'react-native';
+import { TouchableOpacity, StyleSheet, Text, View, Platform } from 'react-native';
 import * as userService from '../services/userService';
 
 // Screens
@@ -23,6 +23,15 @@ const Tab = createBottomTabNavigator();
 export default function AdminTabNavigator() {
   const { user, isAdmin, logout } = useAuth();
   const navigation = useNavigation();
+  const [isWeb] = React.useState(Platform.OS === 'web');
+
+  console.log('AdminNavigator - Navigation State:', {
+    platform: Platform.OS,
+    isWeb,
+    isAdmin,
+    currentUser: user,
+    timestamp: new Date().toISOString()
+  });
 
   if (!user || !isAdmin) {
     return null;
@@ -30,7 +39,9 @@ export default function AdminTabNavigator() {
 
   const handleLogout = async () => {
     try {
+      console.log('Admin logout initiated');
       await logout();
+      navigation.navigate('UserNavigator');
     } catch (error) {
       console.error('AdminNavigator - Logout error:', error);
     }
@@ -66,13 +77,14 @@ export default function AdminTabNavigator() {
             case 'Logout':
               iconName = 'logout';
               break;
+            default:
+              iconName = 'circle';
           }
           return <MaterialIcons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: '#4A90E2',
         tabBarInactiveTintColor: 'gray',
         tabBarLabel: () => null,
-        // Update header options
         headerStyle: {
           backgroundColor: '#4A90E2',
         },
@@ -80,11 +92,10 @@ export default function AdminTabNavigator() {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
-        // Remove headerRight if not needed or update it
         headerRight: () => (
           <TouchableOpacity
             onPress={() => navigation.navigate('Profile')}
-            style={{ marginRight: 15 }}
+            style={styles.headerButton}
           >
             <MaterialIcons
               name="account-circle"
@@ -100,7 +111,6 @@ export default function AdminTabNavigator() {
         component={DashboardScreen}
         options={{
           title: 'Dashboard',
-          // Update headerLeft to use proper View and Text components
           headerLeft: () => (
             <View style={{ marginLeft: 15 }}>
               <Text style={[styles.headerText, { fontWeight: 'bold' }]}>
@@ -182,6 +192,10 @@ const styles = StyleSheet.create({
   headerText: {
     color: '#fff',
     fontSize: 16,
+  },
+  headerButton: {
+    marginRight: 15,
+    padding: 8,
   },
   customButton: {
     flex: 1,

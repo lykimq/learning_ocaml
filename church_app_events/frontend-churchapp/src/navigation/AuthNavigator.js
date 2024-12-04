@@ -1,6 +1,7 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAuth } from '../contexts/AuthContext';
+import { Platform } from 'react-native';
 
 // Screens and Navigators
 import LoginScreen from '../screens/shared/LoginScreen';
@@ -12,57 +13,57 @@ const Stack = createStackNavigator();
 
 export default function AuthNavigator() {
   const { user, isAdmin } = useAuth();
+  const [isWeb] = React.useState(Platform.OS === 'web');
+
+  console.log('AuthNavigator Render:', {
+    platform: Platform.OS,
+    isWeb,
+    isUserAuthenticated: !!user,
+    isAdmin,
+    navigationState: 'initial render',
+    stackConfig: {
+      presentation: isWeb ? 'transparentModal' : 'modal',
+      animationEnabled: !isWeb
+    }
+  });
 
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
         gestureEnabled: false,
+        presentation: isWeb ? 'transparentModal' : 'modal',
       }}
     >
-      {/* UserNavigator is always available */}
       <Stack.Screen
         name="UserNavigator"
         component={UserNavigator}
         options={{
-          gestureEnabled: false,
-          animationEnabled: false
+          animationEnabled: false,
         }}
       />
 
-      {/* LoginScreen is available when not logged in */}
-      {!user && (
-        <Stack.Screen
-          name="LoginScreen"
-          component={LoginScreen}
-          options={{
-            gestureEnabled: false,
-            animationEnabled: true
-          }}
-        />
-      )}
+      <Stack.Screen
+        name="LoginScreen"
+        component={LoginScreen}
+        options={{
+          presentation: isWeb ? 'transparentModal' : 'modal',
+          animationEnabled: true,
+          cardStyle: {
+            backgroundColor: isWeb ? 'rgba(0, 0, 0, 0.5)' : 'white',
+          },
+        }}
+      />
 
-      {/* AdminNavigator is only available when user is admin */}
-      {user && isAdmin && (
+      {isAdmin && (
         <Stack.Screen
           name="AdminNavigator"
           component={AdminNavigator}
           options={{
-            gestureEnabled: false,
-            animationEnabled: false
+            animationEnabled: false,
           }}
         />
       )}
-
-      {/* ProfileScreen is always available */}
-      <Stack.Screen
-        name="ProfileScreen"
-        component={ProfileScreen}
-        options={{
-          gestureEnabled: true,
-          animationEnabled: true
-        }}
-      />
     </Stack.Navigator>
   );
 }

@@ -1,9 +1,9 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet, Text, View } from 'react-native';
+import { TouchableOpacity, StyleSheet, Text, View, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { ActivityIndicator } from 'react-native-paper';
 import * as userService from '../services/userService';
 
@@ -21,32 +21,30 @@ import LogoutScreen from '../screens/shared/LogoutScreen';
 const Tab = createBottomTabNavigator();
 
 export default function UserNavigator() {
-  const { user, isLoading, setUser } = useAuth();
+  const { user, isLoading } = useAuth();
   const navigation = useNavigation();
+  const [isWeb] = React.useState(Platform.OS === 'web');
 
-  console.log('UserNavigator - Current user state:', user);
+  const handleLoginPress = React.useCallback(() => {
+    console.log('Login button pressed', {
+      platform: Platform.OS,
+      timestamp: new Date().toISOString()
+    });
 
+    navigation.navigate('LoginScreen');
+  }, [navigation]);
 
-  const { logout } = useAuth();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error('UserNavigator - Logout error:', error);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4A90E2" />
-      </View>
-    );
-  }
+  const LoginButton = React.useCallback(() => (
+    <TouchableOpacity
+      onPress={handleLoginPress}
+      style={styles.headerLoginButton}
+      testID="loginButton"
+    >
+      <Text style={styles.headerLoginText}>Login</Text>
+    </TouchableOpacity>
+  ), [handleLoginPress]);
 
   const getTabScreens = () => {
-    // Base screens available to all users
     const screens = [
       <Tab.Screen
         key="Home"
@@ -71,14 +69,7 @@ export default function UserNavigator() {
         key="Events"
         name="Events"
         component={EventsScreen}
-        options={{
-          title: 'Events',
-          listeners: ({ navigation }) => ({
-            tabPress: () => {
-              navigation.setParams({ reset: Date.now() });
-            },
-          }),
-        }}
+        options={{ title: 'Events' }}
       />,
       <Tab.Screen
         key="HomeGroups"
@@ -107,33 +98,6 @@ export default function UserNavigator() {
           name="Profile"
           component={ProfileScreen}
           options={{ title: 'Profile' }}
-        />,
-        <Tab.Screen
-          key="Logout"
-          name="Logout"
-          component={LogoutScreen}
-          options={{
-            title: 'Logout',
-            tabBarIcon: ({ color, size }) => (
-              <MaterialIcons name="logout" size={size} color={color} />
-            ),
-            tabBarButton: (props) => (
-              <TouchableOpacity
-                {...props}
-                onPress={handleLogout}
-                style={[
-                  styles.customButton,
-                  props.accessibilityState?.selected && styles.customButtonActive
-                ]}
-              >
-                <MaterialIcons
-                  name="logout"
-                  size={24}
-                  color={props.accessibilityState?.selected ? '#4A90E2' : 'gray'}
-                />
-              </TouchableOpacity>
-            )
-          }}
         />
       );
     } else {
@@ -150,7 +114,8 @@ export default function UserNavigator() {
             tabBarButton: (props) => (
               <TouchableOpacity
                 {...props}
-                onPress={() => navigation.navigate('LoginScreen')}
+                onPress={handleLoginPress}
+                testID="loginTabButton"
                 style={[
                   styles.customButton,
                   props.accessibilityState?.selected && styles.customButtonActive
@@ -161,8 +126,13 @@ export default function UserNavigator() {
                   size={24}
                   color={props.accessibilityState?.selected ? '#4A90E2' : 'gray'}
                 />
+                {isWeb && (
+                  <Text style={styles.tabBarLabel}>
+                    Login
+                  </Text>
+                )}
               </TouchableOpacity>
-            )
+            ),
           }}
         />
       );
@@ -170,6 +140,14 @@ export default function UserNavigator() {
 
     return screens;
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4A90E2" />
+      </View>
+    );
+  }
 
   return (
     <Tab.Navigator
@@ -184,7 +162,6 @@ export default function UserNavigator() {
             case 'Serving': iconName = 'volunteer-activism'; break;
             case 'Giving': iconName = 'attach-money'; break;
             case 'Profile': iconName = 'person'; break;
-            case 'Logout': iconName = 'logout'; break;
             case 'Login': iconName = 'login'; break;
             default: iconName = 'circle';
           }
@@ -200,6 +177,7 @@ export default function UserNavigator() {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
+        headerRight: () => !user && <LoginButton />,
       })}
     >
       {getTabScreens()}
@@ -213,13 +191,13 @@ const styles = StyleSheet.create({
     marginLeft: 15,
     fontSize: 16,
   },
-  loginButton: {
+  headerLoginButton: {
     marginRight: 15,
     padding: 8,
     borderRadius: 5,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
-  loginButtonText: {
+  headerLoginText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
@@ -228,6 +206,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 8,
   },
   customButtonActive: {
     borderTopWidth: 2,
@@ -237,5 +216,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  tabBarLabel: {
+    fontSize: 12,
+    marginTop: 2,
+    color: 'gray',
   },
 });
