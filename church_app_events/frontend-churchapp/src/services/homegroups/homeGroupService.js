@@ -89,7 +89,9 @@ export const addHomeGroup = async (homeGroupData) => {
             status: error.response?.status,
             data: error.response?.config?.data
         });
-        throw new Error(error.response?.data?.message || 'Failed to add home group');
+        throw new Error(error.response?.data?.message ||
+            error.response?.data ||
+            'Failed to add home group');
     }
 }
 

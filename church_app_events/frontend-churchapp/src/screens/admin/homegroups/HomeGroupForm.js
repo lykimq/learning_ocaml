@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import formStyles from '../../styles/formStyles';
 
 const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
-    const { isAdmin } = useAuth();
+    const { isAdmin, user } = useAuth();
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [location, setLocation] = useState('');
@@ -55,6 +55,11 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
             return;
         }
 
+        if (!user?.id) {
+            handleAlert('Error', 'User ID not found');
+            return;
+        }
+
         const validationErrors = {};
         if (!name) validationErrors.name = true;
         if (!location) validationErrors.location = true;
@@ -79,7 +84,7 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
             max_capacity: maxCapacity ? parseInt(maxCapacity) : null,
             meeting_day: meetingDay.toISOString().split('T')[0],
             meeting_time: meetingTime.toTimeString().split(' ')[0].slice(0, 5),
-            created_by: 1,
+            created_by: user.id,
         };
 
         try {
@@ -96,7 +101,7 @@ const HomeGroupForm = ({ homeGroupData, onSubmit }) => {
             }
         } catch (error) {
             console.error('Error saving home group:', error);
-            handleAlert('Error', 'Failed to save home group');
+            handleAlert('Error', error.message || 'Failed to save home group');
         }
     };
 
