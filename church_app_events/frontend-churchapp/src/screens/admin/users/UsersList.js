@@ -8,6 +8,8 @@ import {
     Text,
     IconButton,
     Avatar,
+    Dialog,
+    Portal,
 } from "react-native-paper";
 import { getUsers, deleteUser, searchUsers } from "../../../services/userService";
 import UserForm from "./UserForm";
@@ -24,6 +26,8 @@ const UsersList = () => {
     const [dialogMessage, setDialogMessage] = useState({ title: '', message: '' });
     const [dialogVisible, setDialogVisible] = useState(false);
     const [dialogCallback, setDialogCallback] = useState(null);
+    const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+    const [userToDelete, setUserToDelete] = useState(null);
 
     useEffect(() => {
         fetchUsers();
@@ -50,14 +54,22 @@ const UsersList = () => {
         setEditingUser(user);
     };
 
-    const handleDeleteUser = async (id) => {
+    const handleDeleteUser = (id) => {
+        setUserToDelete(id);
+        setDeleteConfirmVisible(true);
+    };
+
+    const confirmDelete = async () => {
         try {
-            await deleteUser(id);
+            await deleteUser(userToDelete);
             fetchUsers();
             handleAlert('Success', 'User deleted successfully');
         } catch (error) {
             console.error('Error deleting user:', error);
             handleAlert('Error', 'Failed to delete user');
+        } finally {
+            setDeleteConfirmVisible(false);
+            setUserToDelete(null);
         }
     };
 
@@ -150,6 +162,28 @@ const UsersList = () => {
                     >
                         Edit
                     </Button>
+                    <Portal>
+                        <Dialog
+                            visible={deleteConfirmVisible}
+                            onDismiss={() => setDeleteConfirmVisible(false)}
+                        >
+                            <Dialog.Title>Confirm Delete</Dialog.Title>
+                            <Dialog.Content>
+                                <Text>Are you sure you want to delete this user? This action cannot be undone.</Text>
+                            </Dialog.Content>
+                            <Dialog.Actions>
+                                <Button onPress={() => setDeleteConfirmVisible(false)}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onPress={confirmDelete}
+                                    textColor={COLORS.error}
+                                >
+                                    Delete
+                                </Button>
+                            </Dialog.Actions>
+                        </Dialog>
+                    </Portal>
                     <Button
                         mode="outlined"
                         onPress={() => handleDeleteUser(item.id)}
@@ -166,7 +200,7 @@ const UsersList = () => {
 
     if (editingUser) {
         return (
-            <View style={styles.container}>
+            <View style={styles.editContainer}>
                 <View style={styles.header}>
                     <IconButton
                         icon="arrow-left"
@@ -175,12 +209,10 @@ const UsersList = () => {
                     />
                     <Title style={styles.headerTitle}>Edit User</Title>
                 </View>
-                <View style={styles.formContainer}>
-                    <UserForm
-                        userData={editingUser}
-                        onSubmit={handleFormSubmit}
-                    />
-                </View>
+                <UserForm
+                    userData={editingUser}
+                    onSubmit={handleFormSubmit}
+                />
             </View>
         );
     }
@@ -409,9 +441,11 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: LAYOUT.padding,
         backgroundColor: COLORS.white,
-        maxWidth: LAYOUT.maxWidth,
         width: '100%',
-        alignSelf: 'center',
+    },
+    editContainer: {
+        flex: 1,
+        backgroundColor: COLORS.white,
     },
 });
 

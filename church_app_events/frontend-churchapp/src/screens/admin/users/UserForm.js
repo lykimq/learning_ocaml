@@ -30,18 +30,6 @@ const UserForm = ({ userData, onSubmit }) => {
         return emailRegex.test(email);
     };
 
-    const renderRequiredLabel = (label) => {
-        return {
-            label: label,
-            render: () => (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ color: '#000' }}>{label}</Text>
-                    <Text style={{ color: '#FF0000' }}> *</Text>
-                </View>
-            )
-        };
-    };
-
     const handleSubmit = async () => {
         setSubmitError('');
         const validationErrors = {};
@@ -129,7 +117,7 @@ const UserForm = ({ userData, onSubmit }) => {
                 )}
 
                 <TextInput
-                    label={renderRequiredLabel("Email").render}
+                    label="Email *"
                     value={email}
                     onChangeText={setEmail}
                     style={formStyles.input}
@@ -145,7 +133,7 @@ const UserForm = ({ userData, onSubmit }) => {
                 )}
 
                 <TextInput
-                    label={userData ? "New Password (leave blank to keep current)" : renderRequiredLabel("Password").render}
+                    label={userData ? "New Password (leave blank to keep current)" : "Password *"}
                     value={password}
                     onChangeText={setPassword}
                     style={[formStyles.input, formStyles.passwordInput]}
@@ -165,7 +153,7 @@ const UserForm = ({ userData, onSubmit }) => {
                 )}
 
                 <TextInput
-                    label={renderRequiredLabel("Username").render}
+                    label="Username *"
                     value={username}
                     onChangeText={setUsername}
                     style={formStyles.input}
@@ -181,7 +169,7 @@ const UserForm = ({ userData, onSubmit }) => {
                 {/* Only show role picker for new users */}
                 {!userData && (
                     <View style={formStyles.input}>
-                        <Text>{renderRequiredLabel("Role").render}</Text>
+                        <Text style={formStyles.label}>Role *</Text>
                         <Picker
                             selectedValue={role}
                             onValueChange={(itemValue) => setRole(itemValue)}

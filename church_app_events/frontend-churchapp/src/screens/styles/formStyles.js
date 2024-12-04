@@ -32,7 +32,9 @@ const TYPOGRAPHY = {
         fontWeight: 'bold',
     },
     label: {
-        fontSize: 16
+        fontSize: 16,
+        marginBottom: 8,
+        color: '#000',
     },
     button: {
         fontSize: 16,
