@@ -17,12 +17,18 @@ mod user;
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
+    println!("Environment variables loaded");
     println!("Connected to the database");
 
     // Read DATABASE_URL and BACKEND_PORT from environment variables
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let backend_port = env::var("BACKEND_PORT").expect("BACKEND_PORT must be set");
     let frontend_port = env::var("FRONTEND_PORT").expect("FRONTEND_PORT must be set");
+
+    // GET API URLS from the environment variables
+    let web_url = env::var("API_URL_WEB").expect("API_URL_WEB must be set");
+    let ios_url = env::var("API_URL_IOS").expect("API_URL_IOS must be set");
+    let android_url = env::var("API_URL_ANDROID").expect("API_URL_ANDROID must be set");
 
     // Connect to the PostgreSQL database
     let pool = PgPool::connect(&database_url).await.unwrap();
@@ -34,11 +40,23 @@ async fn main() -> std::io::Result<()> {
             .wrap(
                 Cors::default()
                     .allowed_origin(&format!("http://localhost:{}", frontend_port))
+                    .allowed_origin(&web_url)
+                    .allowed_origin(&ios_url)
+                    .allowed_origin(&android_url)
                     .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-                    .allowed_headers(vec!["Content-Type", "Authorization"])
+                    .allowed_headers(vec!["Content-Type", "Authorization", "Accept", "Origin"])
+                    .expose_headers(vec!["Content-Length"])
+                    .supports_credentials()
                     .max_age(3600),
             )
+            .wrap(user::AuthMiddleware)
             // Authentication routes
+            .service(
+                web::scope("/auth")
+                    .route("/login", web::post().to(user::login))
+                    .route("/logout", web::post().to(user::logout))
+            )
+            // Authentication routes (existing admin routes)
             .service(
                 web::scope("/admin/users")
                     .route("/add", web::post().to(user::add_user))

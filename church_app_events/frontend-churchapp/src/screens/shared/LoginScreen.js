@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { TextInput, Button, Text, HelperText, SegmentedButtons } from 'react-native-paper';
+import * as userService from '../../services/userService';
 
 export default function LoginScreen({ navigation }) {
-  const { login } = useAuth();
+  const { setUser } = useAuth();
 
   const [loginType, setLoginType] = useState('email');
   const [identifier, setIdentifier] = useState('');
@@ -37,7 +37,11 @@ export default function LoginScreen({ navigation }) {
   };
 
   const handleLogin = async () => {
-    if (!validateForm()) return;
+    console.log('Login button pressed');
+    if (!validateForm()) {
+      console.log('Form validation failed', errors);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -45,21 +49,15 @@ export default function LoginScreen({ navigation }) {
         identifier: identifier.trim(),
         password: password.trim()
       };
+      console.log('Attempting login with:', loginData);
 
-      const userData = await login(loginData);
-      console.log('Login successful, user data:', userData);
+      const response = await userService.login(loginData);
+      console.log('Login successful:', response);
 
-      if (userData) {
-        navigation.reset({
-          index: 0,
-          routes: [
-            {
-              name: userData.role === 'admin' ? 'AdminNavigator' : 'UserNavigator'
-            }
-          ]
-        });
-        console.log('Navigation reset to:', userData.role === 'admin' ? 'AdminNavigator' : 'UserNavigator');
-      }
+      const { user, token } = response;
+
+      setUser(user);
+
     } catch (error) {
       console.error('Login error:', error);
       setErrors({
@@ -70,11 +68,27 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
-  return (
-    <View style={styles.pageContainer}>
-      <View style={styles.contentContainer}>
-        <Text style={styles.title}>Login</Text>
+  const onButtonPress = () => {
+    console.log('Button pressed!');
+    handleLogin();
+  };
 
+  useEffect(() => {
+    navigation.addListener('beforeRemove', (e) => {
+      if (loading) {
+        e.preventDefault();
+      }
+    });
+    console.log('LoginScreen mounted');
+  }, [navigation, loading]);
+
+  return (
+    <View style={[styles.pageContainer, { flex: 1 }]}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Login</Text>
+      </View>
+
+      <View style={[styles.contentContainer, { flex: 1 }]}>
         <View style={styles.inputContainer}>
           <SegmentedButtons
             value={loginType}
@@ -138,14 +152,18 @@ export default function LoginScreen({ navigation }) {
 
           <Button
             mode="contained"
-            onPress={handleLogin}
-            style={styles.button}
+            onPress={onButtonPress}
+            style={[
+              styles.button,
+              { elevation: 3 }
+            ]}
             labelStyle={styles.buttonLabel}
             loading={loading}
             disabled={loading}
           >
             {loading ? 'Logging in...' : 'Login'}
           </Button>
+
         </View>
       </View>
     </View>
@@ -158,16 +176,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     width: '100%',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginLeft: 16,
+  },
   contentContainer: {
+    flex: 1,
     padding: 20,
     maxWidth: Platform.OS === 'web' ? 400 : '100%',
     width: '100%',
     alignSelf: 'center',
-    marginTop: Platform.OS === 'web' ? 100 : 50,
+    marginTop: Platform.OS === 'web' ? 50 : 20,
   },
   inputContainer: {
     width: '100%',
     gap: 8,
+    zIndex: 1,
   },
   title: {
     fontSize: 28,
@@ -189,6 +222,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 6,
     backgroundColor: '#4A90E2',
+    zIndex: 1000,
+    minHeight: 48,
   },
   buttonLabel: {
     fontSize: 16,

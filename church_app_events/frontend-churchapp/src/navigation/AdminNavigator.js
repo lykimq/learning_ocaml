@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigation } from '@react-navigation/native';
-import { Alert, TouchableOpacity, StyleSheet, Text, View } from 'react-native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
+import { TouchableOpacity, StyleSheet, Text, View } from 'react-native';
+import * as userService from '../services/userService';
 
 // Screens
 import DashboardScreen from '../screens/admin/DashboardScreen';
@@ -14,18 +15,26 @@ import ManageServingScreen from '../screens/admin/ManageServingScreen';
 import ManageUsersScreen from '../screens/admin/users/ManageUsersScreen';
 import ManageGivingScreen from '../screens/admin/ManageGivingScreen';
 import LogoutScreen from '../screens/shared/LogoutScreen';
+import UserNavigator from './UserNavigator';
 import ProfileScreen from '../screens/shared/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
 export default function AdminTabNavigator() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
   const navigation = useNavigation();
 
-  // Don't render anything if not authorized
   if (!user || !isAdmin) {
     return null;
   }
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('AdminNavigator - Logout error:', error);
+    }
+  };
 
   return (
     <Tab.Navigator
@@ -139,59 +148,35 @@ export default function AdminTabNavigator() {
         }}
       />
       <Tab.Screen
+        key="Logout"
         name="Logout"
         component={LogoutScreen}
         options={{
           title: 'Logout',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="logout" size={size} color={color} />
+          ),
           tabBarButton: (props) => (
-            <TabBarCustomButton
+            <TouchableOpacity
               {...props}
-              onPress={() => {
-                // Show confirmation dialog
-                Alert.alert(
-                  'Logout',
-                  'Are you sure you want to logout?',
-                  [
-                    {
-                      text: 'Cancel',
-                      style: 'cancel'
-                    },
-                    {
-                      text: 'Logout',
-                      style: 'destructive',
-                      onPress: () =>
-                        navigation.getParent()?.reset({
-                          index: 0,
-                          routes: [{ name: 'Logout' }]
-                        })
-                    }
-                  ]
-                );
-              }}
-            />
+              onPress={handleLogout}
+              style={[
+                styles.customButton,
+                props.accessibilityState?.selected && styles.customButtonActive
+              ]}
+            >
+              <MaterialIcons
+                name="logout"
+                size={24}
+                color={props.accessibilityState?.selected ? '#4A90E2' : 'gray'}
+              />
+            </TouchableOpacity>
           )
         }}
       />
     </Tab.Navigator>
   );
 }
-
-// Custom TabBar button component for logout
-const TabBarCustomButton = ({ onPress, accessibilityState }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={[
-      styles.customButton,
-      accessibilityState?.selected && styles.customButtonActive
-    ]}
-  >
-    <MaterialIcons
-      name="logout"
-      size={24}
-      color={accessibilityState?.selected ? '#4A90E2' : 'gray'}
-    />
-  </TouchableOpacity>
-);
 
 const styles = StyleSheet.create({
   headerText: {

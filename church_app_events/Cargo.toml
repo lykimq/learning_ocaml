@@ -18,6 +18,8 @@ lettre = { version = "0.10", features = ["tokio1", "tokio1-native-tls", "builder
 regex = "1.5"
 lazy_static = "1.4"
 bcrypt = "0.16"
+jwt = "0.16.0"
+futures = "0.3"
 
 [[bin]]
 name = "church_app_events"         # Name of the binary

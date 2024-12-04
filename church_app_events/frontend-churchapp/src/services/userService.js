@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import axios from 'axios';
 import { API_URL_ANDROID, API_URL_IOS, API_URL_WEB } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const getApiUrl = () => {
     switch (Platform.OS) {
@@ -10,14 +11,54 @@ const getApiUrl = () => {
     }
 };
 
-const apiUrl = getApiUrl();
+const validateApiUrl = () => {
+    const url = getApiUrl();
+    if (!url) {
+        throw new Error('API URL is not configured');
+    }
+    console.log('Using API URL:', url);
+    return url;
+};
+
+const apiUrl = validateApiUrl();
 
 const api = axios.create({
     baseURL: apiUrl,
     headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
     },
+    withCredentials: true,
+    timeout: 10000, // 10 second timeout
 });
+
+// Add request interceptor for debugging
+api.interceptors.request.use(
+    config => {
+        console.log('Making request:', {
+            url: config.url,
+            method: config.method,
+            data: config.data
+        });
+        return config;
+    },
+    error => {
+        console.error('Request error:', error);
+        return Promise.reject(error);
+    }
+);
+
+// Add response interceptor for debugging
+api.interceptors.response.use(
+    response => {
+        console.log('Response received:', response.data);
+        return response;
+    },
+    error => {
+        console.error('Response error:', error);
+        return Promise.reject(error);
+    }
+);
 
 // get users
 
@@ -77,37 +118,34 @@ export const getUserByUsername = async (username) => {
 // Verify password with support for both email and username login
 export const verifyPassword = async (loginData) => {
     try {
+        console.log('API URL being used:', apiUrl);
+        console.log('Making request to:', `${apiUrl}/admin/users/verify-password`);
+
         const requestData = {
             identifier: loginData.identifier,
             password: loginData.password
         };
 
-        console.log('Attempting to verify password for:', requestData.identifier);
-
         const response = await api.post('/admin/users/verify-password', requestData);
+        console.log('Response received:', response.data);
 
-        console.log('Response status:', response.status);
-        console.log('Response data:', JSON.stringify(response.data, null, 2));
-
+        // The response contains { valid: true, user: {...} }
         if (response.data.valid && response.data.user) {
-            console.log('Successfully authenticated user:', response.data.user.username);
-            return response.data.user;
+            console.log('Valid user data received:', response.data.user);
+            return response.data.user; // Return just the user object
         } else {
-            console.log('Authentication failed - Invalid credentials');
-            throw new Error('Invalid username/email or password');
+            throw new Error('Invalid credentials');
         }
     } catch (error) {
-        console.error('Authentication error:', {
-            status: error.response?.status,
-            message: error.response?.data?.message || error.message
-        });
-
-        if (error.response?.status === 404) {
-            throw new Error('User not found');
-        } else if (error.response?.status === 401) {
-            throw new Error('Invalid password');
+        if (error.response) {
+            console.error('Server error:', error.response.data);
+            throw new Error(error.response.data?.message || 'Authentication failed');
+        } else if (error.request) {
+            console.error('No response received:', error.request);
+            throw new Error('No response from server');
         } else {
-            throw new Error(error.response?.data?.message || 'Authentication failed');
+            console.error('Request error:', error.message);
+            throw error;
         }
     }
 };
@@ -198,17 +236,6 @@ export const searchUsers = async (params) => {
     }
 };
 
-// Combined login function that matches your LoginScreen
-export const login = async (loginData) => {
-    try {
-        const user = await verifyPassword(loginData);
-        return user;
-    } catch (error) {
-        console.error('Login error:', error);
-        throw error;
-    }
-};
-
 // Check if username exists (for registration)
 export const checkUsernameAvailability = async (username) => {
     try {
@@ -229,5 +256,72 @@ export const checkEmailAvailability = async (email) => {
     } catch (error) {
         console.error('Error checking email:', error);
         throw new Error(error.response?.data?.message || 'Failed to check email availability');
+    }
+};
+
+const storeToken = async (token) => {
+    try {
+        await AsyncStorage.setItem('token', token);
+    } catch (error) {
+        console.error('Error storing token:', error);
+        throw error;
+    }
+};
+
+export const login = async (loginData) => {
+    try {
+        console.log('Attempting login with:', loginData);
+
+        // Use the configured api instance instead of axios directly
+        const response = await api.post('/auth/login', loginData);
+        console.log('Login response received:', response.data);
+
+        if (response.data.token) {
+            await storeToken(response.data.token);
+            // Also store the token in the api instance headers
+            api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+            return response.data;
+        } else {
+            throw new Error('No token received');
+        }
+    } catch (error) {
+        console.error('Login service error:', error);
+        if (error.response) {
+            throw new Error(error.response.data.message || 'Failed to log in');
+        } else if (error.request) {
+            throw new Error('Network error - please check your connection');
+        } else {
+            throw new Error('Failed to log in');
+        }
+    }
+};
+
+export const logout = async () => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+            // Use the configured api instance instead of axios directly
+            await api.post('/auth/logout', {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+    } finally {
+        await AsyncStorage.removeItem('token');
+        // Remove the token from api headers
+        delete api.defaults.headers.common['Authorization'];
+    }
+};
+
+// Add a function to setup the API with stored token on app start
+export const setupApiToken = async () => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        }
+    } catch (error) {
+        console.error('Error setting up API token:', error);
     }
 };

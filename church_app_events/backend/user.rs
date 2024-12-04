@@ -1,21 +1,34 @@
 use actix_web::{
     web,
     HttpResponse,
-    Responder
+    Responder,
+    HttpRequest,
+    body::MessageBody
+
 };
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, QueryBuilder, Execute};
+use sqlx::{PgPool, QueryBuilder};
 use serde_json::json;
 use regex::Regex;
 use lazy_static::lazy_static;
 use bcrypt;
+use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation};
+use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
+use actix_web::Error;
+use futures::future::{ok, Ready};
+use std::task::{Context, Poll};
+use dotenv::dotenv;
+use chrono::{Utc, Duration as ChronoDuration};
+use std::sync::Mutex;
+use std::collections::HashSet;
 
 lazy_static! {
     static ref EMAIL_REGEX: Regex =
     Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
     static ref USERNAME_REGEX: Regex =
     Regex::new(r"^[a-zA-Z0-9_-]{3,20}$").unwrap();
+    static ref TOKEN_BLACKLIST: Mutex<HashSet<String>> = Mutex::new(HashSet::new());
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, sqlx::Type, PartialEq)]
@@ -50,7 +63,7 @@ impl std::str::FromStr for UserRole {
     }
 }
 
-#[derive(Deserialize, Serialize, sqlx::FromRow)]
+#[derive(Deserialize, Serialize, sqlx::FromRow, Debug)]
 pub struct User {
     pub id: i32,
     pub email: String,
@@ -96,6 +109,206 @@ pub struct VerifyPasswordRequest {
 pub struct VerifyPasswordResponse {
     pub valid: bool,
     pub user: Option<User>,
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct LoginResponse {
+    pub token: String,
+    pub user: User,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct LoginRequest {
+    pub identifier: String,
+    pub password: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Claims {
+    // Standard JWT claims
+    pub sub: i32, // subject: User ID
+    pub exp: usize, // expiration: Expiration time
+    pub iat: usize, // issued at: Issued at time
+    // Custom claims
+    pub role: UserRole,
+    pub email: String,
+    pub username: String,
+}
+
+// Login handler
+pub async fn login(
+    pool: web::Data<PgPool>,
+    request: web::Json<LoginRequest>
+) -> impl Responder {
+    // Find user by email or username
+    let user = sqlx::query_as!(
+        User,
+        r#"
+        SELECT id, email, password_hash, username, role as "role!: UserRole",
+        profile_picture, created_at, updated_at
+        FROM users
+        WHERE email = $1 OR username = $1"#,
+        request.identifier
+    )
+    .fetch_optional(pool.get_ref())
+    .await;
+
+    match user {
+        Ok(Some(user)) => {
+            // Verify password
+            let is_valid = bcrypt::verify(&request.password, &user.password_hash)
+                .unwrap_or(false);
+            if !is_valid {
+                return HttpResponse::Unauthorized().json(json!({
+                    "message": "Invalid password"
+                }));
+            }
+
+            // Current time
+            let now = Utc::now();
+
+            // Generate JWT
+            let expiration = now.checked_add_signed(ChronoDuration::hours(24))
+                .expect("Invalid timestamp")
+                .timestamp() as usize; // 1 day expiration
+
+
+            let issued_at = now.timestamp() as usize; // Issued at time
+
+            // Create claims for JWT
+            let claims = Claims {
+                sub: user.id,
+                exp: expiration,
+                iat: issued_at,
+                role: user.role,
+                email: user.email.clone(),
+                username: user.username.clone(),
+            };
+
+            // Create JWT header and payload
+            let header = Header::new(jsonwebtoken::Algorithm::HS256);
+
+            // Generate JWT Token
+            let secret = std::env::var("JWT_SECRET")
+            .unwrap_or_else(|_| {
+                dotenv().ok();
+                std::env::var("JWT_SECRET").expect("JWT_SECRET must be set")
+            });
+
+            match encode(
+                &header,
+                &claims,
+                &EncodingKey::from_secret(secret.as_bytes())
+            ) {
+                Ok(token) =>
+                {
+                    // Create response
+                    let response = json!({
+                        "token": token,
+                        "token_type": "Bearer",
+                        "expires_in": 86400, // 1 day
+                        "user": {
+                            "id": user.id,
+                            "email": user.email,
+                            "username": user.username,
+                            "role": user.role,
+                            "profile_picture": user.profile_picture,
+                        }
+                    });
+                    HttpResponse::Ok().json(response)
+                }
+                Err(e) => {
+                    eprintln!("Failed to generate JWT: {}", e);
+                    HttpResponse::InternalServerError().json(json!({
+                        "message": format!("Failed to generate JWT: {}", e)
+                    }))
+                }
+            }
+        }
+        Ok(None) => HttpResponse::Unauthorized().json(json!({
+            "message": "Invalid credentials"
+        })),
+        Err(e) => {
+            eprintln!("Database error: {:?}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "message": "Failed to fetch user"
+            }))
+        }
+    }
+}
+
+#[allow(dead_code)]
+pub fn verify_jwt (token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
+    // Check if token is blacklisted
+    if let Ok(blacklist) = TOKEN_BLACKLIST.lock() {
+        if blacklist.contains(token) {
+            return Err(jsonwebtoken::errors::Error::from(
+                jsonwebtoken::errors::ErrorKind::InvalidToken
+            ));
+        }
+    }
+
+    let secret = std::env::var("JWT_SECRET")
+    .unwrap_or_else(|_| {
+        dotenv().ok();
+        std::env::var("JWT_SECRET").expect("JWT_SECRET must be set")
+    });
+
+    let validation = Validation::new(jsonwebtoken::Algorithm::HS256);
+
+    decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(secret.as_bytes()),
+        &validation
+    )
+    .map(|token_data| token_data.claims)
+}
+
+// Middleware to protect routes
+#[derive(Clone)]
+pub struct AuthMiddleware;
+
+// Implement the necessary traits for AuthMiddleware
+impl<S, B> Transform<S, ServiceRequest> for AuthMiddleware
+where
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
+    B: MessageBody + 'static,
+{
+    type Response = ServiceResponse<B>;
+    type Error = Error;
+    type Transform = AuthMiddlewareService<S>;
+    type InitError = ();
+    type Future = Ready<Result<Self::Transform, Self::InitError>>;
+
+    fn new_transform(&self, service: S) -> Self::Future {
+        ok(AuthMiddlewareService { service })
+    }
+}
+
+// Define the service that will be used by the middleware
+pub struct AuthMiddlewareService<S> {
+    service: S,
+}
+
+// Implement the necessary traits for AuthMiddlewareService
+impl<S, B> Service<ServiceRequest> for AuthMiddlewareService<S>
+where
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
+    B: MessageBody + 'static,
+{
+    type Response = ServiceResponse<B>;
+    type Error = Error;
+    type Future = S::Future;
+
+    fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.service.poll_ready(cx)
+    }
+
+    fn call(&self, req: ServiceRequest) -> Self::Future {
+        // Add your authentication logic here
+        self.service.call(req)
+    }
 }
 
 fn validate_username(username: &str) -> Result<(), String> {
@@ -462,4 +675,27 @@ pub async fn verify_password(
             }))
         }
     }
+}
+
+pub async fn logout(req: HttpRequest) -> impl Responder {
+    // Extract the token from the Authorization header
+    if let Some(auth_header) = req.headers().get("Authorization") {
+        if let Ok(auth_str) = auth_header.to_str() {
+            if auth_str.starts_with("Bearer ") {
+                let token = auth_str[7..].to_string();
+
+                // Add the token to the blacklist
+                if let Ok(mut blacklist) = TOKEN_BLACKLIST.lock() {
+                    blacklist.insert(token);
+                    return HttpResponse::Ok().json(json!({
+                        "message": "Successfully logged out"
+                    }));
+                }
+            }
+        }
+    }
+
+    HttpResponse::BadRequest().json(json!({
+        "message": "Invalid token format"
+    }))
 }
