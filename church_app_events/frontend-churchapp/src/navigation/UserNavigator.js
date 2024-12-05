@@ -12,7 +12,6 @@ import EventsScreen from '../screens/user/events/EventsScreen';
 import HomeGroupScreen from '../screens/user/HomeGroupScreen';
 import ServingScreen from '../screens/user/ServingScreen';
 import GivingScreen from '../screens/user/GivingScreen';
-import ProfileScreen from '../screens/shared/ProfileScreen';
 import LogoutScreen from '../screens/shared/LogoutScreen';
 import LoginScreen from '../screens/shared/LoginScreen';
 

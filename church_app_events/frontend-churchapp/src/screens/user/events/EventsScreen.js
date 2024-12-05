@@ -7,7 +7,8 @@ import {
   Button,
   Searchbar,
   Text,
-  TextInput
+  TextInput,
+  IconButton
 } from "react-native-paper";
 import { getEvents, searchEvents } from "../../../services/events/eventService";
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -150,16 +151,49 @@ const EventsScreen = () => {
 
   const renderItem = ({ item }) => (
     <Card style={styles.eventCard}>
-      <Card.Content>
-        <Title>{item.event_title}</Title>
-        <Paragraph>Date: {new Date(item.event_date).toLocaleDateString()}</Paragraph>
-        <Paragraph>Address: {item.address.toString()}</Paragraph>
-        <Paragraph>Description: {item.description}</Paragraph>
+      <Card.Content style={styles.cardContent}>
+        <View style={styles.dateContainer}>
+          <View style={styles.dateBox}>
+            <Text style={styles.dateMonth}>
+              {new Date(item.event_date).toLocaleString('default', { month: 'short' })}
+            </Text>
+            <Text style={styles.dateDay}>
+              {new Date(item.event_date).getDate()}
+            </Text>
+          </View>
+          <View style={styles.eventDetails}>
+            <Title style={styles.eventTitle}>{item.event_title}</Title>
+            <View style={styles.eventInfo}>
+              <IconButton
+                icon="clock-outline"
+                size={16}
+                color="#666"
+                style={styles.infoIcon}
+              />
+              <Text style={styles.infoText}>{item.event_time}</Text>
+            </View>
+            <View style={styles.eventInfo}>
+              <IconButton
+                icon="map-marker-outline"
+                size={16}
+                color="#666"
+                style={styles.infoIcon}
+              />
+              <Text style={styles.infoText}>{item.address}</Text>
+            </View>
+          </View>
+        </View>
+        {item.description && (
+          <Text style={styles.description}>{item.description}</Text>
+        )}
       </Card.Content>
-      <Card.Actions>
+      <Card.Actions style={styles.cardActions}>
         <Button
           mode="contained"
-          onPress={() => handleRegister(item)}>
+          onPress={() => handleRegister(item)}
+          style={styles.actionButton}
+          labelStyle={styles.actionButtonLabel}
+        >
           Register
         </Button>
       </Card.Actions>
@@ -256,59 +290,158 @@ const EventsScreen = () => {
   );
 };
 
+const COLORS = {
+  white: '#fff', // white
+  background: '#f5f5f5', // light gray
+  border: '#e0e0e0', // gray
+  shadow: '#000', // black
+  blue: '#3f51b5', // blue
+  text: '#333', // dark text
+  error: '#c62828', // red
+  errorBorder: '#F44336', // red
+};
+
+const LAYOUT = {
+  padding: 16,
+  borderRadius: 8,
+  maxWidth: 600,
+};
+
+const TYPOGRAPHY = {
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  label: {
+    fontSize: 16,
+  },
+  button: {
+    fontSize: 16,
+  },
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: LAYOUT.padding,
+    backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: COLORS.border,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: TYPOGRAPHY.title.fontSize,
     marginLeft: 10,
   },
   searchContainer: {
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: LAYOUT.padding,
+    backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: COLORS.border,
+    elevation: 2,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   searchBar: {
     elevation: 0,
+    backgroundColor: COLORS.background,
+    borderRadius: 8,
+  },
+  searchButton: {
+    marginTop: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.blue,
   },
   listContainer: {
-    padding: 16,
+    padding: LAYOUT.padding,
   },
   eventCard: {
     marginBottom: 16,
+    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    elevation: 2,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: Platform.OS === 'ios' ? 1 : 0,
+    borderColor: COLORS.border,
   },
-  iconButton: {
-    margin: 0,
+  cardContent: {
+    padding: LAYOUT.padding,
   },
-  paginationContainer: {
+  dateContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  dateBox: {
+    backgroundColor: COLORS.blue,
+    borderRadius: 8,
+    padding: 8,
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
+    minWidth: 60,
+  },
+  dateMonth: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  dateDay: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  eventDetails: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  eventTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  eventInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  infoIcon: {
+    margin: 0,
+    marginRight: 4,
+  },
+  infoText: {
+    color: COLORS.text,
+    fontSize: TYPOGRAPHY.label.fontSize,
+    flex: 1,
+  },
+  description: {
+    marginTop: 12,
+    color: COLORS.text,
+    fontSize: TYPOGRAPHY.label.fontSize,
+    lineHeight: 20,
+  },
+  cardActions: {
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: COLORS.border,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 8,
   },
-  pageText: {
-    marginHorizontal: 16,
-    color: '#666',
+  actionButton: {
+    marginHorizontal: 4,
+    borderRadius: 8,
+    backgroundColor: COLORS.blue,
   },
-  loadingText: {
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 16,
-    color: '#666',
+  actionButtonLabel: {
+    color: COLORS.white,
+    fontSize: TYPOGRAPHY.button.fontSize,
   },
   filterRow: {
     flexDirection: 'row',
@@ -318,26 +451,39 @@ const styles = StyleSheet.create({
   filterButton: {
     flex: 1,
     marginHorizontal: 5,
+    borderRadius: 8,
+    borderColor: COLORS.blue,
   },
   filtersContainer: {
     marginTop: 10,
-    padding: 10,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 5,
+    padding: LAYOUT.padding,
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
   },
-  dateContainer: {
-    marginVertical: 10,
-    width: '100%',
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: LAYOUT.padding,
+    backgroundColor: COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  pageText: {
+    marginHorizontal: 16,
+    color: COLORS.text,
+    fontSize: TYPOGRAPHY.label.fontSize,
+  },
+  loadingText: {
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: TYPOGRAPHY.label.fontSize,
+    color: COLORS.text,
   },
   dateLabel: {
-    fontSize: 16,
+    fontSize: TYPOGRAPHY.label.fontSize,
     marginBottom: 8,
-    color: '#000000',
-  },
-  searchButton: {
-    marginTop: 10,
+    color: COLORS.text,
   },
 });
-
-
 export default EventsScreen;

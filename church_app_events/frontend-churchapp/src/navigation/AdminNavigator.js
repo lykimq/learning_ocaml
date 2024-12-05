@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
-import { TouchableOpacity, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 // Screens
 import DashboardScreen from '../screens/admin/DashboardScreen';
@@ -14,13 +14,11 @@ import ManageServingScreen from '../screens/admin/ManageServingScreen';
 import ManageUsersScreen from '../screens/admin/users/ManageUsersScreen';
 import ManageGivingScreen from '../screens/admin/ManageGivingScreen';
 import LogoutScreen from '../screens/shared/LogoutScreen';
-import ProfileScreen from '../screens/shared/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
 export default function AdminTabNavigator() {
   const { user, isAdmin } = useAuth();
-  const navigation = useNavigation();
 
   if (!user || !isAdmin) {
     return null;

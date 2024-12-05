@@ -98,9 +98,9 @@ const EventRSVP = ({ event, onClose }) => {
             </View>
 
             <View style={styles.eventInfo}>
-                <Paragraph>Date: {new Date(event.event_date).toLocaleDateString()}</Paragraph>
-                <Paragraph>Time: {event.event_time}</Paragraph>
-                <Paragraph>Location: {event.address}</Paragraph>
+                <Paragraph style={styles.paragraph}>Date: {new Date(event.event_date).toLocaleDateString()}</Paragraph>
+                <Paragraph style={styles.paragraph}>Time: {event.event_time}</Paragraph>
+                <Paragraph style={styles.paragraph}>Location: {event.address}</Paragraph>
             </View>
 
             <View style={styles.form}>
@@ -124,6 +124,7 @@ const EventRSVP = ({ event, onClose }) => {
                     loading={loading}
                     disabled={loading}
                     style={styles.submitButton}
+                    labelStyle={styles.submitButtonLabel}
                 >
                     {loading ? 'Registering...' : 'Register for Event'}
                 </Button>
@@ -148,44 +149,114 @@ const EventRSVP = ({ event, onClose }) => {
     );
 };
 
+const COLORS = {
+    white: '#fff',
+    background: '#f5f5f5',
+    border: '#e0e0e0',
+    shadow: '#000',
+    blue: '#3f51b5',
+    text: '#333',
+    textLight: '#666',
+    error: '#c62828',
+    errorBorder: '#F44336',
+};
+
+const LAYOUT = {
+    padding: 16,
+    borderRadius: 8,
+    maxWidth: 600,
+};
+
+const TYPOGRAPHY = {
+    title: {
+        fontSize: 24,
+        fontWeight: 'bold',
+    },
+    label: {
+        fontSize: 16,
+    },
+    button: {
+        fontSize: 16,
+    },
+    note: {
+        fontSize: 12,
+    },
+};
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 20,
+        padding: LAYOUT.padding,
+        backgroundColor: COLORS.background,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 20,
+        padding: LAYOUT.padding,
+        backgroundColor: COLORS.white,
+        borderRadius: LAYOUT.borderRadius,
+        elevation: 2,
+        shadowColor: COLORS.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     backButton: {
         marginRight: 10,
     },
     title: {
-        fontSize: 24,
-        flex: 1, // This allows the title to take remaining space
+        fontSize: TYPOGRAPHY.title.fontSize,
+        fontWeight: TYPOGRAPHY.title.fontWeight,
+        color: COLORS.text,
+        flex: 1,
     },
     eventInfo: {
         marginBottom: 20,
-        padding: 15,
-        backgroundColor: '#f5f5f5',
-        borderRadius: 8,
+        padding: LAYOUT.padding,
+        backgroundColor: COLORS.white,
+        borderRadius: LAYOUT.borderRadius,
+        elevation: 2,
+        shadowColor: COLORS.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     form: {
         gap: 15,
+        padding: LAYOUT.padding,
+        backgroundColor: COLORS.white,
+        borderRadius: LAYOUT.borderRadius,
+        elevation: 2,
+        shadowColor: COLORS.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     input: {
         marginBottom: 10,
+        backgroundColor: COLORS.white,
     },
     note: {
-        fontSize: 12,
-        color: '#666',
+        fontSize: TYPOGRAPHY.note.fontSize,
+        color: COLORS.textLight,
         fontStyle: 'italic',
         marginBottom: 10,
     },
     submitButton: {
         marginTop: 10,
         paddingVertical: 8,
+        backgroundColor: COLORS.blue,
+        borderRadius: LAYOUT.borderRadius,
+    },
+    submitButtonLabel: {
+        color: COLORS.white,
+        fontSize: TYPOGRAPHY.button.fontSize,
+    },
+    paragraph: {
+        fontSize: TYPOGRAPHY.label.fontSize,
+        color: COLORS.text,
+        marginBottom: 8,
     }
 });
 
