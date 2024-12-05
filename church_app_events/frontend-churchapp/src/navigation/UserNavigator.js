@@ -9,7 +9,7 @@ import { ActivityIndicator } from 'react-native-paper';
 import HomeScreen from '../screens/user/HomeScreen';
 import MediaScreen from '../screens/user/MediaScreen';
 import EventsScreen from '../screens/user/events/EventsScreen';
-import HomeGroupScreen from '../screens/user/HomeGroupScreen';
+import HomeGroupScreen from '../screens/user/homegroups/HomeGroupScreen';
 import ServingScreen from '../screens/user/ServingScreen';
 import GivingScreen from '../screens/user/GivingScreen';
 import LogoutScreen from '../screens/shared/LogoutScreen';
