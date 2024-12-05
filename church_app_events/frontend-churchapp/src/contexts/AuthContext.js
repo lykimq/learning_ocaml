@@ -6,6 +6,7 @@ const AuthContext = createContext({});
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const isAdmin = user?.role === 'admin';
 
@@ -31,14 +32,17 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await userService.logout();
-      await AsyncStorage.removeItem('token');
+      console.log('AuthContext - Logout initiated');
+      // Clear any stored tokens or user data
+      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('userData');
+      // Clear the user state
       setUser(null);
+      console.log('AuthContext - Logout successful');
+      return true;
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('AuthContext - Logout error:', error);
       throw error;
-    } finally {
-      setUser(null);
     }
   };
 

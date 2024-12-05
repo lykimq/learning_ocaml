@@ -2,9 +2,8 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigation, CommonActions } from '@react-navigation/native';
-import { TouchableOpacity, StyleSheet, Text, View, Platform } from 'react-native';
-import * as userService from '../services/userService';
+import { useNavigation } from '@react-navigation/native';
+import { TouchableOpacity, StyleSheet, Text, View } from 'react-native';
 
 // Screens
 import DashboardScreen from '../screens/admin/DashboardScreen';
@@ -15,37 +14,17 @@ import ManageServingScreen from '../screens/admin/ManageServingScreen';
 import ManageUsersScreen from '../screens/admin/users/ManageUsersScreen';
 import ManageGivingScreen from '../screens/admin/ManageGivingScreen';
 import LogoutScreen from '../screens/shared/LogoutScreen';
-import UserNavigator from './UserNavigator';
 import ProfileScreen from '../screens/shared/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
 export default function AdminTabNavigator() {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigation = useNavigation();
-  const [isWeb] = React.useState(Platform.OS === 'web');
-
-  console.log('AdminNavigator - Navigation State:', {
-    platform: Platform.OS,
-    isWeb,
-    isAdmin,
-    currentUser: user,
-    timestamp: new Date().toISOString()
-  });
 
   if (!user || !isAdmin) {
     return null;
   }
-
-  const handleLogout = async () => {
-    try {
-      console.log('Admin logout initiated');
-      await logout();
-      navigation.navigate('UserNavigator');
-    } catch (error) {
-      console.error('AdminNavigator - Logout error:', error);
-    }
-  };
 
   return (
     <Tab.Navigator
@@ -78,7 +57,7 @@ export default function AdminTabNavigator() {
               iconName = 'logout';
               break;
             default:
-              iconName = 'circle';
+              iconName = 'logout'
           }
           return <MaterialIcons name={iconName} size={size} color={color} />;
         },
@@ -91,19 +70,7 @@ export default function AdminTabNavigator() {
         headerTintColor: '#fff',
         headerTitleStyle: {
           fontWeight: 'bold',
-        },
-        headerRight: () => (
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Profile')}
-            style={styles.headerButton}
-          >
-            <MaterialIcons
-              name="account-circle"
-              size={24}
-              color="#fff"
-            />
-          </TouchableOpacity>
-        ),
+        }
       })}
     >
       <Tab.Screen
@@ -151,38 +118,10 @@ export default function AdminTabNavigator() {
         options={{ title: 'Manage Users' }}
       />
       <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          title: 'Profile',
-        }}
-      />
-      <Tab.Screen
         key="Logout"
         name="Logout"
         component={LogoutScreen}
-        options={{
-          title: 'Logout',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="logout" size={size} color={color} />
-          ),
-          tabBarButton: (props) => (
-            <TouchableOpacity
-              {...props}
-              onPress={handleLogout}
-              style={[
-                styles.customButton,
-                props.accessibilityState?.selected && styles.customButtonActive
-              ]}
-            >
-              <MaterialIcons
-                name="logout"
-                size={24}
-                color={props.accessibilityState?.selected ? '#4A90E2' : 'gray'}
-              />
-            </TouchableOpacity>
-          )
-        }}
+        options={{ title: 'Logout' }}
       />
     </Tab.Navigator>
   );

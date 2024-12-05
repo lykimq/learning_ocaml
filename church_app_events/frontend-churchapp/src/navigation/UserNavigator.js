@@ -1,11 +1,9 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet, Text, View, Platform } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigation, CommonActions } from '@react-navigation/native';
 import { ActivityIndicator } from 'react-native-paper';
-import * as userService from '../services/userService';
 
 // Screens
 import HomeScreen from '../screens/user/HomeScreen';
@@ -16,33 +14,12 @@ import ServingScreen from '../screens/user/ServingScreen';
 import GivingScreen from '../screens/user/GivingScreen';
 import ProfileScreen from '../screens/shared/ProfileScreen';
 import LogoutScreen from '../screens/shared/LogoutScreen';
-
+import LoginScreen from '../screens/shared/LoginScreen';
 
 const Tab = createBottomTabNavigator();
 
-export default function UserNavigator() {
+const UserNavigator = () => {
   const { user, isLoading } = useAuth();
-  const navigation = useNavigation();
-  const [isWeb] = React.useState(Platform.OS === 'web');
-
-  const handleLoginPress = React.useCallback(() => {
-    console.log('Login button pressed', {
-      platform: Platform.OS,
-      timestamp: new Date().toISOString()
-    });
-
-    navigation.navigate('LoginScreen');
-  }, [navigation]);
-
-  const LoginButton = React.useCallback(() => (
-    <TouchableOpacity
-      onPress={handleLoginPress}
-      style={styles.headerLoginButton}
-      testID="loginButton"
-    >
-      <Text style={styles.headerLoginText}>Login</Text>
-    </TouchableOpacity>
-  ), [handleLoginPress]);
 
   const getTabScreens = () => {
     const screens = [
@@ -94,10 +71,10 @@ export default function UserNavigator() {
           options={{ title: 'Giving' }}
         />,
         <Tab.Screen
-          key="Profile"
-          name="Profile"
-          component={ProfileScreen}
-          options={{ title: 'Profile' }}
+          key="Logout"
+          name="Logout"
+          component={LogoutScreen}
+          options={{ title: 'Logout' }}
         />
       );
     } else {
@@ -105,35 +82,8 @@ export default function UserNavigator() {
         <Tab.Screen
           key="Login"
           name="Login"
-          component={HomeScreen}
-          options={{
-            title: 'Login',
-            tabBarIcon: ({ color, size }) => (
-              <MaterialIcons name="login" size={size} color={color} />
-            ),
-            tabBarButton: (props) => (
-              <TouchableOpacity
-                {...props}
-                onPress={handleLoginPress}
-                testID="loginTabButton"
-                style={[
-                  styles.customButton,
-                  props.accessibilityState?.selected && styles.customButtonActive
-                ]}
-              >
-                <MaterialIcons
-                  name="login"
-                  size={24}
-                  color={props.accessibilityState?.selected ? '#4A90E2' : 'gray'}
-                />
-                {isWeb && (
-                  <Text style={styles.tabBarLabel}>
-                    Login
-                  </Text>
-                )}
-              </TouchableOpacity>
-            ),
-          }}
+          component={LoginScreen}
+          options={{ title: 'Login' }}
         />
       );
     }
@@ -163,7 +113,7 @@ export default function UserNavigator() {
             case 'Giving': iconName = 'attach-money'; break;
             case 'Profile': iconName = 'person'; break;
             case 'Login': iconName = 'login'; break;
-            default: iconName = 'circle';
+            default: iconName = 'logout';
           }
           return <MaterialIcons name={iconName} size={size} color={color} />;
         },
@@ -177,7 +127,8 @@ export default function UserNavigator() {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
-        headerRight: () => !user && <LoginButton />,
+        headerRight: () => null,
+        animationEnabled: false,
       })}
     >
       {getTabScreens()}
@@ -191,22 +142,12 @@ const styles = StyleSheet.create({
     marginLeft: 15,
     fontSize: 16,
   },
-  headerLoginButton: {
-    marginRight: 15,
-    padding: 8,
-    borderRadius: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  headerLoginText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
   customButton: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 8,
+    pointerEvents: 'auto',
   },
   customButtonActive: {
     borderTopWidth: 2,
@@ -223,3 +164,5 @@ const styles = StyleSheet.create({
     color: 'gray',
   },
 });
+
+export default UserNavigator;

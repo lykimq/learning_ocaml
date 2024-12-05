@@ -28,7 +28,7 @@ function RootNavigator() {
         )
       ) : (
         // Non-authenticated stack
-        <Stack.Screen name="Auth" component={AuthNavigator} />
+        <Stack.Screen name="AuthNavigator" component={AuthNavigator} />
       )}
     </Stack.Navigator>
   );
