@@ -2,7 +2,6 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigation } from '@react-navigation/native';
 import { StyleSheet, Text, View } from 'react-native';
 
 // Screens
@@ -88,38 +87,52 @@ export default function AdminTabNavigator() {
       <Tab.Screen
         name="Media"
         component={ManageMediaScreen}
-        options={{ title: 'Manage Media' }}
+        options={{
+          title: 'Manage Media',
+        }}
       />
       <Tab.Screen
         name="Events"
         component={ManageEventsScreen}
-        options={{ title: 'Manage Events' }}
+        options={{
+          title: 'Manage Events',
+        }}
       />
       <Tab.Screen
         name="HomeGroups"
         component={ManageHomeGroupScreen}
-        options={{ title: 'Manage Home Groups' }}
+        options={{
+          title: 'Manage Home Groups',
+        }}
       />
       <Tab.Screen
         name="Serving"
         component={ManageServingScreen}
-        options={{ title: 'Manage Serving' }}
+        options={{
+          title: 'Manage Serving',
+        }}
       />
       <Tab.Screen
         name="Giving"
         component={ManageGivingScreen}
-        options={{ title: 'Manage Giving' }}
+        options={{
+          title: 'Manage Giving',
+        }}
       />
       <Tab.Screen
         name="Users"
         component={ManageUsersScreen}
-        options={{ title: 'Manage Users' }}
+        options={{
+          title: 'Manage Users',
+        }}
       />
       <Tab.Screen
         key="Logout"
         name="Logout"
         component={LogoutScreen}
-        options={{ title: 'Logout' }}
+        options={{
+          title: 'Logout',
+        }}
       />
     </Tab.Navigator>
   );

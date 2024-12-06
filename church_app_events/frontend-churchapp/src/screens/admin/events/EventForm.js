@@ -80,78 +80,119 @@ const EventForm = ({ eventData = null, onSubmit }) => {
 
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={formStyles.keyboardAvoidingView}
-    >
-      <ScrollView contentContainerStyle={formStyles.scrollContainer}>
-        <View style={formStyles.container}>
-          <Title style={formStyles.title}>
-            {eventData?.id ? 'Edit Event' : 'Create New Event'}
-          </Title>
+    <View style={styles.mainContainer}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={[formStyles.keyboardAvoidingView, styles.keyboardView]}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+        >
+          <View style={[formStyles.container, styles.formContainer]}>
+            <Title style={formStyles.title}>
+              {eventData?.id ? 'Edit Event' : 'Create New Event'}
+            </Title>
 
-          <TextInput
-            label="Event Title"
-            value={eventTitle}
-            onChangeText={setEventTitle}
-            style={formStyles.input}
-            mode="outlined"
-            error={!!errors.eventTitle}
-          />
-
-          <View style={formStyles.dateTimeContainer}>
-            <Text style={formStyles.dateTimeLabel}>Date:</Text>
-            <DateTimeSelector
-              mode="date"
-              value={eventDate}
-              onChange={(_, selectedDate) => setEventDate(selectedDate || eventDate)}
-              showPicker={showDatePicker}
-              setShowPicker={setShowDatePicker}
+            <TextInput
+              label="Event Title"
+              value={eventTitle}
+              onChangeText={setEventTitle}
+              style={formStyles.input}
+              mode="outlined"
+              error={!!errors.eventTitle}
             />
-          </View>
 
-          <View style={formStyles.dateTimeContainer}>
-            <Text style={formStyles.dateTimeLabel}>Time:</Text>
-            <DateTimeSelector
-              mode="time"
-              value={eventTime}
-              onChange={(_, selectedTime) => setEventTime(selectedTime || eventTime)}
-              showPicker={showTimePicker}
-              setShowPicker={setShowTimePicker}
+            <View style={formStyles.dateTimeContainer}>
+              <Text style={formStyles.dateTimeLabel}>Date:</Text>
+              <DateTimeSelector
+                mode="date"
+                value={eventDate}
+                onChange={(_, selectedDate) => setEventDate(selectedDate || eventDate)}
+                showPicker={showDatePicker}
+                setShowPicker={setShowDatePicker}
+              />
+            </View>
+
+            <View style={formStyles.dateTimeContainer}>
+              <Text style={formStyles.dateTimeLabel}>Time:</Text>
+              <DateTimeSelector
+                mode="time"
+                value={eventTime}
+                onChange={(_, selectedTime) => setEventTime(selectedTime || eventTime)}
+                showPicker={showTimePicker}
+                setShowPicker={setShowTimePicker}
+              />
+            </View>
+
+            <TextInput
+              label="Address (optional)"
+              value={address}
+              onChangeText={setAddress}
+              style={formStyles.input}
+              mode="outlined"
             />
+
+            <TextInput
+              label="Description (optional)"
+              value={description}
+              onChangeText={setDescription}
+              style={[formStyles.input, formStyles.textArea]}
+              mode="outlined"
+              multiline
+              numberOfLines={4}
+            />
+
+            <Button
+              mode="contained"
+              onPress={handleSubmit}
+              style={formStyles.submitButton}
+              labelStyle={formStyles.submitButtonLabel}
+            >
+              {eventData?.id ? 'Update Event' : 'Add Event'}
+            </Button>
           </View>
-
-          <TextInput
-            label="Address (optional)"
-            value={address}
-            onChangeText={setAddress}
-            style={formStyles.input}
-            mode="outlined"
-          />
-
-          <TextInput
-            label="Description (optional)"
-            value={description}
-            onChangeText={setDescription}
-            style={[formStyles.input, formStyles.textArea]}
-            mode="outlined"
-            multiline
-            numberOfLines={4}
-          />
-
-          <Button
-            mode="contained"
-            onPress={handleSubmit}
-            style={formStyles.submitButton}
-            labelStyle={formStyles.submitButtonLabel}
-          >
-            {eventData?.id ? 'Update Event' : 'Add Event'}
-          </Button>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 };
 
+const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    padding: 20,
+    ...(Platform.OS === 'web' && {
+      maxWidth: 800,
+      alignSelf: 'center',
+      width: '100%',
+    }),
+  },
+  formContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 20,
+    ...(Platform.OS === 'web' && {
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    }),
+  },
+});
 
 export default EventForm;

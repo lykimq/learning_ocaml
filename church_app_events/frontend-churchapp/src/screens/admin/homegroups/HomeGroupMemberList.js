@@ -417,8 +417,45 @@ const HomegroupMemberList = () => {
                                 color="#666"
                                 style={styles.infoIcon}
                             />
-                            <Text style={styles.infoText}>Group: {item.home_group_id}</Text>
+                            <Text style={styles.infoText}>
+                                Group: {item.group_name || item.home_group_id}
+                            </Text>
                         </View>
+                        {item.group_description && (
+                            <View style={styles.infoRow}>
+                                <IconButton
+                                    icon="information-outline"
+                                    size={16}
+                                    color="#666"
+                                    style={styles.infoIcon}
+                                />
+                                <Text style={styles.infoText}>{item.group_description}</Text>
+                            </View>
+                        )}
+                        {(item.meeting_day || item.meeting_time) && (
+                            <View style={styles.infoRow}>
+                                <IconButton
+                                    icon="clock-outline"
+                                    size={16}
+                                    color="#666"
+                                    style={styles.infoIcon}
+                                />
+                                <Text style={styles.infoText}>
+                                    Meets: {item.meeting_day} {item.meeting_time}
+                                </Text>
+                            </View>
+                        )}
+                        {item.location && (
+                            <View style={styles.infoRow}>
+                                <IconButton
+                                    icon="map-marker-outline"
+                                    size={16}
+                                    color="#666"
+                                    style={styles.infoIcon}
+                                />
+                                <Text style={styles.infoText}>{item.location}</Text>
+                            </View>
+                        )}
                         <View style={styles.infoRow}>
                             <IconButton
                                 icon="email-outline"
@@ -427,6 +464,28 @@ const HomegroupMemberList = () => {
                                 style={styles.infoIcon}
                             />
                             <Text style={styles.infoText}>{item.email}</Text>
+                        </View>
+                        {item.phone && (
+                            <View style={styles.infoRow}>
+                                <IconButton
+                                    icon="phone-outline"
+                                    size={16}
+                                    color="#666"
+                                    style={styles.infoIcon}
+                                />
+                                <Text style={styles.infoText}>{item.phone}</Text>
+                            </View>
+                        )}
+                        <View style={styles.infoRow}>
+                            <IconButton
+                                icon="calendar-outline"
+                                size={16}
+                                color="#666"
+                                style={styles.infoIcon}
+                            />
+                            <Text style={styles.infoText}>
+                                Registered: {new Date(item.registration_date).toLocaleDateString()}
+                            </Text>
                         </View>
                     </View>
                     <View style={styles.statusSection}>

@@ -94,8 +94,16 @@ export default function LoginScreen({ navigation }) {
             value={loginType}
             onValueChange={setLoginType}
             buttons={[
-              { value: 'email', label: 'Email' },
-              { value: 'username', label: 'Username' },
+              {
+                value: 'email',
+                label: 'Email',
+                labelStyle: { color: loginType === 'email' ? '#fff' : '#000' }
+              },
+              {
+                value: 'username',
+                label: 'Username',
+                labelStyle: { color: loginType === 'username' ? '#fff' : '#000' }
+              },
             ]}
             style={styles.segmentedButtons}
           />
@@ -161,7 +169,7 @@ export default function LoginScreen({ navigation }) {
             loading={loading}
             disabled={loading}
           >
-            {loading ? 'Logging in...' : 'Login'}
+            <Text>{loading ? 'Logging in...' : 'Login'}</Text>
           </Button>
 
         </View>

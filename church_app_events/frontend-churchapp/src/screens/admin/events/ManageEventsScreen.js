@@ -5,16 +5,24 @@ import EventForm from './EventForm';
 import EventsList from '../../shared/events/EventsList';
 import EventRsvpList from './EventRsvpList';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
 
 const ManageEventsScreen = ({ route }) => {
+  const navigation = useNavigation();
   const [selectedOption, setSelectedOption] = useState(null);
 
-  // Reset to main menu when tab is pressed
   useEffect(() => {
-    if (route.params?.reset) {
+    if (route.params?.focused) {
       setSelectedOption(null);
     }
-  }, [route.params?.reset]);
+  }, [route.params?.focused]);
+
+  // Enable swipe back gesture
+  useEffect(() => {
+    navigation.setOptions({
+      gestureEnabled: true,
+    });
+  }, [navigation]);
 
   const renderContent = () => {
     switch (selectedOption) {

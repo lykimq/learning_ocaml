@@ -126,15 +126,38 @@ const HomeGroupList = () => {
             <Card style={styles.userCard}>
                 <Card.Content style={styles.cardContent}>
                     <View style={styles.userContainer}>
-                        <Avatar.Text
-                            size={50}
-                            label={groupInitials || '??'}
-                            style={styles.avatar}
-                        />
+                        {item.profile_picture ? (
+                            <Avatar.Image
+                                size={50}
+                                source={{ uri: item.profile_picture }}
+                                style={styles.avatar}
+                            />
+                        ) : (
+                            <Avatar.Text
+                                size={50}
+                                label={groupInitials || '??'}
+                                style={styles.avatar}
+                            />
+                        )}
                         <View style={styles.userDetails}>
                             <Title style={styles.userName}>
                                 {item.name}
                             </Title>
+
+                            {/* Description */}
+                            {item.description && (
+                                <View style={styles.userInfo}>
+                                    <IconButton
+                                        icon="information"
+                                        size={16}
+                                        color="#666"
+                                        style={styles.infoIcon}
+                                    />
+                                    <Text style={styles.infoText}>{item.description}</Text>
+                                </View>
+                            )}
+
+                            {/* Location */}
                             <View style={styles.userInfo}>
                                 <IconButton
                                     icon="map-marker-outline"
@@ -144,15 +167,69 @@ const HomeGroupList = () => {
                                 />
                                 <Text style={styles.infoText}>{item.location || 'No location'}</Text>
                             </View>
+
+                            {/* Meeting Schedule */}
+                            {(item.meeting_day || item.meeting_time) && (
+                                <View style={styles.userInfo}>
+                                    <IconButton
+                                        icon="calendar"
+                                        size={16}
+                                        color="#666"
+                                        style={styles.infoIcon}
+                                    />
+                                    <Text style={styles.infoText}>
+                                        {`${format(new Date(item.meeting_day), 'MMM dd, yyyy')} at ${item.meeting_time}`}
+                                    </Text>
+                                </View>
+                            )}
+
+                            {/* Language */}
+                            {item.language && (
+                                <View style={styles.userInfo}>
+                                    <IconButton
+                                        icon="translate"
+                                        size={16}
+                                        color="#666"
+                                        style={styles.infoIcon}
+                                    />
+                                    <Text style={styles.infoText}>Language: {item.language}</Text>
+                                </View>
+                            )}
+
+                            {/* Capacity */}
+                            {item.max_capacity && (
+                                <View style={styles.userInfo}>
+                                    <IconButton
+                                        icon="account-group"
+                                        size={16}
+                                        color="#666"
+                                        style={styles.infoIcon}
+                                    />
+                                    <Text style={styles.infoText}>Capacity: {item.max_capacity}</Text>
+                                </View>
+                            )}
+
+                            {/* Created/Updated Info */}
                             <View style={styles.userInfo}>
                                 <IconButton
-                                    icon="calendar"
+                                    icon="clock-outline"
                                     size={16}
                                     color="#666"
                                     style={styles.infoIcon}
                                 />
                                 <Text style={styles.infoText}>
-                                    {`${format(new Date(item.meeting_day), 'MMM dd, yyyy')} at ${item.meeting_time}`}
+                                    Created: {new Date(item.created_at).toLocaleDateString()}
+                                </Text>
+                            </View>
+                            <View style={styles.userInfo}>
+                                <IconButton
+                                    icon="update"
+                                    size={16}
+                                    color="#666"
+                                    style={styles.infoIcon}
+                                />
+                                <Text style={styles.infoText}>
+                                    Updated: {new Date(item.updated_at).toLocaleDateString()}
                                 </Text>
                             </View>
                         </View>

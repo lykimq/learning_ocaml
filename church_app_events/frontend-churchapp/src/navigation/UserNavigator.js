@@ -39,20 +39,26 @@ const UserNavigator = () => {
         key="Media"
         name="Media"
         component={MediaScreen}
-        options={{ title: 'Media' }}
+        options={{
+          title: 'Media',
+        }}
       />,
       <Tab.Screen
         key="Events"
         name="Events"
         component={EventsScreen}
-        options={{ title: 'Events' }}
+        options={{
+          title: 'Events',
+        }}
       />,
       <Tab.Screen
         key="HomeGroups"
         name="HomeGroups"
         component={HomeGroupScreen}
-        options={{ title: 'Home Groups' }}
-      />
+        options={{
+          title: 'Home Groups',
+        }}
+      />,
     ];
 
     if (user) {
@@ -61,19 +67,25 @@ const UserNavigator = () => {
           key="Serving"
           name="Serving"
           component={ServingScreen}
-          options={{ title: 'Serving' }}
+          options={{
+            title: 'Serving',
+          }}
         />,
         <Tab.Screen
           key="Giving"
           name="Giving"
           component={GivingScreen}
-          options={{ title: 'Giving' }}
+          options={{
+            title: 'Giving',
+          }}
         />,
         <Tab.Screen
           key="Logout"
           name="Logout"
           component={LogoutScreen}
-          options={{ title: 'Logout' }}
+          options={{
+            title: 'Logout',
+          }}
         />
       );
     } else {
@@ -82,7 +94,9 @@ const UserNavigator = () => {
           key="Login"
           name="Login"
           component={LoginScreen}
-          options={{ title: 'Login' }}
+          options={{
+            title: 'Login',
+          }}
         />
       );
     }
