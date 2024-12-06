@@ -182,15 +182,16 @@ pub async fn create_rsvp(
 
 // Get all RSVPs with event details
 pub async fn get_all_rsvps(
-    pool: web::Data<PgPool>
+    pool: web::Data<PgPool>,
 ) -> impl Responder {
     let result = sqlx::query!(
         r#"
-        SELECT er.id, er.email, er.event_id, er.user_id,
-               er.rsvp_status as "rsvp_status!: RsvpStatus", er.rsvp_date,
-               e.event_title, e.event_date, e.event_time::text
-        FROM eventrsvp er
-        JOIN events e ON er.event_id = e.id
+        SELECT r.id, r.email, r.event_id, r.user_id,
+               r.rsvp_status as "rsvp_status!: RsvpStatus",
+               r.rsvp_date,
+               e.event_title, e.event_date, e.event_time
+        FROM eventrsvp r
+        JOIN events e ON r.event_id = e.id
         ORDER BY e.event_date DESC, e.event_time DESC
         "#
     )
@@ -199,7 +200,23 @@ pub async fn get_all_rsvps(
 
     match result {
         Ok(rsvps) => {
-            let response: Vec<RSVPWithEventResponse> = rsvps
+            // Calculate status counts
+            let status_counts = HashMap::from([
+                ("confirmed".to_string(),
+                    rsvps.iter()
+                    .filter(|r| r.rsvp_status == RsvpStatus::Confirmed)
+                    .count()),
+                ("pending".to_string(),
+                    rsvps.iter()
+                    .filter(|r| r.rsvp_status == RsvpStatus::Pending)
+                    .count()),
+                ("declined".to_string(),
+                    rsvps.iter()
+                    .filter(|r| r.rsvp_status == RsvpStatus::Declined)
+                    .count()),
+            ]);
+
+            let converted_rsvps: Vec<RSVPWithEventResponse> = rsvps
                 .iter()
                 .map(|r| RSVPWithEventResponse {
                     id: r.id,
@@ -210,12 +227,16 @@ pub async fn get_all_rsvps(
                     rsvp_date: r.rsvp_date,
                     event_title: r.event_title.clone(),
                     event_date: r.event_date,
-                    event_time: r.event_time
-                        .as_ref()
-                        .and_then(|t| t.parse::<NaiveTime>().ok())
-                        .unwrap_or_else(|| NaiveTime::from_hms_opt(0, 0, 0).unwrap()),
+                    event_time: r.event_time.clone(),
                 })
                 .collect();
+
+            let response = serde_json::json!({
+                "rsvps": converted_rsvps,
+                "total": rsvps.len(),
+                "status_counts": status_counts,
+            });
+
             HttpResponse::Ok().json(response)
         }
         Err(e) => {
@@ -506,11 +527,11 @@ pub async fn decline_rsvp(
     }
 }
 
+// Search RSVPs
 pub async fn search_rsvps(
     pool: web::Data<PgPool>,
-    params: web::Query<SearchQuery>
+    params: web::Query<SearchQuery>,
 ) -> impl Responder {
-    // Build the base WHERE clause
     let mut count_query = sqlx::QueryBuilder::new(
         "SELECT COUNT(*) as count
          FROM eventrsvp r
@@ -518,24 +539,27 @@ pub async fn search_rsvps(
          WHERE 1=1"
     );
 
-    // Apply the same filters to count query
+    // Apply status filter if provided
     if let Some(status) = &params.status {
         count_query.push(" AND r.rsvp_status = ");
         count_query.push_bind(status);
     }
 
+    // Email filter with improved pattern matching
     if let Some(email) = &params.email {
         let search_pattern = format!("%{}%", email.trim().to_lowercase());
         count_query.push(" AND LOWER(r.email) LIKE ");
         count_query.push_bind(search_pattern);
     }
 
+    // Event title filter with improved pattern matching
     if let Some(event_title) = &params.event_title {
         let search_pattern = format!("%{}%", event_title.trim().to_lowercase());
         count_query.push(" AND LOWER(e.event_title) LIKE ");
         count_query.push_bind(search_pattern);
     }
 
+    // User ID filter
     if let Some(user_id) = params.user_id {
         count_query.push(" AND r.user_id = ");
         count_query.push_bind(user_id);
@@ -553,11 +577,11 @@ pub async fn search_rsvps(
             }
     };
 
-    // Build the main search query
+    // Build main search query
     let mut search_query = sqlx::QueryBuilder::new(
         "SELECT r.id, r.email, r.event_id, r.user_id,
-                r.rsvp_status, r.rsvp_date,
-                e.event_title, e.event_date, e.event_time
+                r.rsvp_status as \"rsvp_status\",
+                r.rsvp_date, e.event_title, e.event_date, e.event_time
          FROM eventrsvp r
          JOIN events e ON r.event_id = e.id
          WHERE 1=1"
@@ -586,55 +610,62 @@ pub async fn search_rsvps(
         search_query.push_bind(user_id);
     }
 
+    // Execute the query
     search_query.push(" ORDER BY e.event_date DESC, e.event_time DESC");
 
-    // Execute the main search query
     match search_query
         .build()
         .fetch_all(pool.get_ref())
         .await {
         Ok(rsvps) => {
+            // Calculate status counts
             let status_counts = HashMap::from([
                 ("confirmed".to_string(),
                     rsvps.iter()
-                    .filter(|r: &&PgRow|
-                        r.get::<RsvpStatus, _>("rsvp_status") == RsvpStatus::Confirmed)
+                    .filter(|r| {
+                        let status: RsvpStatus = r.try_get("rsvp_status").unwrap_or(RsvpStatus::Pending);
+                        status == RsvpStatus::Confirmed
+                    })
                     .count()),
                 ("pending".to_string(),
                     rsvps.iter()
-                    .filter(|r: &&PgRow|
-                        r.get::<RsvpStatus, _>("rsvp_status") == RsvpStatus::Pending)
+                    .filter(|r| {
+                        let status: RsvpStatus = r.try_get("rsvp_status").unwrap_or(RsvpStatus::Pending);
+                        status == RsvpStatus::Pending
+                    })
                     .count()),
                 ("declined".to_string(),
                     rsvps.iter()
-                    .filter(|r: &&PgRow|
-                        r.get::<RsvpStatus, _>("rsvp_status") == RsvpStatus::Declined)
+                    .filter(|r| {
+                        let status: RsvpStatus = r.try_get("rsvp_status").unwrap_or(RsvpStatus::Pending);
+                        status == RsvpStatus::Declined
+                    })
                     .count()),
             ]);
 
             let converted_rsvps: Vec<RSVPWithEventResponse> = rsvps
                 .iter()
                 .map(|r| RSVPWithEventResponse {
-                    id: r.get("id"),
-                    email: r.get("email"),
-                    event_id: r.get("event_id"),
-                    user_id: r.get("user_id"),
-                    rsvp_status: r.get("rsvp_status"),
-                    rsvp_date: r.get("rsvp_date"),
-                    event_title: r.get("event_title"),
-                    event_date: r.get("event_date"),
-                    event_time: r.get("event_time"),
+                    id: r.try_get("id").unwrap(),
+                    email: r.try_get("email").unwrap(),
+                    event_id: r.try_get("event_id").unwrap(),
+                    user_id: r.try_get("user_id").unwrap(),
+                    rsvp_status: r.try_get("rsvp_status").unwrap(),
+                    rsvp_date: r.try_get("rsvp_date").unwrap(),
+                    event_title: r.try_get("event_title").unwrap(),
+                    event_date: r.try_get("event_date").unwrap(),
+                    event_time: r.try_get("event_time").unwrap(),
                 })
                 .collect();
 
-            let response = SearchResponse {
-                rsvps: converted_rsvps,
-                total: total_count as usize,
-                status_counts,
-            };
+            let response = serde_json::json!({
+                "rsvps": converted_rsvps,
+                "total": total_count,
+                "status_counts": status_counts,
+            });
 
             HttpResponse::Ok().json(response)
-        },
+        }
         Err(err) => {
             eprintln!("Search error: {}", err);
             HttpResponse::InternalServerError().json("Failed to search RSVPs")

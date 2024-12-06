@@ -450,7 +450,53 @@ pub async fn search_registrations(
     pool: web::Data<PgPool>,
     params: web::Query<SearchQuery>,
 ) -> impl Responder {
-    let mut query = sqlx::QueryBuilder::new(
+    let mut count_query = sqlx::QueryBuilder::new(
+        "SELECT COUNT (*) as count
+         FROM homegroupregistrations hr
+         JOIN homegroups hg ON hr.home_group_id = hg.id
+         WHERE 1=1"
+    );
+
+    // Apply status filter if provided
+    if let Some(status) = &params.status {
+        count_query.push(" AND hr.registration_status = ");
+        count_query.push_bind(status);
+    }
+
+    // Email filter with improved pattern matching
+    if let Some(email) = &params.email {
+        let search_pattern = format!("%{}%", email.trim().to_lowercase());
+        count_query.push(" AND LOWER(hr.email) LIKE ");
+        count_query.push_bind(search_pattern);
+    }
+
+    // Group name filter with improved pattern matching
+    if let Some(group_name) = &params.group_name {
+        let search_pattern = format!("%{}%", group_name.trim().to_lowercase());
+        count_query.push(" AND LOWER(hg.name) LIKE ");
+        count_query.push_bind(search_pattern);
+    }
+
+    // User ID filter
+    if let Some(user_id) = params.user_id {
+        count_query.push(" AND hr.user_id = ");
+        count_query.push_bind(user_id);
+    }
+
+    // Execute count query first
+    let total_count = match count_query
+        .build()
+        .fetch_one(pool.get_ref())
+        .await {
+            Ok(row) => row.get::<i64, _>("count"),
+            Err(e) => {
+                eprintln!("Count query error: {}", e);
+                return HttpResponse::InternalServerError().json("Failed to count registrations");
+            }
+        };
+
+    // Default sorting by registration date
+    let mut search_query = sqlx::QueryBuilder::new(
         "SELECT hr.id, hr.email, hr.home_group_id, hr.user_id,
                 hr.registration_status as \"registration_status\",
                 hr.registration_date, hg.name as group_name, hg.location as group_location
@@ -461,63 +507,80 @@ pub async fn search_registrations(
 
     // Apply status filter if provided
     if let Some(status) = &params.status {
-        query.push(" AND hr.registration_status = ");
-        query.push_bind(status);
+        search_query.push(" AND hr.registration_status = ");
+        search_query.push_bind(status);
     }
 
-    // Email filter with improved pattern matching
+    // Apply email filter if provided
     if let Some(email) = &params.email {
         let search_pattern = format!("%{}%", email.trim().to_lowercase());
-        query.push(" AND LOWER(hr.email) LIKE ");
-        query.push_bind(search_pattern);
+        search_query.push(" AND LOWER(hr.email) LIKE ");
+        search_query.push_bind(search_pattern);
     }
 
-    // Group name filter with improved pattern matching
+    // Apply group name filter if provided
     if let Some(group_name) = &params.group_name {
         let search_pattern = format!("%{}%", group_name.trim().to_lowercase());
-        query.push(" AND LOWER(hg.name) LIKE ");
-        query.push_bind(search_pattern);
+        search_query.push(" AND LOWER(hg.name) LIKE ");
+        search_query.push_bind(search_pattern);
     }
 
-    // User ID filter
+    // Apply user ID filter if provided
     if let Some(user_id) = params.user_id {
-        query.push(" AND hr.user_id = ");
-        query.push_bind(user_id);
+        search_query.push(" AND hr.user_id = ");
+        search_query.push_bind(user_id);
     }
-
-    // Default sorting by registration date
-    query.push(" ORDER BY hr.registration_date DESC");
 
     // Execute the query
-    let query =
-     query.build_query_as::<RegistrationWithGroupResponse>();
+    search_query.push(" ORDER BY hr.registration_date DESC");
 
-    match query.fetch_all(pool.get_ref()).await {
+    match search_query
+        .build()
+        .fetch_all(pool.get_ref())
+        .await {
         Ok(registrations) => {
-            let total = registrations.len();
-
             // Calculate status counts
             let status_counts = HashMap::from([
                 ("approved".to_string(),
                     registrations.iter()
-                    .filter(|r|
-                        r.registration_status == RegistrationStatus::Approved)
+                    .filter(|r| {
+                        let status: RegistrationStatus = r.try_get("registration_status").unwrap_or(RegistrationStatus::Pending);
+                        status == RegistrationStatus::Approved
+                    })
                     .count()),
                 ("pending".to_string(),
                     registrations.iter()
-                    .filter(|r|
-                        r.registration_status == RegistrationStatus::Pending)
+                    .filter(|r| {
+                        let status: RegistrationStatus = r.try_get("registration_status").unwrap_or(RegistrationStatus::Pending);
+                        status == RegistrationStatus::Pending
+                    })
                     .count()),
                 ("declined".to_string(),
                     registrations.iter()
-                    .filter(|r|
-                        r.registration_status == RegistrationStatus::Declined)
+                    .filter(|r| {
+                        let status: RegistrationStatus = r.try_get("registration_status").unwrap_or(RegistrationStatus::Pending);
+                        status == RegistrationStatus::Declined
+                    })
                     .count()),
             ]);
 
+            let converted_registrations: Vec<RegistrationWithGroupResponse> = registrations
+                .iter()
+                .map(|r| RegistrationWithGroupResponse {
+                    id: r.try_get("id").unwrap(),
+                    email: r.try_get("email").unwrap(),
+                    home_group_id: r.try_get("home_group_id").unwrap(),
+                    user_id: r.try_get("user_id").unwrap(),
+                    registration_status: r.try_get("registration_status").unwrap(),
+                    registration_date: r.try_get("registration_date").unwrap(),
+                    group_name: r.try_get("group_name").unwrap(),
+                    group_location: r.try_get("group_location").unwrap(),
+                })
+                .collect();
+
             let response = serde_json::json!({
-                "registrations": registrations,
-                "total": total,
+                "registrations": converted_registrations,
+                "total": total_count as usize,
                 "status_counts": status_counts,
             });
 

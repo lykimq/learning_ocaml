@@ -184,10 +184,10 @@ const HomegroupMemberList = () => {
                 setRegistrationData({
                     registrations: registrationList || [],
                     total: registrationList?.length || 0,
-                    status_counts: registrationList?.status_counts || {
-                        confirmed: registrationList?.filter(r => r.registration_status === 'confirmed').length || 0,
-                        pending: registrationList?.filter(r => r.registration_status === 'pending').length || 0,
-                        declined: registrationList?.filter(r => r.registration_status === 'declined').length || 0
+                    status_counts: registrationList.status_counts || {
+                        confirmed: 0,
+                        pending: 0,
+                        declined: 0
                     }
                 });
                 return;
@@ -198,19 +198,13 @@ const HomegroupMemberList = () => {
             // Perform the search
             const searchResults = await searchRegistrations(searchCriteria);
 
-            // Ensure proper data structure
-            const results = Array.isArray(searchResults) ? searchResults :
-                searchResults?.registrations ? searchResults.registrations : [];
-
-            console.log('Search results:', results);
-
             setRegistrationData({
-                registrations: results,
-                total: results.length,
+                registrations: searchResults.registrations || [],
+                total: searchResults.total || 0,
                 status_counts: searchResults.status_counts || {
-                    confirmed: results.filter(r => r.registration_status === 'confirmed').length,
-                    pending: results.filter(r => r.registration_status === 'pending').length,
-                    declined: results.filter(r => r.registration_status === 'declined').length
+                    confirmed: 0,
+                    pending: 0,
+                    declined: 0
                 }
             });
 

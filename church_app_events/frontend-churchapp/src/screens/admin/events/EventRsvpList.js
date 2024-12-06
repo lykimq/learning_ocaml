@@ -53,18 +53,45 @@ const EventRsvpList = () => {
     const fetchRsvps = async () => {
         setLoading(true);
         try {
-            const rsvpList = await getAllRsvps();
-            console.log('Total RSVPs:', rsvpList.length);
+            const response = await getAllRsvps();
+            console.log('RSVP response:', response);
+
+            if (!response || !response.rsvps) {
+                console.error('Invalid response format:', response);
+                setRsvpData({
+                    rsvps: [],
+                    total: 0,
+                    status_counts: {
+                        confirmed: 0,
+                        pending: 0,
+                        declined: 0
+                    }
+                });
+                return;
+            }
 
             setRsvpData({
-                rsvps: rsvpList || [],
-                total: rsvpList.total || 0,
-                status_counts: rsvpList.status_counts || {}
+                rsvps: response.rsvps,
+                total: response.total,
+                status_counts: response.status_counts || {
+                    confirmed: 0,
+                    pending: 0,
+                    declined: 0
+                }
             });
 
         } catch (error) {
             console.error('Error fetching RSVPs:', error);
             handleAlert('Error', 'Failed to fetch RSVPs');
+            setRsvpData({
+                rsvps: [],
+                total: 0,
+                status_counts: {
+                    confirmed: 0,
+                    pending: 0,
+                    declined: 0
+                }
+            });
         } finally {
             setLoading(false);
         }
@@ -457,7 +484,7 @@ const EventRsvpList = () => {
     // Pagination
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = currentPage * ITEMS_PER_PAGE;
-    const paginatedRsvps = rsvpData?.rsvps?.slice(startIndex, endIndex) || [];
+    const paginatedRsvps = rsvpData.rsvps.slice(startIndex, endIndex);
 
     console.log('rsvpData:', rsvpData);
     console.log('startIndex:', startIndex);
