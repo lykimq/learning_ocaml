@@ -53,15 +53,36 @@ const HomegroupMemberList = () => {
         setLoading(true);
         try {
             const registrationList = await getAllRegistrations();
+
+            // Calculate status counts from the registrations array
+            const status_counts = (registrationList || []).reduce((acc, reg) => {
+                const status = reg.registration_status;
+                acc[status] = (acc[status] || 0) + 1;
+                return acc;
+            }, {
+                approved: 0,
+                pending: 0,
+                declined: 0
+            });
+
             setRegistrationData({
                 registrations: registrationList || [],
                 total: registrationList?.length || 0,
-                status_counts: registrationList?.status_counts || {}
+                status_counts: status_counts
             });
 
         } catch (error) {
             console.error('Error fetching registrations:', error);
             handleAlert('Error', 'Failed to fetch registrations');
+            setRegistrationData({
+                registrations: [],
+                total: 0,
+                status_counts: {
+                    approved: 0,
+                    pending: 0,
+                    declined: 0
+                }
+            });
         } finally {
             setLoading(false);
         }
