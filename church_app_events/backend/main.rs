@@ -11,6 +11,7 @@ mod events;
 mod eventrsvp;
 mod email;
 mod homegroup;
+mod homegrouprsvp;
 mod user;
 
 #[tokio::main]
@@ -61,10 +62,10 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/admin/users")
                     .route("/add", web::post().to(user::add_user))
                     .route("/edit/{id}", web::put().to(user::update_user))
-                    .route("/list", web::get().to(user::get_all_users))
-                    .route("/{id}", web::get().to(user::get_user))
                     .route("/{id}", web::delete().to(user::delete_user))
                     .route("/search", web::get().to(user::search_users))
+                    .route("/list", web::get().to(user::get_all_users))
+                    .route("/{id}", web::get().to(user::get_user))
                     .route("/email/{email}", web::get().to(user::get_user_by_email))
                     .route("/username/{username}", web::get().to(user::get_user_by_username))
                     .route("/verify-password", web::post().to(user::verify_password))
@@ -74,6 +75,8 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/admin/events")
                     .route("/add", web::post().to(events::add_event))
                     .route("/edit/{id}", web::put().to(events::update_event))
+                    .route("/{id}", web::delete().to(events::delete_event))
+                    .route("/search", web::get().to(events::search_events))
                     .route("/list", web::get().to(events::get_all_events))
                     .route("/past", web::get().to(events::get_past_events))
                     .route("/current", web::get().to(events::get_current_events))
@@ -82,17 +85,15 @@ async fn main() -> std::io::Result<()> {
                         "/current_future",
                         web::get().to(events::get_current_future_events),
                     )
-                    .route("/{id}", web::delete().to(events::delete_event))
-                    .route("/search", web::get().to(events::search_events))
                     .service(
                         web::scope("/rsvp")
                             .route("/confirm/{id}", web::post().to(eventrsvp::confirm_rsvp))
                             .route("/decline/{id}", web::post().to(eventrsvp::decline_rsvp))
                             .route("/search", web::get().to(eventrsvp::search_rsvps))
-                            .route("/list", web::get().to(eventrsvp::get_all_rsvps))
                             .route("/add", web::post().to(eventrsvp::create_rsvp))
                             .route("/edit/{id}", web::put().to(eventrsvp::update_rsvp))
                             .route("/{id}", web::delete().to(eventrsvp::delete_rsvp))
+                            .route("/list", web::get().to(eventrsvp::get_all_rsvps))
                             .route("/email/{email}", web::get().to(eventrsvp::get_rsvps_by_email))
                             .route("/event/{event_id}", web::get().to(eventrsvp::get_rsvps_by_event))
                             .service(
@@ -107,18 +108,35 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/admin/home_group")
                     .route("/add", web::post().to(homegroup::add_home_group))
                     .route("/edit/{id}", web::put().to(homegroup::update_home_group))
-                    .route("/list", web::get().to(homegroup::get_all_home_groups))
-                    .route("/{id}", web::get().to(homegroup::get_home_group))
                     .route("/{id}", web::delete().to(homegroup::delete_home_group))
                     .route("/search", web::get().to(homegroup::search_home_groups))
+                    .route("/list", web::get().to(homegroup::get_all_home_groups))
+                    .route("/{id}", web::get().to(homegroup::get_home_group))
+                    .service(
+                        web::scope("/rsvp")
+                            .route("/add", web::post().to(homegrouprsvp::create_registration))
+                            .route("/edit/{id}", web::put().to(homegrouprsvp::update_registration))
+                            .route("/{id}", web::delete().to(homegrouprsvp::delete_registration))
+                            .route("/list", web::get().to(homegrouprsvp::get_all_registrations))
+                            .route("/group/{home_group_id}", web::get().to(homegrouprsvp::get_registrations_by_group))
+                            .route("/email/{email}", web::get().to(homegrouprsvp::get_registrations_by_email))
+                            .route("/confirm/{id}", web::post().to(homegrouprsvp::confirm_registration))
+                            .route("/decline/{id}", web::post().to(homegrouprsvp::decline_registration))
+                            .route("/search", web::get().to(homegrouprsvp::search_registrations))
+                            .service(
+                                web::scope("/email")
+                                    .route("/send-confirmation", web::post().to(email::send_homegroup_rsvp_email))
+                                    .route("/send-decline", web::post().to(email::send_homegroup_decline_email))
+                            )
+                    )
             )
-            // Event RSVPs
+            // User Event RSVPs
             .service(
                 web::scope("events/rsvp")
                     .route("/add", web::post().to(eventrsvp::create_rsvp))
                     .route("/edit/{id}", web::put().to(eventrsvp::update_rsvp))
-                    .route("/list", web::get().to(eventrsvp::get_all_rsvps))
                     .route("/{id}", web::delete().to(eventrsvp::delete_rsvp))
+                    .route("/list", web::get().to(eventrsvp::get_all_rsvps))
                     .route("/email/{email}", web::get().to(eventrsvp::get_rsvps_by_email))
                     .route("/event/{event_id}", web::get().to(eventrsvp::get_rsvps_by_event))
             )

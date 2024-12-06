@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { View, Alert, StyleSheet, Platform } from 'react-native';
 import { Button, Text, TextInput, Title, Paragraph, Portal, Dialog, IconButton } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
-import { addRsvp } from '../../../services/events/eventRsvpService';
+import { createRegistration } from '../../../services/homegroups/homeGroupRsvpService';
+import { format } from 'date-fns';
 
-const EventRSVP = ({ event, onClose }) => {
+const HomeGroupRSVP = ({ homeGroup, onClose }) => {
     const [email, setEmail] = useState('');
+    const [name, setName] = useState('');
     const [loading, setLoading] = useState(false);
     const navigation = useNavigation();
     const [dialogVisible, setDialogVisible] = useState(false);
@@ -16,7 +18,6 @@ const EventRSVP = ({ event, onClose }) => {
         if (Platform.OS === 'web') {
             setDialogMessage({ title, message });
             setDialogVisible(true);
-            // Store callback for web dialog
             if (onOk) {
                 setDialogCallback(() => onOk);
             }
@@ -38,24 +39,30 @@ const EventRSVP = ({ event, onClose }) => {
             return;
         }
 
+        if (!name.trim()) {
+            showAlert('Error', 'Please enter your name');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const rsvpData = {
-                event_id: event.id,
+            const registrationData = {
+                home_group_id: homeGroup.id,
                 email: email,
+                name: name.trim(),
                 user_id: null,
-                rsvp_status: "pending"
+                registration_status: "pending"
             };
 
-            await addRsvp(rsvpData);
+            await createRegistration(registrationData);
             setLoading(false);
 
             showAlert(
                 'Success',
-                'You have been registered for this event.',
+                'You have been registered for this home group.',
                 () => {
-                    navigation.navigate('Events', {
+                    navigation.navigate('HomeGroups', {
                         reset: Date.now()
                     });
                 }
@@ -67,12 +74,12 @@ const EventRSVP = ({ event, onClose }) => {
             if (error.message.includes('already')) {
                 showAlert(
                     'Already Registered',
-                    'You are already registered for this event.'
+                    'You are already registered for this home group.'
                 );
             } else {
                 showAlert(
                     'Error',
-                    error.message || 'Failed to register for the event. Please try again.'
+                    error.message || 'Failed to register for the home group. Please try again.'
                 );
             }
         }
@@ -80,9 +87,9 @@ const EventRSVP = ({ event, onClose }) => {
 
     const handleBack = () => {
         if (onClose) {
-            onClose(); // Close the modal if it exists
+            onClose();
         }
-        navigation.navigate('Events'); // Explicitly navigate to Events screen
+        navigation.navigate('HomeGroups');
     };
 
     return (
@@ -94,16 +101,31 @@ const EventRSVP = ({ event, onClose }) => {
                     onPress={handleBack}
                     style={styles.backButton}
                 />
-                <Title style={styles.title}>{event.event_title}</Title>
+                <Title style={styles.title}>{homeGroup.name}</Title>
             </View>
 
-            <View style={styles.eventInfo}>
-                <Paragraph style={styles.paragraph}>Date: {new Date(event.event_date).toLocaleDateString()}</Paragraph>
-                <Paragraph style={styles.paragraph}>Time: {event.event_time}</Paragraph>
-                <Paragraph style={styles.paragraph}>Location: {event.address}</Paragraph>
+            <View style={styles.groupInfo}>
+                <Paragraph style={styles.paragraph}>
+                    Meeting Day: {format(new Date(homeGroup.meeting_day), 'MMM dd, yyyy')}
+                </Paragraph>
+                <Paragraph style={styles.paragraph}>Time: {homeGroup.meeting_time}</Paragraph>
+                <Paragraph style={styles.paragraph}>Location: {homeGroup.location}</Paragraph>
+                <Paragraph style={styles.paragraph}>Language: {homeGroup.language}</Paragraph>
+                {homeGroup.description && (
+                    <Paragraph style={styles.paragraph}>Description: {homeGroup.description}</Paragraph>
+                )}
             </View>
 
             <View style={styles.form}>
+                <TextInput
+                    label="Name *"
+                    value={name}
+                    onChangeText={setName}
+                    mode="outlined"
+                    autoCapitalize="words"
+                    style={styles.input}
+                />
+
                 <TextInput
                     label="Email Address *"
                     value={email}
@@ -126,7 +148,7 @@ const EventRSVP = ({ event, onClose }) => {
                     style={styles.submitButton}
                     labelStyle={styles.submitButtonLabel}
                 >
-                    {loading ? 'Registering...' : 'Register for Event'}
+                    {loading ? 'Registering...' : 'Register for Home Group'}
                 </Button>
             </View>
 
@@ -211,7 +233,7 @@ const styles = StyleSheet.create({
         color: COLORS.text,
         flex: 1,
     },
-    eventInfo: {
+    groupInfo: {
         marginBottom: 20,
         padding: LAYOUT.padding,
         backgroundColor: COLORS.white,
@@ -260,4 +282,4 @@ const styles = StyleSheet.create({
     }
 });
 
-export default EventRSVP;
+export default HomeGroupRSVP;

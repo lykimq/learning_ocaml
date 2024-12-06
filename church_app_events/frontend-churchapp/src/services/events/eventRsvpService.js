@@ -26,39 +26,6 @@ const api = axios.create({
     }
 });
 
-export const getAllRsvps = async () => {
-    try {
-        const response = await api.get('/events/rsvp/list');
-        console.log('RSVPs fetched:', response.data);
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching RSVPs:', error);
-        throw error;
-    }
-};
-
-export const getRsvpsByEvent = async (eventId) => {
-    try {
-        const response = await api.get(`/events/rsvp/event/${eventId}`);
-        console.log('RSVPs for event fetched:', response.data);
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching RSVPs for event:', error);
-        throw error;
-    }
-};
-
-export const getRsvpsByEmail = async (email) => {
-    try {
-        const response = await api.get(`/events/rsvp/email/${encodeURIComponent(email)}`);
-        console.log('RSVPs for email fetched:', response.data);
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching RSVPs for email:', error);
-        throw error;
-    }
-};
-
 export const addRsvp = async (rsvpData) => {
     try {
         if (!rsvpData.event_id || !rsvpData.email || !rsvpData.rsvp_status) {
@@ -107,7 +74,43 @@ export const deleteRsvp = async (id) => {
     }
 };
 
-// User confirm an event
+
+// Get all RSVPs
+export const getAllRsvps = async () => {
+    try {
+        const response = await api.get('/events/rsvp/list');
+        console.log('RSVPs fetched:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching RSVPs:', error);
+        throw error;
+    }
+};
+
+export const getRsvpsByEmail = async (email) => {
+    try {
+        const response = await api.get(`/events/rsvp/email/${encodeURIComponent(email)}`);
+        console.log('RSVPs for email fetched:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching RSVPs for email:', error);
+        throw error;
+    }
+};
+
+
+export const getRsvpsByEvent = async (eventId) => {
+    try {
+        const response = await api.get(`/events/rsvp/event/${eventId}`);
+        console.log('RSVPs for event fetched:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching RSVPs for event:', error);
+        throw error;
+    }
+};
+
+// Admin confirm RSVP
 export const confirmRsvp = async (rsvpId) => {
     try {
         const response = await api.post(`/admin/events/rsvp/confirm/${rsvpId}`);
@@ -119,18 +122,20 @@ export const confirmRsvp = async (rsvpId) => {
     }
 };
 
-// User decline an event
+// Admin decline RSVP
 export const declineRsvp = async (rsvpId) => {
     try {
+        console.log('Declining RSVP with ID:', rsvpId);
         const response = await api.post(`/admin/events/rsvp/decline/${rsvpId}`);
-        console.log('Decline RSP response:', response.data);
-        return response.data
+        console.log('Decline response:', response.data);
+        return response.data;
     } catch (error) {
-        console.error('Error declining RSVP:', error);
+        console.error('Error in declineRsvp:', error);
         throw error;
     }
 };
 
+// Admin send confirmation email to user
 export const sendConfirmationEmail = async (rsvpData) => {
     try {
         const response = await api.post('/admin/events/rsvp/email/send-confirmation', {
@@ -149,21 +154,20 @@ export const sendConfirmationEmail = async (rsvpData) => {
     }
 };
 
-export const sendDeclineEmail = async (rsvpData) => {
+// Admin send decline email to user
+export const sendDeclineEmail = async (emailData) => {
     try {
+        console.log('Sending decline email with data:', emailData);
         const response = await api.post('/admin/events/rsvp/email/send-decline', {
-            rsvp_id: rsvpData.rsvp_id,
-            email: rsvpData.email,
-            event_id: rsvpData.event_id
+            rsvp_id: emailData.rsvp_id,
+            email: emailData.email,
+            event_id: emailData.event_id
         });
-        console.log('Decline email sent:', response.data);
+        console.log('Email response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error sending decline email:', error);
-        if (error.response?.data) {
-            throw new Error(error.response.data);
-        }
-        throw new Error('Failed to send decline email');
+        throw error;
     }
 };
 
@@ -189,18 +193,27 @@ export const confirmRsvpWithEmail = async (rsvpId, email, eventId) => {
 // Admin send decline email to user email
 export const declineRsvpWithEmail = async (rsvpId, email, eventId) => {
     try {
+        // First decline the RSVP
         await declineRsvp(rsvpId);
 
-        await sendDeclineEmail({
-            rsvp_id: rsvpId,
-            email: email,
-            event_id: eventId
-        });
-
-        return { message: 'RSVP declined and notification email sent' };
+        // Then send the email
+        try {
+            await sendDeclineEmail({
+                rsvp_id: rsvpId,
+                email: email,
+                event_id: eventId
+            });
+            return { status: 'success' };
+        } catch (emailError) {
+            console.warn('Email sending failed, but RSVP was declined:', emailError);
+            return {
+                status: 'partial_success',
+                message: 'RSVP declined but notification email failed to send'
+            };
+        }
     } catch (error) {
-        console.error('Error in RSVP decline process:', error);
-        throw new Error('Failed to complete RSVP decline process');
+        console.error('Error in decline process:', error);
+        throw new Error(error.response?.data || error.message || 'Failed to decline RSVP');
     }
 };
 

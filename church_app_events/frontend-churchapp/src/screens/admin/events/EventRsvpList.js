@@ -71,15 +71,23 @@ const EventRsvpList = () => {
     };
 
     const handleDeleteRsvp = async (rsvpId) => {
-        try {
-            await deleteRsvp(rsvpId);
-            fetchRsvps();
-            handleAlert('Success', 'RSVP deleted successfully');
-        } catch (error) {
-            console.error('Error deleting RSVP:', error);
-            handleAlert('Error', 'Failed to delete RSVP');
-        }
-    }
+        // Set up confirmation dialog
+        setDialogMessage({
+            title: 'Confirm Delete',
+            message: 'Are you sure you want to delete this RSVP?'
+        });
+        setDialogVisible(true);
+        setDialogCallback(() => async () => {
+            try {
+                await deleteRsvp(rsvpId);
+                fetchRsvps();
+                handleAlert('Success', 'RSVP deleted successfully');
+            } catch (error) {
+                console.error('Error deleting RSVP:', error);
+                handleAlert('Error', 'Failed to delete RSVP');
+            }
+        });
+    };
 
     const handleConfirmRsvp = async (rsvp) => {
         try {
@@ -93,14 +101,40 @@ const EventRsvpList = () => {
     };
 
     const handleDeclineRsvp = async (rsvp) => {
-        try {
-            await declineRsvpWithEmail(rsvp.id, rsvp.email, rsvp.event_id);
-            fetchRsvps();
-            handleAlert('Success', 'RSVP declined and email sent');
-        } catch (error) {
-            console.error('Error declining RSVP:', error);
-            handleAlert('Error', 'Failed to decline RSVP');
+        if (!rsvp || !rsvp.id) {
+            handleAlert('Error', 'Invalid RSVP data');
+            return;
         }
+
+        setDialogMessage({
+            title: 'Confirm Decline',
+            message: `Are you sure you want to decline the RSVP for ${rsvp.email}?`
+        });
+        setDialogVisible(true);
+        setDialogCallback(() => async () => {
+            try {
+                setLoading(true);
+
+                const result = await declineRsvpWithEmail(rsvp.id, rsvp.email, rsvp.event_id);
+
+                if (result.status === 'partial_success') {
+                    handleAlert('Partial Success', result.message);
+                } else {
+                    handleAlert('Success', 'RSVP declined successfully');
+                }
+
+            } catch (error) {
+                console.error('Decline RSVP error:', error);
+
+                const errorMessage = error.response?.data?.message || error.message || 'Failed to decline RSVP';
+                const errorTitle = error.response?.status === 404 ? 'Not Found' : 'Error';
+
+                handleAlert(errorTitle, errorMessage);
+            } finally {
+                setLoading(false);
+                await fetchRsvps();
+            }
+        });
     };
 
     const handleSearch = async () => {
@@ -132,12 +166,12 @@ const EventRsvpList = () => {
             if (Object.keys(searchCriteria).length === 0) {
                 const response = await getAllRsvps();
                 setRsvpData({
-                    rsvps: response || [],
-                    total: response.length || 0,
-                    status_counts: {
-                        confirmed: response.filter(r => r.rsvp_status === 'confirmed').length,
-                        pending: response.filter(r => r.rsvp_status === 'pending').length,
-                        declined: response.filter(r => r.rsvp_status === 'declined').length
+                    rsvps: response.rsvps || [],
+                    total: response.total || 0,
+                    status_counts: response.status_counts || {
+                        confirmed: 0,
+                        pending: 0,
+                        declined: 0
                     }
                 });
                 return;
@@ -148,19 +182,13 @@ const EventRsvpList = () => {
             // Perform the search with combined criteria
             const searchResults = await searchRsvps(searchCriteria);
 
-            // Ensure proper data structure
-            const results = Array.isArray(searchResults) ? searchResults :
-                searchResults?.rsvps ? searchResults.rsvps : [];
-
-            console.log('Search results:', results); // Debug log
-
             setRsvpData({
-                rsvps: results,
-                total: results.length,
-                status_counts: {
-                    confirmed: results.filter(r => r.rsvp_status === 'confirmed').length,
-                    pending: results.filter(r => r.rsvp_status === 'pending').length,
-                    declined: results.filter(r => r.rsvp_status === 'declined').length
+                rsvps: searchResults.rsvps || [],
+                total: searchResults.total || 0,
+                status_counts: searchResults.status_counts || {
+                    confirmed: 0,
+                    pending: 0,
+                    declined: 0
                 }
             });
 
@@ -520,32 +548,52 @@ const EventRsvpList = () => {
                     visible={dialogVisible}
                     onDismiss={() => {
                         setDialogVisible(false);
-                        if (dialogCallback) {
-                            dialogCallback();
-                            setDialogCallback(null);
-                        }
+                        setDialogCallback(null);
                     }}
                     style={styles.dialogContainer}
                 >
                     <Dialog.Title>{dialogMessage.title}</Dialog.Title>
                     <Dialog.Content>
-                        <Text style={styles.cardText}>{dialogMessage.message}</Text>
+                        <Text style={styles.dialogText}>{dialogMessage.message}</Text>
                     </Dialog.Content>
                     <Dialog.Actions>
-                        <Button
-                            mode="contained"
-                            onPress={() => {
-                                setDialogVisible(false);
-                                if (dialogCallback) {
-                                    dialogCallback();
+                        {dialogCallback ? (
+                            <>
+                                <Button
+                                    mode="outlined"
+                                    onPress={() => {
+                                        setDialogVisible(false);
+                                        setDialogCallback(null);
+                                    }}
+                                    style={styles.dialogButton}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    mode="contained"
+                                    onPress={() => {
+                                        const callback = dialogCallback;
+                                        setDialogVisible(false);
+                                        setDialogCallback(null);
+                                        callback();
+                                    }}
+                                    style={[styles.dialogButton, { marginLeft: 8 }]}
+                                >
+                                    Confirm
+                                </Button>
+                            </>
+                        ) : (
+                            <Button
+                                mode="contained"
+                                onPress={() => {
+                                    setDialogVisible(false);
                                     setDialogCallback(null);
-                                }
-                            }}
-                            style={styles.button}
-                            labelStyle={styles.buttonLabel}
-                        >
-                            OK
-                        </Button>
+                                }}
+                                style={styles.dialogButton}
+                            >
+                                OK
+                            </Button>
+                        )}
                     </Dialog.Actions>
                 </Dialog>
             </Portal>
@@ -822,6 +870,14 @@ const styles = StyleSheet.create({
         maxWidth: 400,
         width: '90%',
         alignSelf: 'center',
+    },
+    dialogText: {
+        fontSize: 16,
+        color: COLORS.text,
+        lineHeight: 24,
+    },
+    dialogButton: {
+        minWidth: 88,
     },
 });
 

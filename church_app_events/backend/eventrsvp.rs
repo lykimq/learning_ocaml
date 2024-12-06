@@ -2,9 +2,10 @@ use std::collections::HashMap;
 
 use actix_web::{web::{self}, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, FromRow};
+use sqlx::{PgPool, FromRow, Row, postgres::PgRow};
 use chrono::{NaiveDate, NaiveTime};
-use serde_json;
+use serde_json::json;
+
 
 // Define RSVP status enum
 #[derive(Debug, Deserialize, Serialize, Clone, sqlx::Type, PartialEq)]
@@ -101,6 +102,20 @@ pub struct SearchResponse {
     rsvps: Vec<RSVPWithEventResponse>,
     total: usize,
     status_counts: HashMap<String, usize>,
+}
+
+// First, add this struct to handle the search results
+#[derive(sqlx::FromRow)]
+struct RsvpSearchResult {
+    id: i32,
+    email: String,
+    event_id: i32,
+    user_id: Option<i32>,
+    rsvp_status: RsvpStatus,
+    rsvp_date: NaiveDate,
+    event_title: String,
+    event_date: NaiveDate,
+    event_time: NaiveTime,
 }
 
 // Create a new RSVP
@@ -420,32 +435,73 @@ pub async fn confirm_rsvp(
 
 pub async fn decline_rsvp(
     pool: web::Data<PgPool>,
-    rsvp_id: web::Path<i32>,
+    rsvp_id: web::Path<i32>
 ) -> impl Responder {
-    let result = sqlx::query!(
-        r#"
-        UPDATE eventrsvp
-        SET rsvp_status = 'declined'
-        WHERE id = $1 AND rsvp_status = 'pending'
-        RETURNING id, email, event_id, user_id, rsvp_status as "rsvp_status!: RsvpStatus", rsvp_date
-        "#,
-        rsvp_id.into_inner()
+    // Extract the ID value once at the beginning
+    let id = rsvp_id.into_inner();
+    println!("Attempting to decline RSVP with ID: {}", id);
+
+    // First check if the RSVP exists
+    let rsvp_exists = sqlx::query!(
+        "SELECT id FROM eventrsvp WHERE id = $1",
+        id  // Use the extracted id
     )
-    .fetch_one(pool.get_ref())
+    .fetch_optional(pool.get_ref())
     .await;
 
-    match result {
-        Ok(rsvp) => HttpResponse::Ok().json(RSVPResponse {
-            id: rsvp.id,
-            email: rsvp.email,
-            event_id: rsvp.event_id,
-            user_id: rsvp.user_id,
-            rsvp_status: rsvp.rsvp_status,
-            rsvp_date: rsvp.rsvp_date,
-        }),
+    match rsvp_exists {
+        Ok(Some(_)) => {
+            // RSVP exists, proceed with update
+            let result = sqlx::query!(
+                r#"
+                UPDATE eventrsvp
+                SET rsvp_status = 'declined'::rsvp_status
+                WHERE id = $1
+                RETURNING id, email, event_id, user_id, rsvp_status as "rsvp_status: RsvpStatus", rsvp_date
+                "#,
+                id  // Use the extracted id
+            )
+            .fetch_one(pool.get_ref())
+            .await;
+
+            match result {
+                Ok(rsvp) => {
+                    println!("Successfully declined RSVP: {:?}", rsvp.id);
+                    HttpResponse::Ok().json(json!({
+                        "status": "success",
+                        "message": "RSVP declined successfully",
+                        "data": {
+                            "id": rsvp.id,
+                            "email": rsvp.email,
+                            "event_id": rsvp.event_id,
+                            "user_id": rsvp.user_id,
+                            "rsvp_status": rsvp.rsvp_status,
+                            "rsvp_date": rsvp.rsvp_date
+                        }
+                    }))
+                },
+                Err(e) => {
+                    eprintln!("Failed to decline RSVP {}: {}", id, e);
+                    HttpResponse::InternalServerError().json(json!({
+                        "status": "error",
+                        "message": format!("Failed to decline RSVP: {}", e)
+                    }))
+                }
+            }
+        },
+        Ok(None) => {
+            println!("RSVP with ID {} not found", id);
+            HttpResponse::NotFound().json(json!({
+                "status": "error",
+                "message": format!("RSVP with ID {} not found", id)
+            }))
+        },
         Err(e) => {
-            eprintln!("Failed to decline RSVP: {}", e);
-            HttpResponse::InternalServerError().json("Failed to decline RSVP")
+            eprintln!("Database error while checking RSVP {}: {}", id, e);
+            HttpResponse::InternalServerError().json(json!({
+                "status": "error",
+                "message": format!("Database error: {}", e)
+            }))
         }
     }
 }
@@ -454,80 +510,126 @@ pub async fn search_rsvps(
     pool: web::Data<PgPool>,
     params: web::Query<SearchQuery>
 ) -> impl Responder {
-
-    let mut query = sqlx::QueryBuilder::new(
-        "SELECT r.id, r.email, r.event_id, r.user_id,
-                r.rsvp_status as \"rsvp_status\",
-                r.rsvp_date, e.event_title, e.event_date,
-                e.event_time
+    // Build the base WHERE clause
+    let mut count_query = sqlx::QueryBuilder::new(
+        "SELECT COUNT(*) as count
          FROM eventrsvp r
          JOIN events e ON r.event_id = e.id
          WHERE 1=1"
     );
 
-    // Apply status filter if provided
+    // Apply the same filters to count query
     if let Some(status) = &params.status {
-        query.push(" AND r.rsvp_status = ");
-        query.push_bind(status);
+        count_query.push(" AND r.rsvp_status = ");
+        count_query.push_bind(status);
     }
 
-    // Email filter with improved pattern matching
     if let Some(email) = &params.email {
         let search_pattern = format!("%{}%", email.trim().to_lowercase());
-        query.push(" AND LOWER(r.email) LIKE ");
-        query.push_bind(search_pattern);
+        count_query.push(" AND LOWER(r.email) LIKE ");
+        count_query.push_bind(search_pattern);
     }
 
-    // Event title filter with improved pattern matching
     if let Some(event_title) = &params.event_title {
         let search_pattern = format!("%{}%", event_title.trim().to_lowercase());
-        query.push(" AND LOWER(e.event_title) LIKE ");
-        query.push_bind(search_pattern);
+        count_query.push(" AND LOWER(e.event_title) LIKE ");
+        count_query.push_bind(search_pattern);
     }
 
-    // User ID filter
     if let Some(user_id) = params.user_id {
-        query.push(" AND r.user_id = ");
-        query.push_bind(user_id);
+        count_query.push(" AND r.user_id = ");
+        count_query.push_bind(user_id);
     }
 
-    // Default sorting by event date and time
-    query.push(" ORDER BY e.event_date ASC, e.event_time ASC");
+    // Execute count query first
+    let total_count = match count_query
+        .build()
+        .fetch_one(pool.get_ref())
+        .await {
+            Ok(row) => row.get::<i64, _>("count"),
+            Err(e) => {
+                eprintln!("Count query error: {}", e);
+                return HttpResponse::InternalServerError().json("Failed to count RSVPs");
+            }
+    };
 
-    // Execute the query
-    let query = query.build_query_as::<RSVPSearchResponse>();
+    // Build the main search query
+    let mut search_query = sqlx::QueryBuilder::new(
+        "SELECT r.id, r.email, r.event_id, r.user_id,
+                r.rsvp_status, r.rsvp_date,
+                e.event_title, e.event_date, e.event_time
+         FROM eventrsvp r
+         JOIN events e ON r.event_id = e.id
+         WHERE 1=1"
+    );
 
-    match query.fetch_all(pool.get_ref()).await {
+    // Apply the same filters to search query
+    if let Some(status) = &params.status {
+        search_query.push(" AND r.rsvp_status = ");
+        search_query.push_bind(status);
+    }
+
+    if let Some(email) = &params.email {
+        let search_pattern = format!("%{}%", email.trim().to_lowercase());
+        search_query.push(" AND LOWER(r.email) LIKE ");
+        search_query.push_bind(search_pattern);
+    }
+
+    if let Some(event_title) = &params.event_title {
+        let search_pattern = format!("%{}%", event_title.trim().to_lowercase());
+        search_query.push(" AND LOWER(e.event_title) LIKE ");
+        search_query.push_bind(search_pattern);
+    }
+
+    if let Some(user_id) = params.user_id {
+        search_query.push(" AND r.user_id = ");
+        search_query.push_bind(user_id);
+    }
+
+    search_query.push(" ORDER BY e.event_date DESC, e.event_time DESC");
+
+    // Execute the main search query
+    match search_query
+        .build()
+        .fetch_all(pool.get_ref())
+        .await {
         Ok(rsvps) => {
-
-            let total = rsvps.len();
-
-            // Calculate status counts
             let status_counts = HashMap::from([
-                ("confirmed".to_string(), rsvps.iter().filter(|r| r.rsvp_status == RsvpStatus::Confirmed).count()),
-                ("pending".to_string(), rsvps.iter().filter(|r| r.rsvp_status == RsvpStatus::Pending).count()),
-                ("declined".to_string(), rsvps.iter().filter(|r| r.rsvp_status == RsvpStatus::Declined).count()),
+                ("confirmed".to_string(),
+                    rsvps.iter()
+                    .filter(|r: &&PgRow|
+                        r.get::<RsvpStatus, _>("rsvp_status") == RsvpStatus::Confirmed)
+                    .count()),
+                ("pending".to_string(),
+                    rsvps.iter()
+                    .filter(|r: &&PgRow|
+                        r.get::<RsvpStatus, _>("rsvp_status") == RsvpStatus::Pending)
+                    .count()),
+                ("declined".to_string(),
+                    rsvps.iter()
+                    .filter(|r: &&PgRow|
+                        r.get::<RsvpStatus, _>("rsvp_status") == RsvpStatus::Declined)
+                    .count()),
             ]);
 
-            // Convert RSVPSearchResponse to RSVPWithEventResponse
             let converted_rsvps: Vec<RSVPWithEventResponse> = rsvps
-                .into_iter()
+                .iter()
                 .map(|r| RSVPWithEventResponse {
-                    id: r.id,
-                    email: r.email,
-                    event_id: r.event_id,
-                    user_id: r.user_id,
-                    rsvp_status: r.rsvp_status,
-                    rsvp_date: r.rsvp_date,
-                    event_title: r.event_title,
-                    event_date: r.event_date,
-                    event_time: r.event_time,
+                    id: r.get("id"),
+                    email: r.get("email"),
+                    event_id: r.get("event_id"),
+                    user_id: r.get("user_id"),
+                    rsvp_status: r.get("rsvp_status"),
+                    rsvp_date: r.get("rsvp_date"),
+                    event_title: r.get("event_title"),
+                    event_date: r.get("event_date"),
+                    event_time: r.get("event_time"),
                 })
                 .collect();
 
             let response = SearchResponse {
                 rsvps: converted_rsvps,
-                total,
+                total: total_count as usize,
                 status_counts,
             };
 

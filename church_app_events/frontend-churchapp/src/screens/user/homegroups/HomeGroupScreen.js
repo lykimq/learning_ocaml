@@ -12,6 +12,7 @@ import {
 import { getHomeGroups, searchHomeGroups } from "../../../services/homegroups/homeGroupService";
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { format } from 'date-fns';
+import HomeGroupRSVP from "./HomeGroupRSVP";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -22,6 +23,7 @@ const HomeGroupScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const route = useRoute();
+  const [selectedHomeGroup, setSelectedHomeGroup] = useState(null);
 
   useEffect(() => {
     fetchHomeGroups();
@@ -58,8 +60,11 @@ const HomeGroupScreen = () => {
   };
 
   const handleJoin = (homeGroup) => {
-    // Implement join functionality
-    console.log('Join home group:', homeGroup);
+    setSelectedHomeGroup(homeGroup);
+  };
+
+  const handleCloseRSVP = () => {
+    setSelectedHomeGroup(null);
   };
 
   const filteredHomeGroups = homeGroups
@@ -126,12 +131,16 @@ const HomeGroupScreen = () => {
             style={styles.actionButton}
             labelStyle={styles.actionButtonLabel}
           >
-            Join Group
+            Register
           </Button>
         </Card.Actions>
       </Card>
     );
   };
+
+  if (selectedHomeGroup) {
+    return <HomeGroupRSVP homeGroup={selectedHomeGroup} onClose={handleCloseRSVP} />;
+  }
 
   return (
     <View style={styles.container}>
