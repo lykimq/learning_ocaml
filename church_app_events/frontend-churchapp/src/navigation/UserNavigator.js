@@ -10,7 +10,7 @@ import HomeScreen from '../screens/user/HomeScreen';
 import MediaScreen from '../screens/user/MediaScreen';
 import EventsScreen from '../screens/user/events/EventsScreen';
 import HomeGroupScreen from '../screens/user/homegroups/HomeGroupScreen';
-import ServingScreen from '../screens/user/ServingScreen';
+import ServingScreen from '../screens/user/servings/ServingScreen';
 import GivingScreen from '../screens/user/GivingScreen';
 import LogoutScreen from '../screens/shared/LogoutScreen';
 import LoginScreen from '../screens/shared/LoginScreen';
@@ -59,26 +59,26 @@ const UserNavigator = () => {
           title: 'Home Groups',
         }}
       />,
+      <Tab.Screen
+        key="Serving"
+        name="Serving"
+        component={ServingScreen}
+        options={{
+          title: 'Serving',
+        }}
+      />,
+      <Tab.Screen
+        key="Giving"
+        name="Giving"
+        component={GivingScreen}
+        options={{
+          title: 'Giving',
+        }}
+      />,
     ];
 
     if (user) {
       screens.push(
-        <Tab.Screen
-          key="Serving"
-          name="Serving"
-          component={ServingScreen}
-          options={{
-            title: 'Serving',
-          }}
-        />,
-        <Tab.Screen
-          key="Giving"
-          name="Giving"
-          component={GivingScreen}
-          options={{
-            title: 'Giving',
-          }}
-        />,
         <Tab.Screen
           key="Logout"
           name="Logout"
