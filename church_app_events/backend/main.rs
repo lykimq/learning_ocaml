@@ -13,6 +13,8 @@ mod email;
 mod homegroup;
 mod homegrouprsvp;
 mod user;
+mod serving;
+mod servingsignup;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -140,8 +142,29 @@ async fn main() -> std::io::Result<()> {
                     .route("/email/{email}", web::get().to(eventrsvp::get_rsvps_by_email))
                     .route("/event/{event_id}", web::get().to(eventrsvp::get_rsvps_by_event))
             )
-            // Add a separate scope for email operations
-
+            // Serving routes
+            .service(
+                web::scope("admin/servings")
+                    .route("/add", web::post().to(serving::add_serving))
+                    .route("/edit/{id}", web::put().to(serving::update_serving))
+                    .route("/{id}", web::delete().to(serving::delete_serving))
+                    .route("/list", web::get().to(serving::get_all_servings))
+                    .route("/{id}", web::get().to(serving::get_serving))
+                    .route("/search", web::get().to(serving::search_servings))
+                    .service(
+                        web::scope("/rsvp/email")
+                            .route("/send-confirmation", web::post().to(email::send_serving_signup_email))
+                             .route("/send-decline", web::post().to(email::send_serving_decline_email)))
+            )
+            .service(
+                web::scope("/servings/rsvp")
+                    .route("/add", web::post().to(servingsignup::create_serving_signup)))
+                    .route("/edit/{id}", web::put().to(servingsignup::update_serving_signup))
+                    .route("/{id}", web::delete().to(servingsignup::delete_serving_signup))
+                    .route("/list", web::get().to(servingsignup::get_all_serving_signups))
+                    .route("/confirm/{id}", web::post().to(servingsignup::confirm_serving_signup))
+                    .route("/decline/{id}", web::post().to(servingsignup::decline_serving_signup))
+                    .route("/search", web::get().to(servingsignup::search_serving_signup))
         // Other routes
     })
     .bind(&format!("0.0.0.0:{}", backend_port))?

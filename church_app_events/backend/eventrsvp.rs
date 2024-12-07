@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use actix_web::{web::{self}, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, FromRow, Row, postgres::PgRow};
+use sqlx::{PgPool, FromRow, Row};
 use chrono::{NaiveDate, NaiveTime};
 use serde_json::json;
 
@@ -102,20 +102,6 @@ pub struct SearchResponse {
     rsvps: Vec<RSVPWithEventResponse>,
     total: usize,
     status_counts: HashMap<String, usize>,
-}
-
-// First, add this struct to handle the search results
-#[derive(sqlx::FromRow)]
-struct RsvpSearchResult {
-    id: i32,
-    email: String,
-    event_id: i32,
-    user_id: Option<i32>,
-    rsvp_status: RsvpStatus,
-    rsvp_date: NaiveDate,
-    event_title: String,
-    event_date: NaiveDate,
-    event_time: NaiveTime,
 }
 
 // Create a new RSVP

@@ -9,7 +9,7 @@ import DashboardScreen from '../screens/admin/DashboardScreen';
 import ManageEventsScreen from '../screens/admin/events/ManageEventsScreen';
 import ManageHomeGroupScreen from '../screens/admin/homegroups/ManageHomeGroupScreen';
 import ManageMediaScreen from '../screens/admin/ManageMediaScreen';
-import ManageServingScreen from '../screens/admin/ManageServingScreen';
+import ManageServingScreen from '../screens/admin/servings/ManageServingScreen';
 import ManageUsersScreen from '../screens/admin/users/ManageUsersScreen';
 import ManageGivingScreen from '../screens/admin/ManageGivingScreen';
 import LogoutScreen from '../screens/shared/LogoutScreen';

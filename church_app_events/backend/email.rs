@@ -9,6 +9,7 @@ use actix_web::{web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use std::env;
 
+
 #[derive(Debug, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "email_status", rename_all = "lowercase")]
 pub enum EmailStatus {
@@ -509,3 +510,272 @@ pub async fn send_homegroup_decline_email(
             HttpResponse::InternalServerError().json(format!("Failed to send home group decline email: {}", e))
     }
 }
+
+// SERVING SIGNUP EMAIL
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ServingSignupEmailRequest {
+    pub email: String,
+    pub name: String,
+    pub serving_id: i32,
+    pub rsvp_id: i32,
+    pub user_id: Option<i32>,
+    pub phone: Option<String>,
+}
+
+// Send confirmation email for serving sign-up
+async fn send_serving_signup_email_internal(
+    pool: &PgPool,
+    email: &str,
+    serving_id: i32,
+    name: &str,
+    rsvp_id: i32,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Get serving details
+    let serving = sqlx::query!(
+        r#"
+        SELECT name
+        FROM servingsignups
+        WHERE id = $1
+        "#,
+        serving_id
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let config = EmailConfig::from_env();
+    let mailer = create_mailer(&config).await?;
+
+    // Create email content
+    let html_content = format!(
+        r#"
+        <html>
+            <body>
+                <h2>Serving Signup Confirmation</h2>
+                <p>Dear {}</p>
+                <p>Thank you for signing up to serve: {}!</p>
+                <p>We look forward to serving with you!</p>
+                <p>Best regards,<br>Church Events Team</p>
+            </body>
+        </html>
+        "#,
+        name,
+        serving.name
+    );
+
+    let text_content = format!(
+        "Dear {},\n\n\
+        Thank you for signing up to serve: {}!\n\n\
+        We look forward to serving with you!\n\n\
+        Best regards,\n\
+        Church Events Team",
+        name,
+        serving.name
+    );
+
+    // Create the email message
+    let email_message = Message::builder()
+        .from(config.from_email.parse()?)
+        .to(email.parse()?)
+        .subject(format!("Serving Signup Confirmation: {}", serving.name))
+        .multipart(
+            MultiPart::alternative()
+                .singlepart(
+                    SinglePart::builder()
+                        .header(header::ContentType::TEXT_PLAIN)
+                        .body(text_content)
+                )
+                .singlepart(
+                    SinglePart::builder()
+                        .header(header::ContentType::TEXT_HTML)
+                        .body(html_content.clone())
+                ),
+        )?;
+
+    // Send the email
+    mailer.send(email_message).await?;
+
+    // After sending the email successfully, log it
+    sqlx::query!(
+        r#"
+        INSERT INTO email_logs
+        (rsvp_id, email_to, email_from, subject, body, status, sent_at)
+        VALUES ($1, $2, $3, $4, $5, 'sent', CURRENT_TIMESTAMP)
+        "#,
+        rsvp_id,
+        email,
+        config.from_email,
+        format!("Serving Signup Confirmation: {}", serving.name),
+        html_content,
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+// Send confirmation email for serving sign-up
+pub async fn send_serving_signup_email(
+    pool: web::Data<PgPool>,
+    req: web::Json<ServingSignupEmailRequest>,
+) -> impl Responder {
+    // First, sign up the user for serving
+    if let Err(e) = signup_for_serving(
+        &pool,
+        req.user_id.expect("User ID must be provided"),
+        req.serving_id,
+        &req.email,
+        &req.name,
+        req.phone.as_deref(),
+    ).await {
+        return HttpResponse::InternalServerError().json(format!("Failed to sign up for serving: {}", e));
+    }
+
+    // Then, send the confirmation email
+    match send_serving_signup_email_internal(
+        &pool,
+        &req.email,
+        req.serving_id,
+        &req.name,
+        req.rsvp_id,
+    ).await {
+        Ok(_) => HttpResponse::Ok().json("Serving signup email sent successfully"),
+        Err(e) =>
+            HttpResponse::InternalServerError().json(format!("Failed to send serving signup email: {}", e))
+    }
+}
+
+// Send decline email for serving sign-up
+async fn send_serving_decline_email_internal(
+    pool: &PgPool,
+    email: &str,
+    serving_id: i32,
+    name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Get serving details
+    let serving = sqlx::query!(
+        r#"
+        SELECT name
+        FROM servingsignups
+        WHERE id = $1
+        "#,
+        serving_id
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let config = EmailConfig::from_env();
+    let mailer = create_mailer(&config).await?;
+
+    // Create email content
+    let html_content = format!(
+        r#"
+        <html>
+            <body>
+                <h2>Serving Response Received</h2>
+                <p>Dear {}</p>
+                <p>We've received your response that you won't be able to serve: {}!</p>
+                <p>Wehope to see you at future serving opportunities!</p>
+                <p>Best regards,<br>
+                Church Events Team</p>
+            </body>
+        </html>
+        "#,
+        name,
+        serving.name
+   );
+
+    let text_content = format!(
+        "Dear {},\n\n\
+        We've received your response that you won't be able to serve: {}!\n\n\
+        We hope to see you at future serving opportunities!\n\n\
+        Best regards,\n\
+        Church Events Team",
+        name,
+        serving.name
+    );
+
+    // Create the email message
+    let email_message = Message::builder()
+        .from(config.from_email.parse()?)
+        .to(email.parse()?)
+        .subject(format!("Response Received: {}", serving.name))
+        .multipart(
+            MultiPart::alternative()
+                .singlepart(
+                    SinglePart::builder()
+                        .header(header::ContentType::TEXT_PLAIN)
+                        .body(text_content)
+                )
+                .singlepart(
+                    SinglePart::builder()
+                        .header(header::ContentType::TEXT_HTML)
+                        .body(html_content.clone())
+                ),
+        )?;
+
+    // Send the email
+    mailer.send(email_message).await?;
+
+    // After sending the email successfully, log it
+    sqlx::query!(
+        r#"
+        INSERT INTO email_logs
+        (email_to, email_from, subject, body, status, sent_at)
+        VALUES ($1, $2, $3, $4, 'sent', CURRENT_TIMESTAMP)
+        "#,
+        email,
+        config.from_email,
+        format!("Response Received: {}", serving.name),
+        html_content,
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+// Send decline email for serving sign-up
+pub async fn send_serving_decline_email(
+    pool: web::Data<PgPool>,
+    req: web::Json<ServingSignupEmailRequest>,
+) -> impl Responder {
+    match send_serving_decline_email_internal(
+        &pool,
+        &req.email,
+        req.serving_id,
+        &req.name
+    ).await {
+        Ok(_) => HttpResponse::Ok().json("Serving decline email sent successfully"),
+        Err(e) =>
+            HttpResponse::InternalServerError().json(format!("Failed to send serving decline email: {}", e))
+    }
+}
+
+// Add this function to handle the sign-up process
+async fn signup_for_serving(
+    pool: &PgPool,
+    user_id: i32,
+    serving_id: i32,
+    email: &str,
+    name: &str,
+    phone: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Insert the sign-up into the servingsignups table
+    sqlx::query!(
+        r#"
+        INSERT INTO public.servingsignups (user_id, serving_id, email, name, phone)
+        VALUES ($1, $2, $3, $4, $5)
+        "#,
+        user_id,
+        serving_id,
+        email,
+        name,
+        phone
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+

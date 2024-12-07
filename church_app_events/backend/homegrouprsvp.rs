@@ -592,3 +592,4 @@ pub async fn search_registrations(
         }
     }
 }
+
