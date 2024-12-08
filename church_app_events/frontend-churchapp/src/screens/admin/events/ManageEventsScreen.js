@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Button, Text, Card, Title, IconButton } from 'react-native-paper';
 import EventForm from './EventForm';
-import EventsList from '../../shared/events/EventsList';
+import EventsList from './EventsList';
 import EventRsvpList from './EventRsvpList';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
