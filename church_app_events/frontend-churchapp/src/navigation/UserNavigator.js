@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../contexts/AuthContext';
 import { ActivityIndicator } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
 
 // Screens
 import HomeScreen from '../screens/user/HomeScreen';
@@ -14,11 +15,13 @@ import ServingScreen from '../screens/user/servings/ServingScreen';
 import GivingScreen from '../screens/user/GivingScreen';
 import LogoutScreen from '../screens/shared/LogoutScreen';
 import LoginScreen from '../screens/shared/LoginScreen';
+import CustomTabButton from './CustomTabButton';
 
 const Tab = createBottomTabNavigator();
 
 const UserNavigator = () => {
   const { user, isLoading } = useAuth();
+  const navigation = useNavigation();
 
   const getTabScreens = () => {
     const screens = [
@@ -28,6 +31,11 @@ const UserNavigator = () => {
         component={HomeScreen}
         options={{
           title: 'Home',
+          tabBarButton: (props) => (
+            <CustomTabButton {...props} routeName="Home" >
+              <MaterialIcons name="home" size={24} color={props.color} />
+            </CustomTabButton>
+          ),
           headerLeft: () => (
             <Text style={styles.headerText}>
               {user ? `Welcome, ${user.username}` : 'Welcome, Guest'}
@@ -41,6 +49,11 @@ const UserNavigator = () => {
         component={MediaScreen}
         options={{
           title: 'Media',
+          tabBarButton: (props) => (
+            <CustomTabButton {...props} routeName="Media" >
+              <MaterialIcons name="play-circle-outline" size={24} color={props.color} />
+            </CustomTabButton>
+          )
         }}
       />,
       <Tab.Screen
@@ -49,6 +62,11 @@ const UserNavigator = () => {
         component={EventsScreen}
         options={{
           title: 'Events',
+          tabBarButton: (props) => (
+            <CustomTabButton {...props} routeName="Events" >
+              <MaterialIcons name="event" size={24} color={props.color} />
+            </CustomTabButton>
+          )
         }}
       />,
       <Tab.Screen
@@ -57,6 +75,11 @@ const UserNavigator = () => {
         component={HomeGroupScreen}
         options={{
           title: 'Home Groups',
+          tabBarButton: (props) => (
+            <CustomTabButton {...props} routeName="HomeGroups" >
+              <MaterialIcons name="handshake" size={24} color={props.color} />
+            </CustomTabButton>
+          )
         }}
       />,
       <Tab.Screen
@@ -65,6 +88,11 @@ const UserNavigator = () => {
         component={ServingScreen}
         options={{
           title: 'Serving',
+          tabBarButton: (props) => (
+            <CustomTabButton {...props} routeName="Serving" >
+              <MaterialIcons name="volunteer-activism" size={24} color={props.color} />
+            </CustomTabButton>
+          )
         }}
       />,
       <Tab.Screen
@@ -73,6 +101,11 @@ const UserNavigator = () => {
         component={GivingScreen}
         options={{
           title: 'Giving',
+          tabBarButton: (props) => (
+            <CustomTabButton {...props} routeName="Giving" >
+              <MaterialIcons name="attach-money" size={24} color={props.color} />
+            </CustomTabButton>
+          )
         }}
       />,
     ];
@@ -85,6 +118,11 @@ const UserNavigator = () => {
           component={LogoutScreen}
           options={{
             title: 'Logout',
+            tabBarButton: (props) => (
+              <CustomTabButton {...props} routeName="Logout" >
+                <MaterialIcons name="logout" size={24} color={props.color} />
+              </CustomTabButton>
+            )
           }}
         />
       );
@@ -96,6 +134,11 @@ const UserNavigator = () => {
           component={LoginScreen}
           options={{
             title: 'Login',
+            tabBarButton: (props) => (
+              <CustomTabButton {...props} routeName="Login" >
+                <MaterialIcons name="login" size={24} color={props.color} />
+              </CustomTabButton>
+            )
           }}
         />
       );

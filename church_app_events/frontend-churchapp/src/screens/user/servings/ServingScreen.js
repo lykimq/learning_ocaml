@@ -10,6 +10,7 @@ import {
   IconButton,
 } from "react-native-paper";
 import { getAllServing, searchServings } from "../../../services/servings/servingService";
+import ServingRSVP from "./ServingRSVP";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -18,6 +19,7 @@ const ServingScreen = () => {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedServing, setSelectedServing] = useState(null);
 
   useEffect(() => {
     fetchServings();
@@ -59,6 +61,14 @@ const ServingScreen = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
+  const handleJoin = (serving) => {
+    setSelectedServing(serving);
+  };
+
+  const handleCloseRSVP = () => {
+    setSelectedServing(null);
+  };
+
   const renderItem = ({ item }) => {
     const groupInitials = item.title
       .split(' ')
@@ -94,7 +104,7 @@ const ServingScreen = () => {
         <Card.Actions style={styles.cardActions}>
           <Button
             mode="contained"
-            onPress={() => console.log('Registering for:', item.title)}
+            onPress={() => handleJoin(item)}
             style={styles.actionButton}
             labelStyle={styles.actionButtonLabel}
           >
@@ -104,6 +114,10 @@ const ServingScreen = () => {
       </Card>
     );
   };
+
+  if (selectedServing) {
+    return <ServingRSVP serving={selectedServing} onClose={handleCloseRSVP} />;
+  }
 
   return (
     <View style={styles.container}>

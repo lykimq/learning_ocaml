@@ -5,58 +5,60 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import ServingList from './ServingList';
 import ServingForm from './ServingForm';
 import ServingMemberList from './ServingMemberList';
+import { useNavigation } from '@react-navigation/native';
+
+const Header = ({ title, onBackPress, hideTitle, hideBackButton }) => {
+  if (!onBackPress) {
+    throw new Error('Missing required prop: onBackPress');
+  }
+
+  return (
+    <View style={styles.headerContainer}>
+      {!hideBackButton && (
+        <IconButton
+          icon="arrow-left"
+          size={24}
+          onPress={onBackPress}
+        />
+      )}
+      {!hideTitle && title && (
+        <Title style={styles.headerTitle}>{title}</Title>
+      )}
+    </View>
+  );
+};
 
 const ManageServingScreen = ({ route }) => {
   const [selectedOption, setSelectedOption] = useState(null);
+  const navigation = useNavigation();
 
-  // Reset to main menu when tab is pressed
   useEffect(() => {
-    if (route.params?.reset) {
-      setSelectedOption(null);
-    }
-  }, [route.params?.reset]);
+  navigation.setOptions({
+    gestureEnabled: true,
+  });
+  }, [navigation]);
+
 
   const renderContent = () => {
     switch (selectedOption) {
       case 'add':
         return (
           <View style={styles.contentContainer}>
-            <View style={styles.headerContainer}>
-              <IconButton
-                icon="arrow-left"
-                size={24}
-                onPress={() => setSelectedOption(null)}
-              />
-              <Title style={styles.headerTitle}>Add New Serving Opportunity</Title>
-            </View>
+            <Header title="Add New Serving Opportunity" onBackPress={() => setSelectedOption(null)} hideTitle={true} hideBackButton={true} />
             <ServingForm onSubmit={() => setSelectedOption(null)} />
           </View>
         );
       case 'list':
         return (
           <View style={styles.contentContainer}>
-            <View style={styles.headerContainer}>
-              <IconButton
-                icon="arrow-left"
-                size={24}
-                onPress={() => setSelectedOption(null)}
-              />
-              <Title style={styles.headerTitle}>Manage Serving Opportunities</Title>
-            </View>
+            <Header title="Manage Serving Opportunities" onBackPress={() => setSelectedOption(null)} hideTitle={true} hideBackButton={true} />
             <ServingList />
           </View>
         );
       case 'members':
         return (
           <View style={styles.contentContainer}>
-            <View style={styles.headerContainer}>
-              <IconButton
-                icon="arrow-left"
-                size={24}
-                onPress={() => setSelectedOption(null)}
-              />
-              <Title style={styles.headerTitle}>Manage Serving Members</Title>
-            </View>
+            <Header title="Manage Serving Members" onBackPress={() => setSelectedOption(null)} hideTitle={true} hideBackButton={true} />
             <ServingMemberList />
           </View>
         );
@@ -107,6 +109,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+    flexDirection:'row',
   },
   headerContainer: {
     flexDirection: 'row',

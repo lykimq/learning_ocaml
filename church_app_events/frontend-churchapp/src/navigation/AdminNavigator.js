@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../contexts/AuthContext';
 import { StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
 // Screens
 import DashboardScreen from '../screens/admin/DashboardScreen';
@@ -13,11 +14,13 @@ import ManageServingScreen from '../screens/admin/servings/ManageServingScreen';
 import ManageUsersScreen from '../screens/admin/users/ManageUsersScreen';
 import ManageGivingScreen from '../screens/admin/ManageGivingScreen';
 import LogoutScreen from '../screens/shared/LogoutScreen';
+import CustomTabButton from './CustomTabButton';
 
 const Tab = createBottomTabNavigator();
 
 export default function AdminTabNavigator() {
   const { user, isAdmin } = useAuth();
+  const navigation = useNavigation();
 
   if (!user || !isAdmin) {
     return null;
@@ -54,7 +57,7 @@ export default function AdminTabNavigator() {
               iconName = 'logout';
               break;
             default:
-              iconName = 'logout'
+              iconName = 'logout';
           }
           return <MaterialIcons name={iconName} size={size} color={color} />;
         },
@@ -75,6 +78,11 @@ export default function AdminTabNavigator() {
         component={DashboardScreen}
         options={{
           title: 'Dashboard',
+          tabBarButton: (props) => (
+            <CustomTabButton {...props} routeName="Home">
+              <MaterialIcons name="home" size={24} color={props.color} />
+            </CustomTabButton>
+          ),
           headerLeft: () => (
             <View style={{ marginLeft: 15 }}>
               <Text style={[styles.headerText, { fontWeight: 'bold' }]}>
@@ -89,6 +97,11 @@ export default function AdminTabNavigator() {
         component={ManageMediaScreen}
         options={{
           title: 'Manage Media',
+          tabBarButton: (props) => (
+            <CustomTabButton {...props} routeName="Media">
+              <MaterialIcons name="play-circle-outline" size={24} color={props.color} />
+            </CustomTabButton>
+          ),
         }}
       />
       <Tab.Screen
@@ -96,6 +109,11 @@ export default function AdminTabNavigator() {
         component={ManageEventsScreen}
         options={{
           title: 'Manage Events',
+          tabBarButton: (props) => (
+            <CustomTabButton {...props} routeName="Events">
+              <MaterialIcons name="event" size={24} color={props.color} />
+            </CustomTabButton>
+          ),
         }}
       />
       <Tab.Screen
@@ -103,6 +121,11 @@ export default function AdminTabNavigator() {
         component={ManageHomeGroupScreen}
         options={{
           title: 'Manage Home Groups',
+          tabBarButton: (props) => (
+            <CustomTabButton {...props} routeName="HomeGroups">
+              <MaterialIcons name="handshake" size={24} color={props.color} />
+            </CustomTabButton>
+          ),
         }}
       />
       <Tab.Screen
@@ -110,6 +133,11 @@ export default function AdminTabNavigator() {
         component={ManageServingScreen}
         options={{
           title: 'Manage Serving',
+          tabBarButton: (props) => (
+            <CustomTabButton {...props} routeName="Serving">
+              <MaterialIcons name="volunteer-activism" size={24} color={props.color} />
+            </CustomTabButton>
+          ),
         }}
       />
       <Tab.Screen
@@ -117,6 +145,11 @@ export default function AdminTabNavigator() {
         component={ManageGivingScreen}
         options={{
           title: 'Manage Giving',
+          tabBarButton: (props) => (
+            <CustomTabButton {...props} routeName="Giving">
+              <MaterialIcons name="attach-money" size={24} color={props.color} />
+            </CustomTabButton>
+          ),
         }}
       />
       <Tab.Screen
@@ -124,6 +157,11 @@ export default function AdminTabNavigator() {
         component={ManageUsersScreen}
         options={{
           title: 'Manage Users',
+          tabBarButton: (props) => (
+            <CustomTabButton {...props} routeName="Users">
+              <MaterialIcons name="people" size={24} color={props.color} />
+            </CustomTabButton>
+          ),
         }}
       />
       <Tab.Screen
@@ -132,6 +170,11 @@ export default function AdminTabNavigator() {
         component={LogoutScreen}
         options={{
           title: 'Logout',
+          tabBarButton: (props) => (
+            <CustomTabButton {...props} routeName="Logout">
+              <MaterialIcons name="logout" size={24} color={props.color} />
+            </CustomTabButton>
+          ),
         }}
       />
     </Tab.Navigator>

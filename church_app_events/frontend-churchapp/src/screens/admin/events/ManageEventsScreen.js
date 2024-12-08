@@ -7,17 +7,37 @@ import EventRsvpList from './EventRsvpList';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
-const ManageEventsScreen = ({ route }) => {
-  const navigation = useNavigation();
+/**
+ * A simple header component for the ManageEventsScreen.
+ *
+ * @param {string} title The title to display in the header.
+ * @param {function} onBackPress The function to call when the back button is pressed.
+ */
+const Header = ({ title, onBackPress, hideTitle, hideBackButton }) => {
+  if (!onBackPress) {
+    throw new Error('Missing required prop: onBackPress');
+  }
+
+  return (
+    <View style={styles.headerContainer}>
+      {!hideBackButton && (
+        <IconButton
+          icon="arrow-left"
+          size={24}
+          onPress={onBackPress}
+        />
+      )}
+      {!hideTitle && title && (
+        <Title style={styles.headerTitle}>{title}</Title>
+      )}
+    </View>
+  );
+};
+
+const ManageEventsScreen = () => {
   const [selectedOption, setSelectedOption] = useState(null);
+  const navigation = useNavigation();
 
-  useEffect(() => {
-    if (route.params?.focused) {
-      setSelectedOption(null);
-    }
-  }, [route.params?.focused]);
-
-  // Enable swipe back gesture
   useEffect(() => {
     navigation.setOptions({
       gestureEnabled: true,
@@ -29,42 +49,21 @@ const ManageEventsScreen = ({ route }) => {
       case 'add':
         return (
           <View style={styles.contentContainer}>
-            <View style={styles.headerContainer}>
-              <IconButton
-                icon="arrow-left"
-                size={24}
-                onPress={() => setSelectedOption(null)}
-              />
-              <Title style={styles.headerTitle}>Add New Event</Title>
-            </View>
+            <Header title="Add New Event" onBackPress={() => setSelectedOption(null)} hideTitle={true} hideBackButton={true} />
             <EventForm onSubmit={() => setSelectedOption(null)} />
           </View>
         );
       case 'list':
         return (
           <View style={styles.contentContainer}>
-            <View style={styles.headerContainer}>
-              <IconButton
-                icon="arrow-left"
-                size={24}
-                onPress={() => setSelectedOption(null)}
-              />
-              <Title style={styles.headerTitle}>Manage Events</Title>
-            </View>
+            <Header title="Manage Events" onBackPress={() => setSelectedOption(null)} hideTitle={true} hideBackButton={true} />
             <EventsList />
           </View>
         );
       case 'rsvp':
         return (
           <View style={styles.contentContainer}>
-            <View style={styles.headerContainer}>
-              <IconButton
-                icon="arrow-left"
-                size={24}
-                onPress={() => setSelectedOption(null)}
-              />
-              <Title style={styles.headerTitle}>Manage RSVPs</Title>
-            </View>
+            <Header title="Manage RSVPs" onBackPress={() => setSelectedOption(null)} hideTitle ={true} hideBackButton={true}  />
             <EventRsvpList />
           </View>
         );
@@ -84,8 +83,8 @@ const ManageEventsScreen = ({ route }) => {
             <Card style={styles.card} onPress={() => setSelectedOption('list')}>
               <Card.Content style={styles.cardContent}>
                 <MaterialIcons name="event" size={32} color="#4A90E2" />
-                <Title style={styles.cardTitle}>View & Manage Events</Title>
-                <Text style={styles.cardDescription}>View, edit, or delete existing events</Text>
+                <Title style={styles.cardTitle}>Manage Events</Title>
+                <Text style={styles.cardDescription}>View and edit existing events</Text>
               </Card.Content>
             </Card>
 
@@ -93,7 +92,7 @@ const ManageEventsScreen = ({ route }) => {
               <Card.Content style={styles.cardContent}>
                 <MaterialIcons name="people" size={32} color="#4A90E2" />
                 <Title style={styles.cardTitle}>Manage RSVPs</Title>
-                <Text style={styles.cardDescription}>View and manage event registrations</Text>
+                <Text style={styles.cardDescription}>View and manage event RSVPs</Text>
               </Card.Content>
             </Card>
           </View>
@@ -126,6 +125,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+    flexDirection:'row',
   },
   headerContainer: {
     flexDirection: 'row',

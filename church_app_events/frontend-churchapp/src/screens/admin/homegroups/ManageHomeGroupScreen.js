@@ -5,17 +5,39 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import HomeGroupList from './HomeGroupList';
 import HomeGroupForm from './HomeGroupForm';
 import HomeGroupMemberList from './HomeGroupMemberList';
+import { useNavigation } from '@react-navigation/native';
+
+const Header = ({ title, onBackPress, hideTitle, hideBackButton }) => {
+  if (!onBackPress) {
+    throw new Error('Missing required prop: onBackPress');
+  }
+
+  return (
+    <View style={styles.headerContainer}>
+      {!hideBackButton && (
+        <IconButton
+          icon="arrow-left"
+          size={24}
+          onPress={onBackPress}
+        />
+      )}
+      {!hideTitle && title && (
+        <Title style={styles.headerTitle}>{title}</Title>
+      )}
+    </View>
+  );
+};
 
 
 const ManageHomeGroupScreen = ({ route }) => {
   const [selectedOption, setSelectedOption] = useState(null);
+  const navigation = useNavigation();
 
-  // Reset to main menu when tab is pressed
   useEffect(() => {
-    if (route.params?.reset) {
-      setSelectedOption(null);
-    }
-  }, [route.params?.reset]);
+    navigation.setOptions({
+  gestureEnabled: true,
+    });
+  }, [navigation]);
 
 
   const renderContent = () => {
@@ -23,42 +45,21 @@ const ManageHomeGroupScreen = ({ route }) => {
       case 'add':
         return (
           <View style={styles.contentContainer}>
-            <View style={styles.headerContainer}>
-              <IconButton
-                icon="arrow-left"
-                size={24}
-                onPress={() => setSelectedOption(null)}
-              />
-              <Title style={styles.headerTitle}>Add New Home Group</Title>
-            </View>
+            <Header title="Add New Home Group" onBackPress={() => setSelectedOption(null)} hideTitle={true} hideBackButton={true} />
             <HomeGroupForm onSubmit={() => setSelectedOption(null)} />
           </View>
         );
       case 'list':
         return (
           <View style={styles.contentContainer}>
-            <View style={styles.headerContainer}>
-              <IconButton
-                icon="arrow-left"
-                size={24}
-                onPress={() => setSelectedOption(null)}
-              />
-              <Title style={styles.headerTitle}>Manage Home Groups</Title>
-            </View>
+            <Header title="Manage Home Groups" onBackPress={() => setSelectedOption(null)} hideTitle={true} hideBackButton={true} />
             <HomeGroupList />
           </View>
         );
       case 'members':
         return (
           <View style={styles.contentContainer}>
-            <View style={styles.headerContainer}>
-              <IconButton
-                icon="arrow-left"
-                size={24}
-                onPress={() => setSelectedOption(null)}
-              />
-              <Title style={styles.headerTitle}>Manage Members</Title>
-            </View>
+            <Header title="Manage Members" onBackPress={() => setSelectedOption(null)} hideTitle={true} hideBackButton={true} />
             <HomeGroupMemberList />
           </View>
         );
@@ -101,10 +102,25 @@ const ManageHomeGroupScreen = ({ route }) => {
   );
 };
 
+const COLORS = {
+  background: '#f5f5f5',
+  white: '#fff',
+  border: '#e0e0e0',
+  text: '#333',
+  icon: '#4A90E2',
+  error: '#f44336',
+  errorBorder: '#f44336',
+  chipText: '#666',
+  chipSelected: '#4A90E2',
+  filterButton: '#4A90E2',
+  filterButtonText: '#fff',
+  shadow: 'rgba(0, 0, 0, 0.1)', // shadow color
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.background,
   },
   contentContainer: {
     flex: 1,
@@ -113,9 +129,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor:  COLORS.border,
   },
   headerTitle: {
     fontSize: 20,
@@ -129,13 +145,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 30,
-    color: '#4A90E2',
+    color: COLORS.icon,
   },
   card: {
     width: '100%',
     marginBottom: 20,
     elevation: 4,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.white,
     ...(Platform.OS === 'web' && {
       maxWidth: 600,
       cursor: 'pointer',
@@ -153,11 +169,11 @@ const styles = StyleSheet.create({
   cardTitle: {
     marginTop: 10,
     fontSize: 18,
-    color: '#333',
+    color: COLORS.text,
   },
   cardDescription: {
     marginTop: 5,
-    color: '#666',
+    color: COLORS.text,
     textAlign: 'center',
   },
 });
