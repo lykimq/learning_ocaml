@@ -14,7 +14,7 @@ mod homegroup;
 mod homegrouprsvp;
 mod user;
 mod serving;
-mod servingsignup;
+mod servingrsvp;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -158,13 +158,13 @@ async fn main() -> std::io::Result<()> {
             )
             .service(
                 web::scope("/servings/rsvp")
-                    .route("/add", web::post().to(servingsignup::create_serving_signup)))
-                    .route("/edit/{id}", web::put().to(servingsignup::update_serving_signup))
-                    .route("/{id}", web::delete().to(servingsignup::delete_serving_signup))
-                    .route("/list", web::get().to(servingsignup::get_all_serving_signups))
-                    .route("/confirm/{id}", web::post().to(servingsignup::confirm_serving_signup))
-                    .route("/decline/{id}", web::post().to(servingsignup::decline_serving_signup))
-                    .route("/search", web::get().to(servingsignup::search_serving_signup))
+                    .route("/add", web::post().to(servingrsvp::create_serving_signup)))
+                    .route("/edit/{id}", web::put().to(servingrsvp::update_serving_signup))
+                    .route("/{id}", web::delete().to(servingrsvp::delete_serving_signup))
+                    .route("/list", web::get().to(servingrsvp::get_all_serving_signups))
+                    .route("/confirm/{id}", web::post().to(servingrsvp::confirm_serving_signup))
+                    .route("/decline/{id}", web::post().to(servingrsvp::decline_serving_signup))
+                    .route("/search", web::get().to(servingrsvp::search_serving_signup))
         // Other routes
     })
     .bind(&format!("0.0.0.0:{}", backend_port))?

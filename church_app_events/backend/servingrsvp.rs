@@ -38,7 +38,7 @@ impl std::str::FromStr for SignupStatus {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct ServingSignupRequest {
-    pub user_id: i32,
+    pub user_id: Option<i32>,
     pub serving_id: i32,
     pub email: String,
     pub name: String,
@@ -49,7 +49,7 @@ pub struct ServingSignupRequest {
 #[derive(Serialize, sqlx::FromRow)]
 pub struct ServingSignupResponse {
     id: i32,
-    user_id: i32,
+    user_id: Option<i32>,
     serving_id: i32,
     email: String,
     name: String,

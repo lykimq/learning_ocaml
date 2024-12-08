@@ -64,7 +64,7 @@ const ServingRSVP = ({ serving, userId, onClose }) => {
                 'Success',
                 'You have been registered for this serving.',
                 () => {
-                    navigation.navigate('Servings', {
+                    navigation.navigate('Serving', {
                         reset: Date.now()
                     });
                 }
