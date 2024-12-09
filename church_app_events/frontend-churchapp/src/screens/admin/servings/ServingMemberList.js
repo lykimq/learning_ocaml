@@ -172,7 +172,7 @@ const ServingMemberList = () => {
             }
 
             if (selectedStatus) {
-                searchCriteria.status = selectedStatus;
+                searchCriteria.rsvp_status = selectedStatus;
             }
 
             const registrationList = await searchServingRsvps(searchCriteria);
