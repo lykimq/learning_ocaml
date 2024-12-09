@@ -511,10 +511,10 @@ pub async fn send_homegroup_decline_email(
     }
 }
 
-// SERVING SIGNUP EMAIL
+// SERVING RSVP EMAIL
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ServingSignupEmailRequest {
+pub struct ServingRsvpEmailRequest {
     pub email: String,
     pub name: String,
     pub serving_id: i32,
@@ -524,7 +524,7 @@ pub struct ServingSignupEmailRequest {
 }
 
 // Send confirmation email for serving sign-up
-async fn send_serving_signup_email_internal(
+async fn send_serving_rsvp_email_internal(
     pool: &PgPool,
     email: &str,
     serving_id: i32,
@@ -532,10 +532,10 @@ async fn send_serving_signup_email_internal(
     rsvp_id: i32,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Get serving details
-    let serving = sqlx::query!(
+    let servingrsvps = sqlx::query!(
         r#"
         SELECT name
-        FROM servingsignups
+        FROM servingrsvps
         WHERE id = $1
         "#,
         serving_id
@@ -551,7 +551,7 @@ async fn send_serving_signup_email_internal(
         r#"
         <html>
             <body>
-                <h2>Serving Signup Confirmation</h2>
+                <h2>Serving RSVP Confirmation</h2>
                 <p>Dear {}</p>
                 <p>Thank you for signing up to serve: {}!</p>
                 <p>We look forward to serving with you!</p>
@@ -560,7 +560,7 @@ async fn send_serving_signup_email_internal(
         </html>
         "#,
         name,
-        serving.name
+        servingrsvps.name
     );
 
     let text_content = format!(
@@ -570,14 +570,14 @@ async fn send_serving_signup_email_internal(
         Best regards,\n\
         Church Events Team",
         name,
-        serving.name
+        servingrsvps.name
     );
 
     // Create the email message
     let email_message = Message::builder()
         .from(config.from_email.parse()?)
         .to(email.parse()?)
-        .subject(format!("Serving Signup Confirmation: {}", serving.name))
+        .subject(format!("Serving RSVP Confirmation: {}", servingrsvps.name))
         .multipart(
             MultiPart::alternative()
                 .singlepart(
@@ -605,7 +605,7 @@ async fn send_serving_signup_email_internal(
         rsvp_id,
         email,
         config.from_email,
-        format!("Serving Signup Confirmation: {}", serving.name),
+        format!("Serving RSVP Confirmation: {}", servingrsvps.name),
         html_content,
     )
     .execute(pool)
@@ -615,12 +615,12 @@ async fn send_serving_signup_email_internal(
 }
 
 // Send confirmation email for serving sign-up
-pub async fn send_serving_signup_email(
+pub async fn send_serving_rsvp_email(
     pool: web::Data<PgPool>,
-    req: web::Json<ServingSignupEmailRequest>,
+    req: web::Json<ServingRsvpEmailRequest>,
 ) -> impl Responder {
     // First, sign up the user for serving
-    if let Err(e) = signup_for_serving(
+    if let Err(e) = rsvp_for_serving(
         &pool,
         req.user_id.expect("User ID must be provided"),
         req.serving_id,
@@ -628,35 +628,36 @@ pub async fn send_serving_signup_email(
         &req.name,
         req.phone.as_deref(),
     ).await {
-        return HttpResponse::InternalServerError().json(format!("Failed to sign up for serving: {}", e));
+        return HttpResponse::InternalServerError().json(format!("Failed to rsvp for serving: {}", e));
     }
 
     // Then, send the confirmation email
-    match send_serving_signup_email_internal(
+    match send_serving_rsvp_email_internal(
         &pool,
         &req.email,
         req.serving_id,
         &req.name,
         req.rsvp_id,
     ).await {
-        Ok(_) => HttpResponse::Ok().json("Serving signup email sent successfully"),
+        Ok(_) => HttpResponse::Ok().json("Serving RSVP email sent successfully"),
         Err(e) =>
-            HttpResponse::InternalServerError().json(format!("Failed to send serving signup email: {}", e))
+            HttpResponse::InternalServerError().json(format!("Failed to send serving RSVP email: {}", e))
     }
 }
 
-// Send decline email for serving sign-up
+// Send decline email for serving RSVP
 async fn send_serving_decline_email_internal(
     pool: &PgPool,
     email: &str,
     serving_id: i32,
     name: &str,
+    rsvp_id: i32,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Get serving details
+    // Get serving details by joining with the serving table
     let serving = sqlx::query!(
         r#"
         SELECT name
-        FROM servingsignups
+        FROM servingrsvps
         WHERE id = $1
         "#,
         serving_id
@@ -667,15 +668,15 @@ async fn send_serving_decline_email_internal(
     let config = EmailConfig::from_env();
     let mailer = create_mailer(&config).await?;
 
-    // Create email content
+    // Update email content to use serving_name
     let html_content = format!(
         r#"
         <html>
             <body>
-                <h2>Serving Response Received</h2>
+                <h2>Serving RSVP Response Received</h2>
                 <p>Dear {}</p>
                 <p>We've received your response that you won't be able to serve: {}!</p>
-                <p>Wehope to see you at future serving opportunities!</p>
+                <p>We hope to see you at future serving opportunities!</p>
                 <p>Best regards,<br>
                 Church Events Team</p>
             </body>
@@ -683,7 +684,7 @@ async fn send_serving_decline_email_internal(
         "#,
         name,
         serving.name
-   );
+    );
 
     let text_content = format!(
         "Dear {},\n\n\
@@ -721,12 +722,13 @@ async fn send_serving_decline_email_internal(
     sqlx::query!(
         r#"
         INSERT INTO email_logs
-        (email_to, email_from, subject, body, status, sent_at)
-        VALUES ($1, $2, $3, $4, 'sent', CURRENT_TIMESTAMP)
+        (rsvp_id, email_to, email_from, subject, body, status, sent_at)
+        VALUES ($1, $2, $3, $4, $5, 'sent', CURRENT_TIMESTAMP)
         "#,
+        rsvp_id,
         email,
         config.from_email,
-        format!("Response Received: {}", serving.name),
+        format!("Serving RSVP Response Received: {}", serving.name),
         html_content,
     )
     .execute(pool)
@@ -738,13 +740,14 @@ async fn send_serving_decline_email_internal(
 // Send decline email for serving sign-up
 pub async fn send_serving_decline_email(
     pool: web::Data<PgPool>,
-    req: web::Json<ServingSignupEmailRequest>,
+    req: web::Json<ServingRsvpEmailRequest>,
 ) -> impl Responder {
     match send_serving_decline_email_internal(
         &pool,
         &req.email,
         req.serving_id,
-        &req.name
+        &req.name,
+        req.rsvp_id,
     ).await {
         Ok(_) => HttpResponse::Ok().json("Serving decline email sent successfully"),
         Err(e) =>
@@ -753,7 +756,7 @@ pub async fn send_serving_decline_email(
 }
 
 // Add this function to handle the sign-up process
-async fn signup_for_serving(
+async fn rsvp_for_serving(
     pool: &PgPool,
     user_id: i32,
     serving_id: i32,
@@ -761,11 +764,12 @@ async fn signup_for_serving(
     name: &str,
     phone: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Insert the sign-up into the servingsignups table
+    // Insert the response into the servingrsvps table
     sqlx::query!(
         r#"
-        INSERT INTO public.servingsignups (user_id, serving_id, email, name, phone)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO public.servingrsvps
+        (user_id, serving_id, email, name, phone, rsvp_status, rsvp_date)
+        VALUES ($1, $2, $3, $4, $5, 'pending', CURRENT_TIMESTAMP)
         "#,
         user_id,
         serving_id,
@@ -778,4 +782,3 @@ async fn signup_for_serving(
 
     Ok(())
 }
-

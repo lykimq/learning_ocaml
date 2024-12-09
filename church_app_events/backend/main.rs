@@ -152,19 +152,26 @@ async fn main() -> std::io::Result<()> {
                     .route("/{id}", web::get().to(serving::get_serving))
                     .route("/search", web::get().to(serving::search_servings))
                     .service(
-                        web::scope("/rsvp/email")
-                            .route("/send-confirmation", web::post().to(email::send_serving_signup_email))
-                             .route("/send-decline", web::post().to(email::send_serving_decline_email)))
+                        web::scope("/rsvp")
+                        .route("/confirm/{id}", web::post().to(servingrsvp::confirm_serving_rsvp))
+                        .route("/decline/{id}", web::post().to(servingrsvp::decline_serving_rsvp))
+                        .service(
+                            web::scope("/email")
+                            .route("/send-confirmation", web::post().to(email::send_serving_rsvp_email))
+                            .route("/send-decline", web::post().to(email::send_serving_decline_email))
+                        )
+                    )
             )
             .service(
+                // User Serving RSVPs
                 web::scope("/servings/rsvp")
-                    .route("/add", web::post().to(servingrsvp::create_serving_signup)))
-                    .route("/edit/{id}", web::put().to(servingrsvp::update_serving_signup))
-                    .route("/{id}", web::delete().to(servingrsvp::delete_serving_signup))
-                    .route("/list", web::get().to(servingrsvp::get_all_serving_signups))
-                    .route("/confirm/{id}", web::post().to(servingrsvp::confirm_serving_signup))
-                    .route("/decline/{id}", web::post().to(servingrsvp::decline_serving_signup))
-                    .route("/search", web::get().to(servingrsvp::search_serving_signup))
+                    .route("/add", web::post().to(servingrsvp::create_serving_rsvp))
+                    .route("/edit/{id}", web::put().to(servingrsvp::update_serving_rsvp))
+                    .route("/{id}", web::delete().to(servingrsvp::delete_serving_rsvp))
+                    .route("/list", web::get().to(servingrsvp::get_all_serving_rsvps))
+                    .route("/search", web::get().to(servingrsvp::search_serving_rsvp))
+
+            )
         // Other routes
     })
     .bind(&format!("0.0.0.0:{}", backend_port))?

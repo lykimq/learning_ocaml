@@ -9,32 +9,32 @@ use serde_json::json;
 
 // Define RSVP status enum
 #[derive(Debug, Deserialize, Serialize, Clone, sqlx::Type, PartialEq)]
-#[sqlx(type_name = "rsvp_status", rename_all = "lowercase")]
+#[sqlx(type_name = "serving_status_type", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
-pub enum RsvpStatus {
+pub enum ServingStatusType {
     Pending,
     Confirmed,
     Declined
 }
 
-impl std::fmt::Display for RsvpStatus {
+impl std::fmt::Display for ServingStatusType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RsvpStatus::Pending => write!(f,"pending"),
-            RsvpStatus::Confirmed => write!(f,"confirmed"),
-            RsvpStatus::Declined => write!(f,"declined"),
+            ServingStatusType::Pending => write!(f,"pending"),
+            ServingStatusType::Confirmed => write!(f,"confirmed"),
+            ServingStatusType::Declined => write!(f,"declined"),
         }
     }
 }
 
-impl std::str::FromStr for RsvpStatus {
+impl std::str::FromStr for ServingStatusType {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "pending" => Ok(RsvpStatus::Pending),
-            "confirmed" => Ok(RsvpStatus::Confirmed),
-            "declined" => Ok(RsvpStatus::Declined),
+            "pending" => Ok(ServingStatusType::Pending),
+            "confirmed" => Ok(ServingStatusType::Confirmed),
+            "declined" => Ok(ServingStatusType::Declined),
             _ => Err(format!("Invalid status: {}", s))
         }
     }
@@ -45,7 +45,7 @@ pub struct EventRSVPRequest {
     email: String,
     event_id: i32,
     user_id: Option<i32>,
-    rsvp_status: RsvpStatus,
+    rsvp_status: ServingStatusType,
 }
 
 #[derive(Serialize)]
@@ -54,7 +54,7 @@ pub struct RSVPResponse {
     email: String,
     event_id: i32,
     user_id: Option<i32>,
-    rsvp_status: RsvpStatus,
+    rsvp_status: ServingStatusType,
     rsvp_date: NaiveDate,
 }
 
@@ -65,7 +65,7 @@ pub struct RSVPListResponse {
     email: String,
     event_id: i32,
     user_id: Option<i32>,
-    rsvp_status: RsvpStatus,
+    rsvp_status: ServingStatusType,
     rsvp_date: NaiveDate,
 }
 
@@ -75,7 +75,7 @@ pub struct RSVPWithEventResponse {
     email: String,
     event_id: i32,
     user_id: Option<i32>,
-    rsvp_status: RsvpStatus,
+    rsvp_status: ServingStatusType,
     rsvp_date: NaiveDate,
     event_title: String,
     event_date: NaiveDate,
@@ -89,7 +89,7 @@ pub struct RSVPSearchResponse {
     email: String,
     event_id: i32,
     user_id: Option<i32>,
-    rsvp_status: RsvpStatus,
+    rsvp_status: ServingStatusType,
     rsvp_date: NaiveDate,
     event_title: String,
     event_date: NaiveDate,
@@ -124,20 +124,20 @@ pub async fn create_rsvp(
         Ok(None) => {
             // Determine initial status based on the request
             let initial_status = match rsvp_data.rsvp_status {
-                RsvpStatus::Declined => RsvpStatus::Declined,
-                _ => RsvpStatus::Pending
+                ServingStatusType::Declined => ServingStatusType::Declined,
+                _ => ServingStatusType::Pending
             };
 
             let result = sqlx::query!(
                 r#"
                 INSERT INTO eventrsvp (email, event_id, user_id, rsvp_date, rsvp_status)
                 VALUES ($1, $2, $3, CURRENT_DATE, $4)
-                RETURNING id, email, event_id, user_id, rsvp_status as "rsvp_status!: RsvpStatus", rsvp_date
+                RETURNING id, email, event_id, user_id, rsvp_status as "rsvp_status!: ServingStatusType", rsvp_date
                 "#,
                 rsvp_data.email,
                 rsvp_data.event_id,
                 rsvp_data.user_id,
-                initial_status as RsvpStatus,
+                initial_status as ServingStatusType,
             )
             .fetch_one(pool.get_ref())
             .await;
@@ -173,7 +173,7 @@ pub async fn get_all_rsvps(
     let result = sqlx::query!(
         r#"
         SELECT r.id, r.email, r.event_id, r.user_id,
-               r.rsvp_status as "rsvp_status!: RsvpStatus",
+               r.rsvp_status as "rsvp_status!: ServingStatusType",
                r.rsvp_date,
                e.event_title, e.event_date, e.event_time
         FROM eventrsvp r
@@ -190,15 +190,15 @@ pub async fn get_all_rsvps(
             let status_counts = HashMap::from([
                 ("confirmed".to_string(),
                     rsvps.iter()
-                    .filter(|r| r.rsvp_status == RsvpStatus::Confirmed)
+                    .filter(|r| r.rsvp_status == ServingStatusType::Confirmed)
                     .count()),
                 ("pending".to_string(),
                     rsvps.iter()
-                    .filter(|r| r.rsvp_status == RsvpStatus::Pending)
+                    .filter(|r| r.rsvp_status == ServingStatusType::Pending)
                     .count()),
                 ("declined".to_string(),
                     rsvps.iter()
-                    .filter(|r| r.rsvp_status == RsvpStatus::Declined)
+                    .filter(|r| r.rsvp_status == ServingStatusType::Declined)
                     .count()),
             ]);
 
@@ -248,7 +248,7 @@ pub async fn get_rsvps_by_event(
             WHERE event_id = $1
         )
         SELECT er.id, er.email, er.event_id, er.user_id,
-               er.rsvp_status as "rsvp_status!: RsvpStatus", er.rsvp_date,
+               er.rsvp_status as "rsvp_status!: ServingStatusType", er.rsvp_date,
                e.event_title, e.event_date, e.event_time,
                sc.confirmed_count, sc.pending_count, sc.declined_count
         FROM eventrsvp er
@@ -305,7 +305,7 @@ pub async fn get_rsvps_by_email(
     let result = sqlx::query!(
         r#"
         SELECT er.id, er.email, er.event_id, er.user_id,
-               er.rsvp_status as "rsvp_status!: RsvpStatus", er.rsvp_date,
+               er.rsvp_status as "rsvp_status!: ServingStatusType", er.rsvp_date,
                e.event_title, e.event_date, e.event_time
         FROM eventrsvp er
         JOIN events e ON er.event_id = e.id
@@ -346,15 +346,15 @@ pub async fn get_rsvps_by_email(
 pub async fn update_rsvp(
     pool: web::Data<PgPool>,
     rsvp_id: web::Path<i32>,
-    status: web::Json<RsvpStatus>) -> impl Responder {
+    status: web::Json<ServingStatusType>) -> impl Responder {
         let result = sqlx::query!(
             r#"
             UPDATE eventrsvp
             SET rsvp_status = $1
             WHERE id = $2
-            RETURNING id, email, event_id, user_id, rsvp_status as "rsvp_status!: RsvpStatus", rsvp_date
+            RETURNING id, email, event_id, user_id, rsvp_status as "rsvp_status!: ServingStatusType", rsvp_date
             "#,
-            status.into_inner() as RsvpStatus,
+            status.into_inner() as ServingStatusType,
             rsvp_id.into_inner()
         )
         .fetch_one(pool.get_ref())
@@ -380,7 +380,7 @@ pub async fn update_rsvp(
 pub struct SearchQuery {
     pub email: Option<String>,
     pub event_title: Option<String>,
-    pub status: Option<RsvpStatus>,
+    pub status: Option<ServingStatusType>,
     pub user_id: Option<i32>,
 }
 
@@ -417,7 +417,7 @@ pub async fn confirm_rsvp(
         UPDATE eventrsvp
         SET rsvp_status = 'confirmed'
         WHERE id = $1 AND rsvp_status = 'pending'
-        RETURNING id, email, event_id, user_id, rsvp_status as "rsvp_status!: RsvpStatus", rsvp_date
+        RETURNING id, email, event_id, user_id, rsvp_status as "rsvp_status!: ServingStatusType", rsvp_date
         "#,
         rsvp_id.into_inner()
     )
@@ -462,9 +462,9 @@ pub async fn decline_rsvp(
             let result = sqlx::query!(
                 r#"
                 UPDATE eventrsvp
-                SET rsvp_status = 'declined'::rsvp_status
+                SET rsvp_status = 'declined'::serving_status_type
                 WHERE id = $1
-                RETURNING id, email, event_id, user_id, rsvp_status as "rsvp_status: RsvpStatus", rsvp_date
+                RETURNING id, email, event_id, user_id, rsvp_status as "rsvp_status: ServingStatusType", rsvp_date
                 "#,
                 id  // Use the extracted id
             )
@@ -609,22 +609,22 @@ pub async fn search_rsvps(
                 ("confirmed".to_string(),
                     rsvps.iter()
                     .filter(|r| {
-                        let status: RsvpStatus = r.try_get("rsvp_status").unwrap_or(RsvpStatus::Pending);
-                        status == RsvpStatus::Confirmed
+                        let status: ServingStatusType = r.try_get("rsvp_status").unwrap_or(ServingStatusType::Pending);
+                        status == ServingStatusType::Confirmed
                     })
                     .count()),
                 ("pending".to_string(),
                     rsvps.iter()
                     .filter(|r| {
-                        let status: RsvpStatus = r.try_get("rsvp_status").unwrap_or(RsvpStatus::Pending);
-                        status == RsvpStatus::Pending
+                        let status: ServingStatusType = r.try_get("rsvp_status").unwrap_or(ServingStatusType::Pending);
+                        status == ServingStatusType::Pending
                     })
                     .count()),
                 ("declined".to_string(),
                     rsvps.iter()
                     .filter(|r| {
-                        let status: RsvpStatus = r.try_get("rsvp_status").unwrap_or(RsvpStatus::Pending);
-                        status == RsvpStatus::Declined
+                        let status: ServingStatusType = r.try_get("rsvp_status").unwrap_or(ServingStatusType::Pending);
+                        status == ServingStatusType::Declined
                     })
                     .count()),
             ]);

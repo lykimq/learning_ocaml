@@ -46,12 +46,15 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const getCurrentUser = () => user;
+
   return (
     <AuthContext.Provider value={{
       user,
       setUser,
       login,
       logout,
+      getCurrentUser,
       isAdmin: user?.role === 'admin'
     }}>
       {children}

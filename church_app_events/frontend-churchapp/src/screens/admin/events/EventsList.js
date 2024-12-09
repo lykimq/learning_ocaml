@@ -11,7 +11,7 @@ import {
     TextInput
 } from "react-native-paper";
 import { getEvents, deleteEvent, searchEvents } from "../../../services/events/eventService";
-import EventForm from "../../admin/events/EventForm";
+import EventForm from "./EventForm";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { showAlert, onDateChange as handleDateChange, onTimeChange as handleTimeChange } from
     "../../constants/constants";

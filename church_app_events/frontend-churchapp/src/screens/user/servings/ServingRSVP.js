@@ -54,7 +54,7 @@ const ServingRSVP = ({ serving, userId, onClose }) => {
                 name: name.trim(),
                 phone: phone,
                 user_id: userId,
-                signup_status: "pending"
+                rsvp_status: "pending"
             };
 
             await createServingSignup(signupData);
