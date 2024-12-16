@@ -376,7 +376,6 @@ const ServingMemberList = () => {
     );
 
     const renderItem = ({ item }) => {
-        // Add a default status if undefined
         const status = item.rsvp_status || 'pending';
 
         return (
@@ -393,7 +392,18 @@ const ServingMemberList = () => {
                                     style={styles.infoIcon}
                                 />
                                 <Text style={styles.infoText}>
-                                    Group: {item.group_name || item.home_group_id}
+                                    {item.serving_title || 'No Serving Title'}
+                                </Text>
+                            </View>
+                            <View style={styles.infoRow}>
+                                <IconButton
+                                    icon="map-marker-outline"
+                                    size={16}
+                                    color="#666"
+                                    style={styles.infoIcon}
+                                />
+                                <Text style={styles.infoText}>
+                                    {item.serving_location || 'No Location'}
                                 </Text>
                             </View>
                             <View style={styles.infoRow}>
@@ -413,7 +423,13 @@ const ServingMemberList = () => {
                                     style={styles.infoIcon}
                                 />
                                 <Text style={styles.infoText}>
-                                    Registered: {new Date(item.registration_date).toLocaleDateString()}
+                                    Registered: {item.rsvp_date
+                                        ? new Date(item.rsvp_date).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric'
+                                        })
+                                        : 'Date not available'}
                                 </Text>
                             </View>
                         </View>

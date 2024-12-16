@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Alert, StyleSheet, Platform } from 'react-native';
 import { Button, Text, TextInput, Title, Paragraph, Portal, Dialog, IconButton } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
-import { createServingSignup } from '../../../services/servings/servingRsvpService';
+import { createServingRsvp } from '../../../services/servings/servingRsvpService';
 import { format } from 'date-fns';
 
 const ServingRSVP = ({ serving, userId, onClose }) => {
@@ -57,7 +57,7 @@ const ServingRSVP = ({ serving, userId, onClose }) => {
                 rsvp_status: "pending"
             };
 
-            await createServingSignup(signupData);
+            await createServingRsvp(signupData);
             setLoading(false);
 
             showAlert(

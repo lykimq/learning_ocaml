@@ -56,6 +56,8 @@ pub struct ServingRSVPResponse {
     phone: Option<String>,
     rsvp_status: ServingStatusType,
     rsvp_date: NaiveDateTime,
+    serving_title: Option<String>,
+    serving_location: Option<String>,
 }
 // Create a new serving RSVP
 pub async fn create_serving_rsvp(
@@ -64,12 +66,18 @@ pub async fn create_serving_rsvp(
 ) -> impl Responder {
     let result = sqlx::query!(
         r#"
+        WITH serving_info AS (
+            SELECT title as serving_title, location as serving_location
+            FROM serving WHERE id = $2
+        )
         INSERT INTO servingrsvps
         (user_id, serving_id, email, name, phone, rsvp_status, rsvp_date)
         VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
         RETURNING
         id, user_id, serving_id, email, name, phone, rsvp_status as "rsvp_status!: ServingStatusType",
-        rsvp_date
+        rsvp_date,
+        (SELECT serving_title FROM serving_info) as serving_title,
+        (SELECT serving_location FROM serving_info) as serving_location
         "#,
         rsvp_data.user_id,
         rsvp_data.serving_id,
@@ -91,6 +99,8 @@ pub async fn create_serving_rsvp(
             phone: rsvp.phone,
             rsvp_status: rsvp.rsvp_status,
             rsvp_date: rsvp.rsvp_date.expect("RSVP date should be present"),
+            serving_title: Some(rsvp.serving_title.unwrap_or_default()),
+            serving_location: Some(rsvp.serving_location.unwrap_or_default()),
         }),
         Err(e) => {
             eprintln!("Failed to create serving RSVP: {}", e);
@@ -103,10 +113,13 @@ pub async fn create_serving_rsvp(
 pub async fn get_all_serving_rsvps(pool: web::Data<PgPool>) -> impl Responder {
     let result = sqlx::query!(
         r#"
-        SELECT id, user_id, serving_id, email, name, phone,
-               rsvp_status as "rsvp_status!: ServingStatusType", rsvp_date
-        FROM servingrsvps
-        ORDER BY rsvp_date DESC
+        SELECT
+            sr.id, sr.user_id, sr.serving_id, sr.email, sr.name, sr.phone,
+            sr.rsvp_status as "rsvp_status!: ServingStatusType", sr.rsvp_date,
+            (SELECT title FROM serving WHERE id = sr.serving_id) as serving_title,
+            (SELECT location FROM serving WHERE id = sr.serving_id) as serving_location
+        FROM servingrsvps sr
+        ORDER BY sr.rsvp_date DESC
         "#
     )
     .fetch_all(pool.get_ref())
@@ -125,6 +138,8 @@ pub async fn get_all_serving_rsvps(pool: web::Data<PgPool>) -> impl Responder {
                     phone: r.phone.clone(),
                     rsvp_status: r.rsvp_status.clone(),
                     rsvp_date: r.rsvp_date.expect("RSVP date should be present"),
+                    serving_title: Some(r.serving_title.clone().unwrap_or_default()),
+                    serving_location: Some(r.serving_location.clone().unwrap_or_default()),
                 })
                 .collect();
             HttpResponse::Ok().json(response)
@@ -148,7 +163,9 @@ pub async fn update_serving_rsvp (
         SET rsvp_status = $1
         WHERE id = $2
         RETURNING id AS "id!", user_id, serving_id, email, name, phone,
-        rsvp_status as "rsvp_status!: ServingStatusType", rsvp_date
+        rsvp_status as "rsvp_status!: ServingStatusType", rsvp_date,
+        (SELECT title FROM serving WHERE id = serving_id) as serving_title,
+        (SELECT location FROM serving WHERE id = serving_id) as serving_location
         "#,
         status.into_inner() as ServingStatusType,
         rsvp_id.into_inner()
@@ -166,6 +183,8 @@ pub async fn update_serving_rsvp (
             phone: rsvp.phone,
             rsvp_status: rsvp.rsvp_status,
             rsvp_date: rsvp.rsvp_date.expect("RSVP date should be present"),
+            serving_title: Some(rsvp.serving_title.unwrap_or_default()),
+            serving_location: Some(rsvp.serving_location.unwrap_or_default()),
         }),
         Err(e) => {
             eprintln!("Failed to update serving RSVP status: {}", e);
@@ -207,7 +226,9 @@ pub async fn confirm_serving_rsvp(
         SET rsvp_status = 'confirmed'
         WHERE id = $1 AND rsvp_status = 'pending'
         RETURNING id, user_id, serving_id, email, name, phone,
-        rsvp_status as "rsvp_status!: ServingStatusType", rsvp_date
+        rsvp_status as "rsvp_status!: ServingStatusType", rsvp_date,
+        (SELECT title FROM serving WHERE id = serving_id) as serving_title,
+        (SELECT location FROM serving WHERE id = serving_id) as serving_location
         "#,
         rsvp_id.into_inner()
     )
@@ -224,6 +245,8 @@ pub async fn confirm_serving_rsvp(
             phone: rsvp.phone,
             rsvp_status: rsvp.rsvp_status,
             rsvp_date: rsvp.rsvp_date.expect("RSVP date should be present"),
+            serving_title: Some(rsvp.serving_title.unwrap_or_default()),
+            serving_location: Some(rsvp.serving_location.unwrap_or_default()),
         }),
         Err(e) => {
             eprintln!("Failed to confirm serving RSVP: {}", e);
@@ -243,7 +266,9 @@ pub async fn decline_serving_rsvp(
         SET rsvp_status = 'declined'
         WHERE id = $1 AND rsvp_status = 'pending'
         RETURNING id, user_id, serving_id, email, name, phone,
-        rsvp_status as "rsvp_status!: ServingStatusType", rsvp_date
+        rsvp_status as "rsvp_status!: ServingStatusType", rsvp_date,
+        (SELECT title FROM serving WHERE id = serving_id) as serving_title,
+        (SELECT location FROM serving WHERE id = serving_id) as serving_location
         "#,
         rsvp_id.into_inner()
     )
@@ -260,6 +285,8 @@ pub async fn decline_serving_rsvp(
             phone: rsvp.phone,
             rsvp_status: rsvp.rsvp_status,
             rsvp_date: rsvp.rsvp_date.expect("RSVP date should be present"),
+            serving_title: Some(rsvp.serving_title.unwrap_or_default()),
+            serving_location: Some(rsvp.serving_location.unwrap_or_default()),
         }),
         Err(e) => {
             eprintln!("Failed to decline serving RSVP: {}", e);
@@ -279,6 +306,8 @@ pub struct ServingWithResponse {
     serving_date: NaiveDateTime,
     name: String,
     location: Option<String>,
+    serving_title: Option<String>,
+    serving_location: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -303,7 +332,9 @@ pub async fn search_serving_rsvp(
             name,
             phone,
             rsvp_status as "rsvp_status!: ServingStatusType",
-            rsvp_date
+            rsvp_date,
+            (SELECT title FROM serving WHERE id = serving_id) as serving_title,
+            (SELECT location FROM serving WHERE id = serving_id) as serving_location
         FROM servingrsvps
         WHERE ($1::text IS NULL OR LOWER(email) LIKE CONCAT('%', LOWER($1), '%'))
         AND ($2::text IS NULL OR LOWER(name) LIKE CONCAT('%', LOWER($2), '%'))
@@ -329,6 +360,8 @@ pub async fn search_serving_rsvp(
                 phone: row.phone,
                 rsvp_status: row.rsvp_status,
                 rsvp_date: row.rsvp_date.expect("RSVP date should be present"),
+                serving_title: Some(row.serving_title.unwrap_or_default()),
+                serving_location: Some(row.serving_location.unwrap_or_default()),
             })
             .collect::<Vec<_>>()
     });

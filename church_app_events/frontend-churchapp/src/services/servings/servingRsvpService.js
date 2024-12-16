@@ -1,7 +1,6 @@
 import { Platform } from "react-native";
 import axios from "axios";
 import { API_URL_ANDROID, API_URL_IOS, API_URL_WEB } from "@env";
-import { useAuth } from '../../contexts/AuthContext';
 
 const getApiUrl = () => {
     switch (Platform.OS) {
