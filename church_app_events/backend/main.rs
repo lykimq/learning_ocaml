@@ -15,6 +15,11 @@ mod homegrouprsvp;
 mod user;
 mod serving;
 mod servingrsvp;
+mod media {
+    pub mod config;
+    pub mod error;
+
+}
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
