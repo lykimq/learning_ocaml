@@ -18,6 +18,9 @@ mod servingrsvp;
 mod media {
     pub mod config;
     pub mod error;
+    pub mod models;
+    pub mod media_repository;
+
 
 }
 

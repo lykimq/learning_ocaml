@@ -60,6 +60,12 @@ pub enum AppError {
 
     #[display(fmt = "External service error: {}", _0)]
     ExternalServiceError(ErrorMessage),
+
+    #[display(fmt = "Invalid media type: {}", _0)]
+    InvalidMediaType(ErrorMessage),
+
+    #[display(fmt = "Invalid media status: {}", _0)]
+    InvalidMediaStatus(ErrorMessage),
 }
 
 impl ResponseError for AppError {
@@ -85,6 +91,8 @@ impl ResponseError for AppError {
                     AppError::ServiceUnavailable(ErrorMessage(_)) => "SERVICE_UNAVAILABLE",
                     AppError::InternalServerError(ErrorMessage(_)) => "INTERNAL_SERVER_ERROR",
                     AppError::ExternalServiceError(ErrorMessage(_)) => "EXTERNAL_SERVICE_ERROR",
+                    AppError::InvalidMediaType(_) => "INVALID_MEDIA_TYPE",
+                    AppError::InvalidMediaStatus(_) => "INVALID_MEDIA_STATUS",
                 }
             }
         });
@@ -105,6 +113,8 @@ impl ResponseError for AppError {
             AppError::ServiceUnavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
             AppError::InternalServerError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::ExternalServiceError(_) => StatusCode::BAD_GATEWAY,
+            AppError::InvalidMediaType(_) => StatusCode::BAD_REQUEST,
+            AppError::InvalidMediaStatus(_) => StatusCode::BAD_REQUEST,
         }
     }
 }
@@ -183,5 +193,20 @@ impl AppError {
 
     pub fn external_service_error(message: impl Into<String>) -> Self {
         AppError::ExternalServiceError(ErrorMessage(message.into()))
+    }
+
+    pub fn invalid_media_type(message: impl Into<String>) -> Self {
+        AppError::InvalidMediaType(ErrorMessage(message.into()))
+    }
+
+    pub fn invalid_media_status(message: impl Into<String>) -> Self {
+        AppError::InvalidMediaStatus(ErrorMessage(message.into()))
+    }
+}
+
+// Add conversion from String errors (from MediaType::from_str and MediaStatus::from_str)
+impl From<String> for ErrorMessage {
+    fn from(message: String) -> Self {
+        ErrorMessage(message)
     }
 }
