@@ -23,6 +23,7 @@ mod media {
     pub mod cache;
     pub mod rate_limiter;
     pub mod youtube_service;
+    pub mod watch_history;
 
 
 }
