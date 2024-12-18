@@ -66,6 +66,15 @@ pub enum AppError {
 
     #[display(fmt = "Invalid media status: {}", _0)]
     InvalidMediaStatus(ErrorMessage),
+
+    #[display(fmt = "External API error: {}", _0)]
+    ExternalApiError(ErrorMessage),
+
+    #[display(fmt = "Parse error: {}", _0)]
+    ParseError(ErrorMessage),
+
+    #[display(fmt = "Cache error: {}", _0)]
+    CacheError(ErrorMessage),
 }
 
 impl ResponseError for AppError {
@@ -93,6 +102,9 @@ impl ResponseError for AppError {
                     AppError::ExternalServiceError(ErrorMessage(_)) => "EXTERNAL_SERVICE_ERROR",
                     AppError::InvalidMediaType(_) => "INVALID_MEDIA_TYPE",
                     AppError::InvalidMediaStatus(_) => "INVALID_MEDIA_STATUS",
+                    AppError::ExternalApiError(ErrorMessage(_)) => "EXTERNAL_API_ERROR",
+                    AppError::ParseError(ErrorMessage(_)) => "PARSE_ERROR",
+                    AppError::CacheError(ErrorMessage(_)) => "CACHE_ERROR",
                 }
             }
         });
@@ -115,6 +127,9 @@ impl ResponseError for AppError {
             AppError::ExternalServiceError(_) => StatusCode::BAD_GATEWAY,
             AppError::InvalidMediaType(_) => StatusCode::BAD_REQUEST,
             AppError::InvalidMediaStatus(_) => StatusCode::BAD_REQUEST,
+            AppError::ExternalApiError(_) => StatusCode::BAD_REQUEST,
+            AppError::ParseError(_) => StatusCode::BAD_REQUEST,
+            AppError::CacheError(_) => StatusCode::BAD_REQUEST,
         }
     }
 }
@@ -201,6 +216,18 @@ impl AppError {
 
     pub fn invalid_media_status(message: impl Into<String>) -> Self {
         AppError::InvalidMediaStatus(ErrorMessage(message.into()))
+    }
+
+    pub fn external_api_error(message: impl Into<String>) -> Self {
+        AppError::ExternalApiError(ErrorMessage(message.into()))
+    }
+
+    pub fn parse_error(message: impl Into<String>) -> Self {
+        AppError::ParseError(ErrorMessage(message.into()))
+    }
+
+    pub fn cache_error(message: impl Into<String>) -> Self {
+        AppError::CacheError(ErrorMessage(message.into()))
     }
 }
 

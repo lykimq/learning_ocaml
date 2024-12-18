@@ -20,6 +20,9 @@ mod media {
     pub mod error;
     pub mod models;
     pub mod media_repository;
+    pub mod cache;
+    pub mod rate_limiter;
+    pub mod youtube_service;
 
 
 }
