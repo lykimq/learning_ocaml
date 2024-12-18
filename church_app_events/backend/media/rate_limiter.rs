@@ -1,7 +1,8 @@
+use anyhow::Result;
 use redis::{Client, AsyncCommands};
 use std::time::Duration;
-use anyhow::Result;
 
+/// RateLimiter handles request rate limiting using Redis
 pub struct RateLimiter {
     client: Client,
     window: Duration,
@@ -9,20 +10,29 @@ pub struct RateLimiter {
 }
 
 impl RateLimiter {
+    /// Creates a new RateLimiter instance
+    ///
+    /// # Arguments
+    /// * `url` - Redis connection URL
+    /// * `window` - Time window for rate limiting
+    /// * `max_requests` - Maximum allowed requests within window
     pub fn new(url: &str, window: Duration, max_requests: i32) -> Result<Self> {
         let client = Client::open(url)?;
-        Ok(Self {
-            client,
-            window,
-            max_requests,
-        })
+        Ok(Self { client, window, max_requests })
     }
 
+    /// Checks if a request from an IP should be rate limited
+    ///
+    /// # Arguments
+    /// * `ip` - IP address to check
+    ///
+    /// # Returns
+    /// * `Ok(true)` if request is allowed
+    /// * `Ok(false)` if rate limit exceeded
     pub async fn check_rate_limit(&self, ip: &str) -> Result<bool> {
         let mut conn = self.client.get_async_connection().await?;
-        let current: Option<String> = conn.get(ip).await?;
 
-        match current {
+        match conn.get::<_, Option<String>>(ip).await? {
             Some(count) => {
                 let count: i32 = count.parse()?;
                 if count >= self.max_requests {

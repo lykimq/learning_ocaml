@@ -24,6 +24,7 @@ mod media {
     pub mod rate_limiter;
     pub mod youtube_service;
     pub mod watch_history;
+    pub mod watch_history_repository;
 
 
 }

@@ -174,6 +174,10 @@ impl AppError {
         AppError::NotFound(ErrorMessage(message.into()))
     }
 
+    pub fn database_error(message: impl Into<String>) -> Self {
+        AppError::DatabaseError(SqlxError::Protocol(message.into()))
+    }
+
     pub fn unauthorized(message: impl Into<String>) -> Self {
         AppError::Unauthorized(ErrorMessage(message.into()))
     }
