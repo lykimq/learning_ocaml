@@ -72,10 +72,10 @@ impl WatchHistoryRepository {
         user_id: i32,
         media_id: i32,
         request: UpdateWatchProgressRequest,
-    ) -> impl Responder {
+    ) -> Result<WatchHistory, AppError> {
         // Validate input parameters
         if request.watched_duration < 0 {
-            return AppError::bad_request("Watch duration cannot be negative").error_response();
+            return Err(AppError::bad_request("Watch duration cannot be negative"));
         }
 
         // First verify media exists and get its duration
@@ -104,7 +104,7 @@ impl WatchHistoryRepository {
                     Ok(tx) => tx,
                     Err(e) => {
                         eprintln!("Failed to start transaction: {}", e);
-                        return AppError::database_error(e.to_string()).error_response();
+                        return Err(AppError::database_error(e.to_string()));
                     }
                 };
 
@@ -141,23 +141,23 @@ impl WatchHistoryRepository {
                         // Commit transaction
                         if let Err(e) = tx.commit().await {
                             eprintln!("Failed to commit transaction: {}", e);
-                            return AppError::database_error(e.to_string()).error_response();
+                            return Err(AppError::database_error(e.to_string()));
                         }
-                        HttpResponse::Ok().json(watch_history)
+                        Ok(watch_history)
                     }
                     Err(e) => {
                         eprintln!("Database error: {}", e);
-                        AppError::database_error(e.to_string()).error_response()
+                        Err(AppError::database_error(e.to_string()))
                     }
                 }
             }
             Ok(None) => {
                 eprintln!("Media not found or deleted: {}", media_id);
-                AppError::not_found("Media not found or has been deleted").error_response()
+                Err(AppError::not_found("Media not found or has been deleted"))
             }
             Err(e) => {
                 eprintln!("Database error while checking media: {}", e);
-                AppError::database_error(e.to_string()).error_response()
+                Err(AppError::database_error(e.to_string()))
             }
         }
     }
@@ -168,7 +168,7 @@ impl WatchHistoryRepository {
         &self,
         user_id: i32,
         media_id: Option<i32>,
-    ) -> impl Responder {
+    ) -> Result<bool, AppError> {
         let result = sqlx::query!(
             r#"
             WITH deleted AS (
@@ -187,14 +187,14 @@ impl WatchHistoryRepository {
         match result {
             Ok(record) => {
                 if record.exists {
-                    HttpResponse::Ok().json("Watch history deleted successfully")
+                    Ok(true)
                 } else {
-                    AppError::not_found("No watch history found to delete").error_response()
+                    Err(AppError::not_found("No watch history found to delete"))
                 }
             }
             Err(e) => {
                 eprintln!("Failed to delete watch history: {}", e);
-                AppError::database_error(e.to_string()).error_response()
+                Err(AppError::database_error(e.to_string()))
             }
         }
     }
@@ -204,7 +204,7 @@ impl WatchHistoryRepository {
         &self,
         user_id: i32,
         older_than: NaiveDateTime,
-    ) -> impl Responder {
+    ) -> Result<bool, AppError> {
         match sqlx::query!(
             "DELETE FROM watch_history
             WHERE user_id = $1
@@ -215,11 +215,10 @@ impl WatchHistoryRepository {
         .execute(&self.pool)
         .await
         {
-            Ok(deleted) => HttpResponse::Ok()
-                .json(format!("Deleted {} watch history entries", deleted.rows_affected())),
+                Ok(deleted) => Ok(deleted.rows_affected() > 0),
             Err(e) => {
                 eprintln!("Failed to cleanup history: {}", e);
-                AppError::database_error(e.to_string()).error_response()
+                Err(AppError::database_error(e.to_string()))
             }
         }
     }
@@ -228,7 +227,7 @@ impl WatchHistoryRepository {
     //---------------
 
     /// Retrieves complete watch history for a user with aggregated statistics
-    pub async fn get_user_watch_history(&self, user_id: i32) -> impl Responder {
+    pub async fn get_user_watch_history(&self, user_id: i32) -> Result<WatchHistoryResponse, AppError> {
         let result = sqlx::query_as!(
             WatchHistoryWithMedia,
             r#"
@@ -257,7 +256,7 @@ impl WatchHistoryRepository {
         match result {
             Ok(watch_history) => {
                 if watch_history.is_empty() {
-                    return HttpResponse::Ok().json(WatchHistoryResponse::default());
+                    return Ok(WatchHistoryResponse::default());
                 }
 
                 let total_watched_time: i32 = watch_history[0].watched_duration;
@@ -282,11 +281,11 @@ impl WatchHistoryRepository {
                     total_completed: watch_history.iter().filter(|w| w.completed).count() as i32,
                 };
 
-                HttpResponse::Ok().json(response)
+                Ok(response)
             }
             Err(e) => {
                 eprintln!("Failed to fetch watch history: {}", e);
-                AppError::database_error(e.to_string()).error_response()
+                Err(AppError::database_error(e.to_string()))
             }
         }
     }
@@ -297,13 +296,13 @@ impl WatchHistoryRepository {
         user_id: i32,
         limit: i32,
         offset: i64,
-    ) -> impl Responder {
+    ) -> Result<WatchHistoryResponse, AppError> {
         if limit <= 0 || limit > 100 {
-            return AppError::bad_request("Limit must be between 1 and 100").error_response();
+            return Err(AppError::bad_request("Limit must be between 1 and 100"));
         }
 
         if offset < 0 {
-            return AppError::bad_request("Offset cannot be negative").error_response();
+            return Err(AppError::bad_request("Offset cannot be negative"));
         }
 
         let result = sqlx::query_as!(
@@ -339,16 +338,34 @@ impl WatchHistoryRepository {
         match result {
             Ok(history) => {
                 if history.is_empty() && offset == 0 {
-                    return HttpResponse::Ok().json(Vec::<WatchHistoryWithMedia>::new());
+                    return Ok(WatchHistoryResponse::default());
                 }
                 if history.is_empty() {
-                    return AppError::not_found("No more watch history entries").error_response();
+                    return Err(AppError::not_found("No more watch history entries"));
                 }
-                HttpResponse::Ok().json(history)
+                Ok(WatchHistoryResponse {
+                    watch_history: history.first().map(|h| WatchHistory {
+                        id: h.id,
+                        user_id: h.user_id,
+                        media_id: h.media_id,
+                        watched_duration: h.watched_duration,
+                        completed: h.completed,
+                        last_watched_at: h.last_watched_at,
+                    }).unwrap_or_default(),
+                    total_watched_time: 0,
+                    total_watched_videos: 0,
+                    total_watched_minutes: 0,
+                    total_watched_hours: 0,
+                    total_watched_days: 0,
+                    total_watched_weeks: 0,
+                    total_watched_months: 0,
+                    total_watched_years: 0,
+                    total_completed: 0,
+                })
             }
             Err(e) => {
                 eprintln!("Failed to fetch recent watch history: {}", e);
-                AppError::database_error(e.to_string()).error_response()
+                Err(AppError::database_error(e.to_string()))
             }
         }
     }
@@ -358,7 +375,7 @@ impl WatchHistoryRepository {
         &self,
         user_id: i32,
         media_id: i32,
-    ) -> impl Responder {
+    ) -> Result<WatchHistoryWithMedia, AppError> {
         let result = sqlx::query_as!(
             WatchHistoryWithMedia,
             r#"
@@ -388,11 +405,11 @@ impl WatchHistoryRepository {
         .await;
 
         match result {
-            Ok(Some(progress)) => HttpResponse::Ok().json(progress),
-            Ok(None) => AppError::not_found("No watch history found for this media").error_response(),
+            Ok(Some(progress)) => Ok(progress),
+            Ok(None) => Err(AppError::not_found("No watch history found for this media")),
             Err(e) => {
                 eprintln!("Failed to fetch media watch progress: {}", e);
-                AppError::database_error(e.to_string()).error_response()
+                Err(AppError::database_error(e.to_string()))
             }
         }
     }
@@ -407,9 +424,9 @@ impl WatchHistoryRepository {
         user_id: i32,
         start_date: NaiveDateTime,
         end_date: NaiveDateTime,
-    ) -> impl Responder {
+    ) -> Result<WatchHistoryResponse, AppError> {
         if start_date >= end_date {
-            return AppError::bad_request("Start date must be before end date").error_response();
+            return Err(AppError::bad_request("Start date must be before end date"));
         }
 
         let result = sqlx::query!(
@@ -431,25 +448,23 @@ impl WatchHistoryRepository {
 
         match result {
             Ok(stats) => {
-                let total_duration = stats.total_duration.unwrap_or(0);
-                let response = WatchHistoryResponse {
+                let total_duration = stats.total_duration.unwrap_or(0) as i32;
+                Ok(WatchHistoryResponse {
                     watch_history: WatchHistory::default(),
-                    total_watched_time: total_duration as i32,
+                    total_watched_time: total_duration,
                     total_watched_videos: stats.total_watched_videos.unwrap_or(0) as i32,
-                    total_watched_minutes: total_duration as i32 / 60,
-                    total_watched_hours: total_duration as i32 / 3600,
-                    total_watched_days: total_duration as i32 / (3600 * 24),
-                    total_watched_weeks: total_duration as i32 / (3600 * 24 * 7),
-                    total_watched_months: total_duration as i32 / (3600 * 24 * 30),
-                    total_watched_years: total_duration as i32 / (3600 * 24 * 365),
+                    total_watched_minutes: total_duration / 60,
+                    total_watched_hours: total_duration / 3600,
+                    total_watched_days: total_duration / (3600 * 24),
+                    total_watched_weeks: total_duration / (3600 * 24 * 7),
+                    total_watched_months: total_duration / (3600 * 24 * 30),
+                    total_watched_years: total_duration / (3600 * 24 * 365),
                     total_completed: stats.completed_videos.unwrap_or(0) as i32,
-                };
-
-                HttpResponse::Ok().json(response)
+                })
             }
             Err(e) => {
                 eprintln!("Failed to fetch watch history stats: {}", e);
-                AppError::database_error(e.to_string()).error_response()
+                Err(AppError::database_error(e.to_string()))
             }
         }
     }
@@ -459,7 +474,7 @@ impl WatchHistoryRepository {
     pub async fn get_watch_history_summary(
         &self,
         user_id: i32,
-    ) -> impl Responder {
+    ) -> Result<WatchHistoryResponse, AppError> {
         let result = sqlx::query!(
             r#"
             SELECT
@@ -478,20 +493,23 @@ impl WatchHistoryRepository {
 
         match result {
             Ok(summary) => {
-                let response = json!({
-                    "total_videos": summary.total_videos,
-                    "total_duration": summary.total_duration.unwrap_or(0),
-                    "completed_videos": summary.completed_videos,
-                    "last_watched": summary.last_watched,
-                    "active_days": summary.active_days,
-                    "average_daily_watch": summary.total_duration.unwrap_or(0) /
-                        std::cmp::max(summary.active_days.unwrap_or(1), 1)
-                });
-                HttpResponse::Ok().json(response)
+                let total_duration = summary.total_duration.unwrap_or(0) as i32;
+                Ok(WatchHistoryResponse {
+                    watch_history: WatchHistory::default(),
+                    total_watched_time: total_duration,
+                    total_watched_videos: summary.total_videos.unwrap_or(0) as i32,
+                    total_watched_minutes: total_duration / 60,
+                    total_watched_hours: total_duration / 3600,
+                    total_watched_days: total_duration / (3600 * 24),
+                    total_watched_weeks: total_duration / (3600 * 24 * 7),
+                    total_watched_months: total_duration / (3600 * 24 * 30),
+                    total_watched_years: total_duration / (3600 * 24 * 365),
+                    total_completed: summary.completed_videos.unwrap_or(0) as i32,
+                })
             }
             Err(e) => {
                 eprintln!("Failed to fetch watch history summary: {}", e);
-                AppError::database_error(e.to_string()).error_response()
+                Err(AppError::database_error(e.to_string()))
             }
         }
     }

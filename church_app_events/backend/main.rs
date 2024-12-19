@@ -25,8 +25,7 @@ mod media {
     pub mod youtube_service;
     pub mod watch_history;
     pub mod watch_history_repository;
-
-
+    pub mod media;
 }
 
 #[tokio::main]

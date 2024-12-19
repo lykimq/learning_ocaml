@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
@@ -89,7 +89,23 @@ pub struct Media {
     pub views_count: Option<i32>,
     pub status: MediaStatus,
     pub uploaded_by: i32,
-    pub created_at: NaiveDate,
-    pub updated_at: NaiveDate,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+    pub series_order: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, FromRow, PartialEq)]
+pub struct MediaUpdateRequest {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub is_live: Option<bool>,
+    pub duration: Option<i32>,
+    pub thumbnail_url: Option<String>,
+    pub views_count: Option<i32>,
+    pub status: Option<MediaStatus>,
+    pub uploaded_by: Option<i32>,
+    pub youtube_id: Option<String>,
+    pub media_type: Option<MediaType>,
+    pub file_url: Option<String>,
     pub series_order: Option<i32>,
 }
