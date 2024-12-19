@@ -7,25 +7,25 @@ use dotenv::dotenv;
 use sqlx::PgPool;
 use std::env;
 
-mod events;
-mod eventrsvp;
-mod email;
-mod homegroup;
-mod homegrouprsvp;
-mod user;
-mod serving;
-mod servingrsvp;
+mod events; // Events for the events module
+mod eventrsvp; // Event RSVPs for the events module
+mod email; // Email for the events, homegroup, andserving modules
+mod homegroup; // Home group for the homegroup modules
+mod homegrouprsvp; // Home group RSVPs for the homegroupmodules
+mod user; // User for the events, homegroup, serving, and media modules
+mod serving; // Serving for the serving modules
+mod servingrsvp; // Serving RSVPs for the serving module
 mod media {
-    pub mod config;
-    pub mod error;
-    pub mod models;
-    pub mod media_repository;
-    pub mod cache;
-    pub mod rate_limiter;
-    pub mod youtube_service;
-    pub mod watch_history;
-    pub mod watch_history_repository;
-    pub mod media;
+    pub mod config; // Configuration settings
+    pub mod error; // Error handling
+    pub mod models; // Data models/structures
+    pub mod media_repository; // Database interactions
+    pub mod cache; // Cache mechanism
+    pub mod rate_limiter; // Rate limiting mechanism
+    pub mod youtube_service; // YouTube API integration
+    pub mod watch_history; // Watch history
+    pub mod watch_history_repository; // Watch history database interactions
+    pub mod media; // Core media functionality
 }
 
 #[tokio::main]
@@ -183,6 +183,24 @@ async fn main() -> std::io::Result<()> {
                     .route("/list", web::get().to(servingrsvp::get_all_serving_rsvps))
                     .route("/search", web::get().to(servingrsvp::search_serving_rsvp))
 
+            )
+            // Media routes
+            .service(
+                web::scope("admin/media")
+                    .route("/add", web::post().to(media::media::create_media))
+                    .route("/edit/{id}", web::put().to(media::media::update_media))
+                    .route("/{id}", web::delete().to(media::media::delete_media))
+                    .route("/{id}", web::get().to(media::media::get_media))
+                    .route("/search", web::get().to(media::media::search_media))
+                    .route("/list", web::get().to(media::media::get_all_media))
+                    .route("/{id}", web::get().to(media::media::get_media))
+                    // Watch history routes
+                    .service(
+                        web::scope("/watch_history")
+                            .route("/add", web::post().to(media::media::get_user_watch_history))
+                            .route("/edit/{id}", web::put().to(media::media::update_user_watch_history))
+                            .route("/{id}", web::delete().to(media::media::delete_user_watch_history))
+                    )
             )
         // Other routes
     })
