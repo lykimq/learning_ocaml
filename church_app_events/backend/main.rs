@@ -1,12 +1,18 @@
 use actix_cors::Cors;
 use actix_web::{
     web::{self},
-    App, HttpServer,
+    App, HttpServer, HttpResponse, Responder,
 };
 use dotenv::dotenv;
 use sqlx::PgPool;
 use std::env;
-
+use crate::media::youtube_service::YouTubeService;
+use std::sync::Arc;
+use crate::media::rate_limiter::RateLimiter;
+use crate::media::cache::Cache;
+use std::time::Duration;
+use anyhow::Result;
+use std::collections::HashMap;
 mod events; // Events for the events module
 mod eventrsvp; // Event RSVPs for the events module
 mod email; // Email for the events, homegroup, andserving modules
@@ -29,7 +35,7 @@ mod media {
 }
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<(), anyhow::Error> {
     dotenv().ok();
 
     println!("Environment variables loaded");
@@ -46,12 +52,33 @@ async fn main() -> std::io::Result<()> {
     let android_url = env::var("API_URL_ANDROID").expect("API_URL_ANDROID must be set");
 
     // Connect to the PostgreSQL database
-    let pool = PgPool::connect(&database_url).await.unwrap();
+let pool = PgPool::connect(&database_url).await.unwrap();
 
 
-       HttpServer::new(move || {
+    // GET YOUTUBE API KEY and CHANNEL ID from the environment variables
+    let api_key = env::var("YOUTUBE_API_KEY").expect("YOUTUBE_API_KEY must be set");
+    let channel_id = env::var("YOUTUBE_CHANNEL_ID").expect("YOUTUBE_CHANNEL_ID must be set");
+
+    // Create a rate limiter and cache
+    let rate_limiter =
+     Arc::new(RateLimiter::new(
+        "redis://127.0.0.1",
+        Duration::from_secs(60),
+        10)?);
+
+    let cache = Arc::new(Cache::new("cache")?);
+
+    HttpServer::new(move || {
+        let youtube_service = Arc::new(YouTubeService::new(
+            api_key.clone(),
+            channel_id.clone(),
+            rate_limiter.clone(),
+            cache.clone(),
+        ));
+
         App::new()
-            .app_data(web::Data::new(pool.clone())) // Clone the pool for each instance
+            .app_data(web::Data::new(pool.clone()))
+            .app_data(web::Data::new(youtube_service))
             .wrap(
                 Cors::default()
                     .allowed_origin(&format!("http://localhost:{}", frontend_port))
@@ -194,6 +221,54 @@ async fn main() -> std::io::Result<()> {
                     .route("/search", web::get().to(media::media::search_media))
                     .route("/list", web::get().to(media::media::get_all_media))
                     .route("/{id}", web::get().to(media::media::get_media))
+                    // YouTube sync routes
+                    .service(
+                        web::scope("/youtube")
+                        .route("/videos", web::get().to(|service: web::Data<YouTubeService>| async move {
+                            service.get_channel_videos(None).await
+                        }))
+                        .route("/live", web::get().to(|service: web::Data<YouTubeService>| async move {
+                            service.get_all_live_streams_handler().await
+                        }))
+                        .route("/upcoming", web::get().to(|service: web::Data<YouTubeService>| async move {
+                            service.get_upcoming_live_streams().await
+                        }))
+                        .route("/validate", web::get().to(move |service: web::Data<Arc<YouTubeService>>| {
+                            async move {
+                                if let Some(channel_id) = web::Query::<HashMap<String, String>>
+                                ::from_query("channel_id")
+                                .ok()
+                                .and_then(|q|
+                                    q.get("channel_id").cloned()) {
+                                    service.validate_channel_id(&channel_id).await
+                                } else {
+                                    HttpResponse::BadRequest().json("Missing channel_id parameter")
+                                }
+                            }
+                        }))
+                        .route("/resolve", web::get().to(move |service: web::Data<Arc<YouTubeService>>| {
+                            async move {
+                                if let Some(custom_url) = web::Query::<HashMap<String, String>>
+                                ::from_query("custom_url")
+                                .ok()
+                                .and_then(|q|
+                                    q.get("custom_url").cloned()) {
+                                    service.resolve_custom_url(&custom_url).await
+                                } else {
+                                    HttpResponse::BadRequest().json("Missing custom_url parameter")
+                                }
+                            }
+                        }))
+                        .route("/sync/start", web::post().to(move |service: web::Data<Arc<YouTubeService>>| async move {
+                            service.start_background_sync_handler().await
+                        }))
+                        .route("/sync/trigger", web::post().to(move |service: web::Data<Arc<YouTubeService>>| async move {
+                            service.trigger_sync().await
+                        }))
+                        .route("/sync/status", web::get().to(|service: web::Data<YouTubeService>| async move {
+                            service.get_sync_status().await
+                        }))
+                    )
                     // Watch history routes
                     .service(
                         web::scope("/watch_history")
@@ -207,5 +282,6 @@ async fn main() -> std::io::Result<()> {
     .bind(&format!("0.0.0.0:{}", backend_port))?
     .run()
     .await
+    .map_err(anyhow::Error::from)
 
 }

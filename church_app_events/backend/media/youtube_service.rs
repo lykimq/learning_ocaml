@@ -7,6 +7,7 @@ use std::time::Duration;
 use std::sync::Arc;
 use crate::media::rate_limiter::RateLimiter;
 use crate::media::cache::Cache;
+use serde_json::json;
 
 /// Response structure for YouTube API requests containing a list of items and pagination token
 #[derive(Debug, Deserialize, Serialize)]
@@ -50,6 +51,7 @@ pub struct YouTubeThumbnail {
 }
 
 /// YouTube service struct containing client, API key, channel ID, rate limiter, and cache
+#[derive(Clone)]
 pub struct YouTubeService {
     client: Client,
     api_key: String,
@@ -58,7 +60,7 @@ pub struct YouTubeService {
     cache: Arc<Cache>,
 }
 
-/// YouTube snippet structure containing metadata
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct YoutubeSnippet {
     pub title: String,
@@ -68,7 +70,7 @@ pub struct YoutubeSnippet {
     pub live_broadcast_content: String, // "live" or "upcoming" or "none"
 }
 
-/// Response structure for channel videos containing a list of videos and pagination token
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ChannelVideosResponse {
     pub videos: Vec<YouTubeItem>,
@@ -204,7 +206,7 @@ impl YouTubeService {
     // === Channel Management Methods ===
 
     /// Validates and extracts YouTube channel ID
-    pub async fn validate_channel_id(&self, channel_id_or_url: &str) -> impl Responder {
+    pub async fn validate_channel_id(&self, channel_id_or_url: &str) -> HttpResponse {
         let url = format!("https://www.googleapis.com/youtube/v3/channels?part=id&id={}&key={}", channel_id_or_url, self.api_key);
 
         match self.client.get(url).send().await {
@@ -221,7 +223,7 @@ impl YouTubeService {
     }
 
     /// Resolves custom YouTube URLs to channel IDs
-    pub async fn resolve_custom_url(&self, custom_url: &str) -> impl Responder {
+    pub async fn resolve_custom_url(&self, custom_url: &str) -> HttpResponse {
         let username = match custom_url.split('/').last() {
             Some(username) => username,
             None => return HttpResponse::BadRequest().json("Invalid YouTube URL")
@@ -249,15 +251,24 @@ impl YouTubeService {
     // === Background Tasks and Sync ===
 
     /// Starts background synchronization task
-    pub async fn start_background_sync(service: Arc<Self>) {
-        let mut interval = tokio::time::interval(Duration::from_secs(3600));// 1 hour
-        loop {
-            interval.tick().await;
-            if let Err(e) = service.sync_channel_data().await {
-                eprintln!("Background sync failed to fetch videos from YouTube: {}", e);
+    pub async fn start_background_sync_handler(&self) -> impl Responder {
+        let self_clone = self.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(3600));// 1 hour
+            loop {
+                interval.tick().await;
+                if let Err(e) = self_clone.sync_channel_data().await {
+                    eprintln!("Background sync failed to fetch videos from YouTube: {}", e);
+                }
             }
-        }
+        });
+
+        HttpResponse::Ok().json(json!({
+            "status": "success",
+            "message": "Background sync started successfully"
+        }))
     }
+
 
     /// Synchronizes channel data (videos and live streams)
     async fn sync_channel_data(&self) -> Result<(), AppError> {
@@ -281,4 +292,34 @@ impl YouTubeService {
 
         Ok(())
     }
+
+    // HTTP endpoint to manually trigger a sync
+    pub async fn trigger_sync(&self) -> impl Responder {
+        if let Err(e) = self.sync_channel_data().await {
+            eprintln!("Failed to trigger sync: {}", e);
+            HttpResponse::InternalServerError().json("Failed to trigger sync")
+        } else {
+            HttpResponse::Ok().json("Sync triggered")
+        }
+    }
+
+    // Get sync status and last sync time
+    pub async fn get_sync_status(&self) -> impl Responder {
+        let cache_key = format!("youtube_sync_status:{}", self.channel_id);
+
+        match self.cache.get::<DateTime<Utc>>(&cache_key).await {
+            Ok(Some(last_sync)) => HttpResponse::Ok().json(json!({
+                "status": "success",
+                "last_sync": last_sync.to_rfc3339(),
+                "next_sync": (last_sync + chrono::Duration::hours(1)).to_rfc3339()
+            })),
+            _ => HttpResponse::Ok().json(json!({
+                "status": "error",
+                "message": "No sync status available",
+                "last_sync": null,
+                "next_sync": null
+            }))
+        }
+    }
 }
+
