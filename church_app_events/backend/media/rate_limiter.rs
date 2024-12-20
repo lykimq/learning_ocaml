@@ -13,12 +13,11 @@ impl RateLimiter {
     /// Creates a new RateLimiter instance
     ///
     /// # Arguments
-    /// * `url` - Redis connection URL
+    /// * `client` - Redis client instance
     /// * `window` - Time window for rate limiting
     /// * `max_requests` - Maximum allowed requests within window
-    pub fn new(url: &str, window: Duration, max_requests: i32) -> Result<Self> {
-        let client = Client::open(url)?;
-        Ok(Self { client, window, max_requests })
+    pub fn new_with_client(client: Client, window: Duration, max_requests: i32) -> Self {
+        Self { client, window, max_requests }
     }
 
     /// Checks if a request from an IP should be rate limited

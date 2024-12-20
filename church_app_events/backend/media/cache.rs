@@ -13,13 +13,12 @@ impl Cache {
     /// Creates a new Cache instance
     ///
     /// # Arguments
-    /// * `url` - Redis connection URL (e.g., "redis://127.0.0.1:6379")
+    /// * `client` - Redis client instance
     ///
     /// # Returns
     /// * `Result<Cache>` - New cache instance or error
-    pub fn new(url: &str) -> Result<Self> {
-        let client = Client::open(url)?;
-        Ok(Self { client })
+    pub fn new_with_client(client: Client) -> Self {
+        Self { client }
     }
 
     /// Gets an async connection from the client

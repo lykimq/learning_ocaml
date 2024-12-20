@@ -59,14 +59,50 @@ let pool = PgPool::connect(&database_url).await.unwrap();
     let api_key = env::var("YOUTUBE_API_KEY").expect("YOUTUBE_API_KEY must be set");
     let channel_id = env::var("YOUTUBE_CHANNEL_ID").expect("YOUTUBE_CHANNEL_ID must be set");
 
-    // Create a rate limiter and cache
-    let rate_limiter =
-     Arc::new(RateLimiter::new(
-        "redis://127.0.0.1",
-        Duration::from_secs(60),
-        10)?);
+    // Read Redis configuration from environment variables
+    let redis_url = env::var("REDIS_URL").expect("REDIS_URL must be set");
+    println!("Attempting to connect to Redis with URL: {}", redis_url);
 
-    let cache = Arc::new(Cache::new("cache")?);
+    // Create Redis client with the URL directly
+    let client = redis::Client::open(redis_url.clone())
+        .map_err(|e| {
+            println!("Redis client creation error: {:?}", e);
+            e
+        })?;
+
+    println!("Redis client created successfully");
+
+    // Then try to get a connection
+    let mut conn = client.get_async_connection().await
+        .map_err(|e| {
+            println!("Redis connection error: {:?}", e);
+            e
+        })?;
+
+    println!("Redis connection established successfully");
+
+    let rate_limit_duration = env::var("RATE_LIMIT_DURATION_SECS")
+        .expect("RATE_LIMIT_DURATION_SECS must be set")
+        .parse::<u64>()
+        .expect("RATE_LIMIT_DURATION_SECS must be a valid number");
+
+    let rate_limit_requests = env::var("RATE_LIMIT_REQUESTS")
+        .expect("RATE_LIMIT_REQUESTS must be set")
+        .parse::<i32>()
+        .expect("RATE_LIMIT_REQUESTS must be a valid number");
+
+    // Create a rate limiter using the existing client
+    let rate_limiter = Arc::new(RateLimiter::new_with_client(
+        client.clone(),
+        Duration::from_secs(rate_limit_duration),
+        rate_limit_requests
+    ));
+
+    println!("Rate limiter created successfully");
+
+    let cache = Arc::new(Cache::new_with_client(client.clone()));
+
+    println!("Cache created successfully");
 
     HttpServer::new(move || {
         let youtube_service = Arc::new(YouTubeService::new(

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import { TextInput, Button, Title, Switch, SegmentedButtons } from 'react-native-paper';
+import { TextInput, Button, Title, Switch, SegmentedButtons, Portal, Dialog } from 'react-native-paper';
 import { createMedia, updateMedia } from '../../../services/media/mediaService';
+import { validateChannelId, getChannelVideos } from '../../../services/media/youtubeService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { showAlert } from '../../constants/constants';
 import formStyles from '../../styles/formStyles';
@@ -22,6 +23,11 @@ const MediaForm = ({ mediaData, onSubmit }) => {
     const [dialogMessage, setDialogMessage] = useState(null);
     const [dialogVisible, setDialogVisible] = useState(false);
     const [dialogCallback, setDialogCallback] = useState(null);
+    const [channelId, setChannelId] = useState('');
+    const [isLoadingVideos, setIsLoadingVideos] = useState(false);
+    const [youtubeVideos, setYoutubeVideos] = useState([]);
+    const [showVideoSelector, setShowVideoSelector] = useState(false);
+    const [selectedVideo, setSelectedVideo] = useState(null);
 
     useEffect(() => {
         if (mediaData) {
@@ -40,6 +46,36 @@ const MediaForm = ({ mediaData, onSubmit }) => {
 
     const handleAlert = (title, message, callback = null) => {
         showAlert(title, message, callback, setDialogMessage, setDialogVisible, setDialogCallback);
+    };
+
+    const handleLoadChannel = async () => {
+        if (!channelId) {
+            handleAlert('Error', 'Please enter a YouTube channel ID');
+            return;
+        }
+
+        setIsLoadingVideos(true);
+        try {
+            await validateChannelId(channelId);
+
+            const videos = await getChannelVideos();
+            setYoutubeVideos(videos);
+            setShowVideoSelector(true);
+        } catch (error) {
+            handleAlert('Error', error.message || 'Failed to load YouTube channel');
+        } finally {
+            setIsLoadingVideos(false);
+        }
+    };
+
+    const handleVideoSelect = (video) => {
+        setSelectedVideo(video);
+        setTitle(video.title);
+        setDescription(video.description);
+        setYoutubeId(video.youtube_id);
+        setDuration(video.duration?.toString());
+        setThumbnailUrl(video.thumbnail_url);
+        setShowVideoSelector(false);
     };
 
     const handleSubmit = async () => {
@@ -68,6 +104,7 @@ const MediaForm = ({ mediaData, onSubmit }) => {
             thumbnail_url: thumbnailUrl,
             series_order: seriesOrder ? parseInt(seriesOrder) : null,
             status,
+            youtube_channel_id: mediaType === 'youtube' ? channelId : null,
         };
 
         try {
@@ -140,14 +177,33 @@ const MediaForm = ({ mediaData, onSubmit }) => {
                     />
 
                     {mediaType === 'youtube' && (
-                        <TextInput
-                            label="YouTube ID"
-                            value={youtubeId}
-                            onChangeText={setYoutubeId}
-                            style={formStyles.input}
-                            mode="outlined"
-                            error={errors.youtubeId}
-                        />
+                        <>
+                            <TextInput
+                                label="YouTube Channel ID"
+                                value={channelId}
+                                onChangeText={setChannelId}
+                                style={formStyles.input}
+                                mode="outlined"
+                            />
+                            <Button
+                                mode="contained"
+                                onPress={handleLoadChannel}
+                                loading={isLoadingVideos}
+                                style={formStyles.videoSelectButton}
+                                labelStyle={formStyles.videoSelectButtonText}
+                            >
+                                Load Channel Videos
+                            </Button>
+
+                            <TextInput
+                                label="YouTube ID"
+                                value={youtubeId}
+                                onChangeText={setYoutubeId}
+                                style={formStyles.input}
+                                mode="outlined"
+                                error={errors.youtubeId}
+                            />
+                        </>
                     )}
 
                     <View style={formStyles.switchContainer}>
@@ -208,6 +264,29 @@ const MediaForm = ({ mediaData, onSubmit }) => {
                     </Button>
                 </View>
             </ScrollView>
+
+            <Portal>
+                <Dialog visible={showVideoSelector} onDismiss={() => setShowVideoSelector(false)}>
+                    <Dialog.Title>Select YouTube Video</Dialog.Title>
+                    <Dialog.ScrollArea>
+                        <ScrollView contentContainerStyle={formStyles.dialogScrollContainer}>
+                            {youtubeVideos.map((video) => (
+                                <Button
+                                    key={video.youtube_id}
+                                    mode="outlined"
+                                    onPress={() => handleVideoSelect(video)}
+                                    style={formStyles.videoSelectButton}
+                                >
+                                    {video.title}
+                                </Button>
+                            ))}
+                        </ScrollView>
+                    </Dialog.ScrollArea>
+                    <Dialog.Actions>
+                        <Button onPress={() => setShowVideoSelector(false)}>Cancel</Button>
+                    </Dialog.Actions>
+                </Dialog>
+            </Portal>
         </KeyboardAvoidingView>
     );
 };

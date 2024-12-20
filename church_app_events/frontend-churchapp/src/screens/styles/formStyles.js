@@ -146,7 +146,21 @@ const formStyles = StyleSheet.create({
         width: '100%',
         maxWidth: Math.min(LAYOUT.maxWidth, width * 0.9),
         marginHorizontal: 'auto',
-    }
+    },
+    dialogScrollContainer: {
+        maxHeight: 400,
+        padding: LAYOUT.padding,
+    },
+    videoSelectButton: {
+        marginBottom: 8,
+        marginHorizontal: 10,
+        marginVertical: 5,
+    },
+    videoSelectButtonText: {
+        fontSize: 16,
+        color: COLORS.text,
+    },
+
 });
 
 
