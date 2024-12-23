@@ -38,6 +38,8 @@ mod media {
 async fn main() -> Result<(), anyhow::Error> {
     dotenv().ok();
 
+    println!("🚀 Starting server initialization...");
+
     println!("Environment variables loaded");
     println!("Connected to the database");
 
@@ -49,7 +51,10 @@ async fn main() -> Result<(), anyhow::Error> {
     // GET API URLS from the environment variables
     let web_url = env::var("API_URL_WEB").expect("API_URL_WEB must be set");
     let ios_url = env::var("API_URL_IOS").expect("API_URL_IOS must be set");
-    let android_url = env::var("API_URL_ANDROID").expect("API_URL_ANDROID must be set");
+    let android_emulator_url = env::var("API_URL_ANDROID_EMULATOR")
+        .expect("API_URL_ANDROID_EMULATOR must be set");
+    let android_device_url = env::var("API_URL_ANDROID_DEVICE")
+        .expect("API_URL_ANDROID_DEVICE must be set");
 
     // Connect to the PostgreSQL database
 let pool = PgPool::connect(&database_url).await.unwrap();
@@ -105,28 +110,37 @@ let pool = PgPool::connect(&database_url).await.unwrap();
     println!("Cache created successfully");
 
     HttpServer::new(move || {
-        let youtube_service = Arc::new(YouTubeService::new(
+        // Create a single YouTube service instance
+        let youtube_service = web::Data::new(YouTubeService::get_instance(
             api_key.clone(),
             channel_id.clone(),
             rate_limiter.clone(),
             cache.clone(),
         ));
 
+        // Create a more permissive CORS configuration for development
+        let cors = Cors::default()
+            .allowed_origin(&web_url)
+            .allowed_origin(&ios_url)
+            .allowed_origin(&android_emulator_url)
+            .allowed_origin(&android_device_url)
+            .allowed_origin(&format!("http://localhost:{}", frontend_port))
+            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+            .allowed_headers(vec![
+                "Content-Type",
+                "Authorization",
+                "Accept",
+                "Origin",
+                "X-Requested-With"
+            ])
+            .expose_headers(vec!["Content-Length"])
+            .supports_credentials()
+            .max_age(3600);
+
         App::new()
             .app_data(web::Data::new(pool.clone()))
-            .app_data(web::Data::new(youtube_service))
-            .wrap(
-                Cors::default()
-                    .allowed_origin(&format!("http://localhost:{}", frontend_port))
-                    .allowed_origin(&web_url)
-                    .allowed_origin(&ios_url)
-                    .allowed_origin(&android_url)
-                    .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-                    .allowed_headers(vec!["Content-Type", "Authorization", "Accept", "Origin"])
-                    .expose_headers(vec!["Content-Length"])
-                    .supports_credentials()
-                    .max_age(3600),
-            )
+            .app_data(youtube_service.clone())
+            .wrap(cors)
             .wrap(user::AuthMiddleware)
             // Authentication routes
             .service(
@@ -255,7 +269,7 @@ let pool = PgPool::connect(&database_url).await.unwrap();
                     .route("/{id}", web::delete().to(media::media::delete_media))
                     .route("/{id}", web::get().to(media::media::get_media))
                     .route("/search", web::get().to(media::media::search_media))
-                    .route("/list", web::get().to(media::media::get_all_media))
+                    .route("/all", web::get().to(media::media::get_all_media))
                     .route("/{id}", web::get().to(media::media::get_media))
                     // YouTube sync routes
                     .service(
@@ -269,19 +283,18 @@ let pool = PgPool::connect(&database_url).await.unwrap();
                         .route("/upcoming", web::get().to(|service: web::Data<YouTubeService>| async move {
                             service.get_upcoming_live_streams().await
                         }))
-                        .route("/validate", web::get().to(move |service: web::Data<Arc<YouTubeService>>| {
-                            async move {
-                                if let Some(channel_id) = web::Query::<HashMap<String, String>>
-                                ::from_query("channel_id")
-                                .ok()
-                                .and_then(|q|
-                                    q.get("channel_id").cloned()) {
-                                    service.validate_channel_id(&channel_id).await
+                        .route("/validate", web::get().to(
+                            |service: web::Data<YouTubeService>, query: web::Query<HashMap<String, String>>| async move {
+                                println!("=== Received validation request ===");
+                                if let Some(channel_id) = query.get("channel_id") {
+                                    println!("Validating channel ID from query: {}", channel_id);
+                                    service.validate_channel_id(channel_id).await
                                 } else {
+                                    println!("No channel_id found in query parameters");
                                     HttpResponse::BadRequest().json("Missing channel_id parameter")
                                 }
                             }
-                        }))
+                        ))
                         .route("/resolve", web::get().to(move |service: web::Data<Arc<YouTubeService>>| {
                             async move {
                                 if let Some(custom_url) = web::Query::<HashMap<String, String>>
@@ -320,4 +333,12 @@ let pool = PgPool::connect(&database_url).await.unwrap();
     .await
     .map_err(anyhow::Error::from)
 
+}
+
+// Health check endpoint
+async fn health_check() -> impl Responder {
+    HttpResponse::Ok().json(serde_json::json!({
+        "status": "healthy",
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }))
 }

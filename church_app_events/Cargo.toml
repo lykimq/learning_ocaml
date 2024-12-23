@@ -26,6 +26,7 @@ reqwest = { version = "0.11", features = ["json"] }
 redis = { version = "0.22.3", features = ["tokio-comp", "connection-manager"] }
 anyhow = "1.0"
 
+
 [[bin]]
 name = "church_app_events"         # Name of the binary
 path = "backend/main.rs"     # Path to the main file

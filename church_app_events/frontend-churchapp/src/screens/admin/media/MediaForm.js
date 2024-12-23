@@ -56,13 +56,21 @@ const MediaForm = ({ mediaData, onSubmit }) => {
 
         setIsLoadingVideos(true);
         try {
-            await validateChannelId(channelId);
+            console.log('Starting channel validation for:', channelId);
+            const validationResult = await validateChannelId(channelId);
+            console.log('Validation result:', validationResult);
 
-            const videos = await getChannelVideos();
-            setYoutubeVideos(videos);
-            setShowVideoSelector(true);
+            if (validationResult.status === 'success') {
+                // Continue with loading videos
+                const videos = await getChannelVideos(channelId);
+                setYoutubeVideos(videos);
+                handleAlert('Success', 'Channel videos loaded successfully');
+            } else {
+                handleAlert('Error', validationResult.error || 'Failed to validate channel');
+            }
         } catch (error) {
-            handleAlert('Error', error.message || 'Failed to load YouTube channel');
+            console.error('Channel loading error:', error);
+            handleAlert('Error', error.message || 'Failed to load channel videos');
         } finally {
             setIsLoadingVideos(false);
         }
@@ -83,7 +91,14 @@ const MediaForm = ({ mediaData, onSubmit }) => {
         if (!title) validationErrors.title = true;
         if (!fileUrl) validationErrors.fileUrl = true;
         if (!mediaType) validationErrors.mediaType = true;
-        if (mediaType === 'youtube' && !youtubeId) validationErrors.youtubeId = true;
+
+        // Conditional validation based on media type
+        if (mediaType === 'youtube') {
+            if (!youtubeId) validationErrors.youtubeId = true;
+            if (!channelId) validationErrors.channelId = true;
+        } else {
+            if (!fileUrl) validationErrors.fileUrl = true;
+        }
 
         setErrors(validationErrors);
 
@@ -95,7 +110,7 @@ const MediaForm = ({ mediaData, onSubmit }) => {
         const formData = {
             title,
             description,
-            file_url: fileUrl,
+            file_url: mediaType === 'youtube' ? `https://youtube.com/watch?v=${youtubeId}` : fileUrl,
             uploaded_by: user.id,
             media_type: mediaType,
             youtube_id: youtubeId,

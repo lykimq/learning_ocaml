@@ -1,26 +1,4 @@
-import { Platform } from 'react-native';
-import axios from 'axios';
-import { API_URL_ANDROID, API_URL_IOS, API_URL_WEB } from '@env';
-
-const getApiUrl = () => {
-    switch (Platform.OS) {
-        case 'android':
-            return API_URL_ANDROID;
-        case 'ios':
-            return API_URL_IOS;
-        default: // web
-            return API_URL_WEB;
-    }
-}
-
-const apiUrl = getApiUrl();
-
-const api = axios.create({
-    baseURL: apiUrl,
-    headers: {
-        'Content-Type': 'application/json'
-    }
-});
+import api from '../apiConfig';
 
 export const getEvents = async () => {
     try {

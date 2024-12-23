@@ -3,9 +3,13 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { Title, Card, Text, IconButton } from 'react-native-paper';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 import MediaList from './MediaList';
 import MediaForm from './MediaForm';
 import WatchHistoryList from './WatchHistoryList';
+import MediaDetails from './MediaDetails';
+
+const Stack = createStackNavigator();
 
 const Header = ({ title, onBackPress, hideTitle, hideBackButton }) => {
   if (!onBackPress) {
@@ -28,15 +32,8 @@ const Header = ({ title, onBackPress, hideTitle, hideBackButton }) => {
   );
 };
 
-const ManageMediaScreen = () => {
+const MainMediaScreen = ({ navigation }) => {
   const [selectedOption, setSelectedOption] = useState(null);
-  const navigation = useNavigation();
-
-  useEffect(() => {
-    navigation.setOptions({
-      gestureEnabled: true,
-    });
-  }, [navigation]);
 
   const renderContent = () => {
     switch (selectedOption) {
@@ -61,7 +58,7 @@ const ManageMediaScreen = () => {
               hideTitle={true}
               hideBackButton={true}
             />
-            <MediaList />
+            <MediaList navigation={navigation} />
           </View>
         );
       case 'history':
@@ -113,6 +110,28 @@ const ManageMediaScreen = () => {
     <View style={styles.container}>
       {renderContent()}
     </View>
+  );
+};
+
+const ManageMediaScreen = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen
+        name="MainMedia"
+        component={MainMediaScreen}
+      />
+      <Stack.Screen
+        name="MediaDetails"
+        component={MediaDetails}
+        options={{
+          presentation: 'card',
+        }}
+      />
+    </Stack.Navigator>
   );
 };
 
