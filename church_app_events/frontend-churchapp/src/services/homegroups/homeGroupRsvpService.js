@@ -145,8 +145,3 @@ export const sendDeclineEmail = async (rsvpData) => {
         throw new Error(error.response?.data || 'Failed to send decline email');
     }
 };
-
-console.log('Android URL:', API_URL_ANDROID);
-console.log('iOS URL:', API_URL_IOS);
-console.log('Web URL:', API_URL_WEB);
-console.log('API URL for homegroup RSVPs:', apiUrl);

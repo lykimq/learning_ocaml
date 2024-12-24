@@ -1,58 +1,45 @@
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
+import Config from 'react-native-config';
 import axios from 'axios';
-import {
-    API_URL_ANDROID_EMULATOR,
-    API_URL_ANDROID_DEVICE,
-    API_URL_IOS,
-    API_URL_WEB
-} from '@env';
 import { logger } from "react-native-logs";
 
 const isEmulator = () => {
     if (Platform.OS === 'android') {
-        return !!(
-            window.navigator.userAgent.includes('Android Emulator') ||
-            window.navigator.userAgent.includes('SDK built for x86')
-        );
+        return Platform.constants.Brand === 'google' ||
+            Platform.constants.Model?.includes('sdk') ||
+            Platform.constants.Model?.includes('Simulator');
+    } else if (Platform.OS === 'ios') {
+        return Platform.constants.isSimulator;
     }
     return false;
-}
-
-const getApiUrl = () => {
-    if (Platform.OS === 'android') {
-        return isEmulator()
-            ? API_URL_ANDROID_EMULATOR  // 10.0.2.2:8080 for emulator
-            : API_URL_ANDROID_DEVICE;   // 192.168.1.36:8080 for physical device
-    } else if (Platform.OS === 'ios') {
-        return API_URL_IOS;
-    }
-    return API_URL_WEB;
 };
 
-const validateApiUrl = () => {
-    const url = getApiUrl();
-    if (!url) {
-        throw new Error('API URL is not configured');
+const getBaseUrl = () => {
+    const platform = Platform.OS;
+    const emulator = isEmulator();
+
+    let baseUrl;
+    if (platform === 'android') {
+        baseUrl = emulator
+            ? Config.API_URL_ANDROID_EMULATOR
+            : Config.API_URL_ANDROID_DEVICE;
+    } else if (platform === 'ios') {
+        baseUrl = Config.API_URL_IOS;
+    } else {
+        baseUrl = Config.API_URL_WEB;
     }
-    console.log('\n🌐 API Configuration:', {
-        url,
-        platform: Platform.OS,
-        isEmulator: isEmulator(),
-        envUrls: {
-            android_emulator: API_URL_ANDROID_EMULATOR,
-            android_device: API_URL_ANDROID_DEVICE,
-            ios: API_URL_IOS,
-            web: API_URL_WEB
-        },
-        timestamp: new Date().toISOString()
-    });
-    return url;
+
+    console.log('Platform:', platform);
+    console.log('Is Emulator:', emulator);
+    console.log('Base URL:', baseUrl);
+
+    return baseUrl;
 };
 
-const apiUrl = validateApiUrl();
+const baseURL = getBaseUrl();
 
 const api = axios.create({
-    baseURL: apiUrl,
+    baseURL,
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -137,7 +124,7 @@ const testConnection = async () => {
         console.log('🟢 API Connection Test: Success');
     } catch (error) {
         console.error('🔴 API Connection Test: Failed', {
-            url: apiUrl,
+            url: baseURL,
             error: error.message
         });
     }
@@ -148,4 +135,11 @@ if (__DEV__) {
     testConnection();
 }
 
-export default api;
+export const apiConfig = {
+    baseURL,
+    headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+    },
+    timeout: 10000,
+};
