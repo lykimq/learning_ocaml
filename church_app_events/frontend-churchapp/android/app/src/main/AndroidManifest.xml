@@ -25,6 +25,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="com.lykimq_uyen.frontendchurchapp"/>
+        <data android:scheme="exp+frontend-churchapp"/>
       </intent-filter>
     </activity>
   </application>
