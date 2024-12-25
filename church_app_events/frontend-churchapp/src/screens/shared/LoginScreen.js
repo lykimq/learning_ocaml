@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { TextInput, Button, Text, HelperText, SegmentedButtons } from 'react-native-paper';
 import * as userService from '../../services/userService';
@@ -140,13 +140,14 @@ export default function LoginScreen({ navigation }) {
             secureTextEntry={!showPassword}
             error={!!errors.password}
             disabled={loading}
-            right={() => (
+            right={
               <TextInput.Icon
                 icon={showPassword ? "eye-off" : "eye"}
                 onPress={() => setShowPassword(!showPassword)}
                 forceTextInputFocus={false}
+                color={errors.password ? 'red' : 'black'}
               />
-            )}
+            }
           />
           {errors.password && (
             <HelperText type="error" visible={true}>
