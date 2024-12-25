@@ -5,18 +5,20 @@ import { API_URL_ANDROID_DEVICE, API_URL_IOS, API_URL_WEB } from "@env"
 import NetInfo from "@react-native-community/netinfo";
 
 const getApiUrl = async () => {
-
+    // Check network connection type
     const netInfo = await NetInfo.fetch();
-    console.log('NetInfo:', netInfo);
 
     switch (Platform.OS) {
         case "android":
+            // If running on real device
             if (!__DEV__) {
-                return API_URL_ANDROID_DEVICE || 'http://192.168.1.36:8080';
-            } else if (netInfo.type === 'wifi') {
-                return 'http://10.0.2.2:8080'
+                return API_URL_ANDROID_DEVICE; // Your production URL
             }
-            return 'http://10.0.2.2:8080'
+            // For development on real device or emulator
+            if (netInfo.type === 'wifi') {
+                return 'http://192.168.1.36:8080'; // Your local network IP
+            }
+            return 'http://10.0.2.2:8080'; // Android emulator default
         case "ios":
             return API_URL_IOS;
         default:
@@ -24,67 +26,68 @@ const getApiUrl = async () => {
     }
 }
 
+// Create API instance with enhanced configuration
 const createApi = async () => {
     const apiUrl = await getApiUrl();
-    return axios.create({
+
+    const instance = axios.create({
         baseURL: apiUrl,
-        timeout: Platform.OS === 'web' ? 30000 : 10000,
+        timeout: Platform.OS === 'web' ? 10000 : 30000,
         headers: {
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "Connection": "keep-alive",
+            "Connection": "keep-alive"
         },
+        // Enhanced retry configuration
         retry: 3,
         retryDelay: (retryCount) => {
-            console.log(`Retrying request, attempt ${retryCount + 1}`);
-            return 1000 * Math.pow(2, retryCount);
-        },
+            return Math.min(1000 * Math.pow(2, retryCount), 10000);
+        }
     });
 
-    // Add request interception with timeout handling
-    api.interceptors.request.use(async (config) => {
+    // Add request interceptor with timeout handling
+    instance.interceptors.request.use(async (config) => {
         // Check network status before making request
         const netInfo = await NetInfo.fetch();
         if (!netInfo.isConnected) {
-            throw new Error('No internet connection');
+            return Promise.reject(new Error('No internet connection'));
         }
+
         if (__DEV__) {
-            console.log('Starting Request:', {
+            console.log('Request:', {
                 url: config.url,
                 method: config.method,
-                baseURL: config.baseURL,
-                data: config.data
+                baseURL: config.baseURL
             });
         }
         return config;
     });
 
-    // Add response interceptor for debugging
-    api.interceptors.response.use(
-        response => {
+    // Enhanced response interceptor with better error handling
+    instance.interceptors.response.use(
+        (response) => {
             if (__DEV__) {
-                console.log('Response:', response);
+                console.log('Response received for:', response.config.url);
             }
             return response;
         },
-        error => {
+        async (error) => {
             if (__DEV__) {
-                console.log('Response Error:', {
-                    message: error.message,
-                    response: error.response?.data,
+                console.log('Error Response:', {
+                    url: error.config?.url,
                     status: error.response?.status,
-                    config: error.config
+                    message: error.message
                 });
             }
 
             // Handle timeout errors specifically
             if (error.code === 'ECONNABORTED') {
-                throw new Error('Request timed out');
+                throw new Error('Request timed out. Please check your connection.');
             }
 
             // Handle network errors
-            if (error.code === 'ENOTFOUND') {
-                throw new Error('Network error');
+            if (!error.response) {
+                throw new Error('Network error. Please check your connection.');
             }
 
             throw error;
@@ -92,20 +95,19 @@ const createApi = async () => {
     );
 
     return instance;
-}
+};
 
-// Initialize the API instance
+// Initialize API
 let api;
 (async () => {
     api = await createApi();
 })();
 
-
-// get users
+// Modify your existing API calls to handle the async API initialization
 export const getUsers = async () => {
     try {
+        if (!api) api = await createApi();
         const response = await api.get('/admin/users/list');
-        console.log('Users fetched:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error fetching users:', error);
@@ -113,15 +115,14 @@ export const getUsers = async () => {
     }
 };
 
-
-// get user by id
+// Example of how to modify other API calls
 export const getUserById = async (id) => {
     try {
+        if (!api) api = await createApi();
         const response = await api.get(`/admin/users/${id}`);
-        console.log('User fetched:', response.data);
         return response.data;
     } catch (error) {
-        console.error('Error fetching user by id:', error);
+        console.error('Error fetching user:', error);
         throw error;
     }
 };

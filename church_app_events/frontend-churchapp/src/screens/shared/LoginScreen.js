@@ -140,13 +140,13 @@ export default function LoginScreen({ navigation }) {
             secureTextEntry={!showPassword}
             error={!!errors.password}
             disabled={loading}
-            right={
+            right={() => (
               <TextInput.Icon
                 icon={showPassword ? "eye-off" : "eye"}
                 onPress={() => setShowPassword(!showPassword)}
                 forceTextInputFocus={false}
               />
-            }
+            )}
           />
           {errors.password && (
             <HelperText type="error" visible={true}>
