@@ -85,14 +85,14 @@ export const updateMedia = async (mediaId, mediaData) => {
 // Get all media (combines both saved media and YouTube videos)
 export const getAllContent = async () => {
     try {
-        // Try to fetch both, but don't let one failure stop the other
+        console.log('Fetching content...');
         const [mediaResponse, youtubeResponse] = await Promise.allSettled([
             api.get('/admin/media/list').catch(err => {
-                console.warn('Failed to fetch saved media:', err);
+                console.error('Failed to fetch saved media:', err.response || err);
                 return { data: [] };
             }),
             api.get('/admin/media/youtube/videos').catch(err => {
-                console.warn('Failed to fetch YouTube videos:', err);
+                console.error('Failed to fetch YouTube videos:', err.response || err);
                 return { data: [] };
             })
         ]);
@@ -101,7 +101,7 @@ export const getAllContent = async () => {
         const savedMedia = mediaResponse.status === 'fulfilled'
             ? (mediaResponse.value?.data || []).map(media => ({
                 ...media,
-                id: `saved-${media.id}-${Date.now()}`,
+                id: `saved-${media.id}`,
                 source: 'saved',
                 created_at: media.created_at || new Date().toISOString()
             }))
@@ -111,27 +111,34 @@ export const getAllContent = async () => {
         let youtubeVideos = [];
         if (youtubeResponse.status === 'fulfilled' && youtubeResponse.value?.data) {
             const ytData = youtubeResponse.value.data;
-            console.log('Raw YouTube response:', ytData);
             const videos = ytData.videos || ytData.items || [];
 
-            youtubeVideos = videos.map((video, index) => {
-                const videoId = video.id?.videoId || video.id;
-                const timestamp = video.snippet?.publishedAt || new Date().toISOString();
+            youtubeVideos = videos.map(video => {
+                // Extract video ID from the complex structure
+                const videoId = video.id?.videoId ||
+                    (typeof video.id === 'string' ? video.id : null);
+
                 return {
-                    id: videoId, // Keep the original videoId as id
-                    title: video.snippet?.title || video.title,
-                    description: video.snippet?.description || video.description,
-                    thumbnail_url: video.snippet?.thumbnails?.default?.url || video.thumbnail_url,
+                    id: videoId,                   // Original video ID for the player
+                    videoId: videoId,              // Keep a separate copy for the player
+                    title: video.snippet?.title,
+                    description: video.snippet?.description,
+                    thumbnail_url: video.snippet?.thumbnails?.default?.url ||
+                        video.snippet?.thumbnails?.medium?.url ||
+                        video.snippet?.thumbnails?.high?.url,
                     media_type: 'youtube',
                     source: 'youtube',
-                    created_at: timestamp,
-                    snippet: video.snippet // Preserve original snippet for additional data
+                    created_at: video.snippet?.publishedAt || new Date().toISOString(),
+                    snippet: video.snippet         // Keep the full snippet for reference
                 };
-            });
+            }).filter(video => video.id && video.title); // Only keep valid videos
         }
 
+        console.log('Processed YouTube videos:', youtubeVideos);
+        console.log('Saved media:', savedMedia);
+
         const combinedContent = [...savedMedia, ...youtubeVideos];
-        console.log('Combined content:', combinedContent);
+        console.log('Final combined content:', combinedContent);
         return combinedContent;
     } catch (error) {
         console.error('Error in getAllContent:', error);
