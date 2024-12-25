@@ -269,7 +269,7 @@ let pool = PgPool::connect(&database_url).await.unwrap();
                     .route("/{id}", web::delete().to(media::media::delete_media))
                     .route("/{id}", web::get().to(media::media::get_media))
                     .route("/search", web::get().to(media::media::search_media))
-                    .route("/all", web::get().to(media::media::get_all_media))
+                    .route("/list", web::get().to(media::media::get_all_media))
                     .route("/{id}", web::get().to(media::media::get_media))
                     // YouTube sync routes
                     .service(

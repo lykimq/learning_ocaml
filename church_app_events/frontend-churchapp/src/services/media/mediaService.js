@@ -87,7 +87,7 @@ export const getAllContent = async () => {
     try {
         // Try to fetch both, but don't let one failure stop the other
         const [mediaResponse, youtubeResponse] = await Promise.allSettled([
-            api.get('/admin/media/all').catch(err => {
+            api.get('/admin/media/list').catch(err => {
                 console.warn('Failed to fetch saved media:', err);
                 return { data: [] };
             }),
@@ -104,24 +104,21 @@ export const getAllContent = async () => {
         let youtubeVideos = [];
         if (youtubeResponse.status === 'fulfilled' && youtubeResponse.value.data) {
             const ytData = youtubeResponse.value.data;
-            console.log('Raw YouTube response:', ytData); // Debug log
+            console.log('Raw YouTube response:', ytData);
 
-            // Handle different response structures
-            if (Array.isArray(ytData)) {
+            // Extract videos array from the response
+            if (ytData.videos && Array.isArray(ytData.videos)) {
+                youtubeVideos = ytData.videos;
+            } else if (Array.isArray(ytData)) {
                 youtubeVideos = ytData;
             } else if (ytData.items && Array.isArray(ytData.items)) {
                 youtubeVideos = ytData.items;
-            } else if (typeof ytData === 'object') {
-                // If it's a single video object
-                youtubeVideos = [ytData];
             }
         }
 
-        console.log('Processed YouTube videos:', youtubeVideos); // Debug log
-
         // Transform YouTube videos to match media format
         const formattedYoutubeVideos = youtubeVideos.map(video => ({
-            id: video.id?.videoId || video.id,
+            id: `youtube-${video.id?.videoId || video.id || Date.now()}`,
             title: video.snippet?.title || video.title,
             description: video.snippet?.description || video.description,
             thumbnail_url: video.snippet?.thumbnails?.default?.url || video.thumbnail_url,
@@ -130,9 +127,10 @@ export const getAllContent = async () => {
             created_at: video.snippet?.publishedAt || new Date().toISOString()
         }));
 
-        // Mark saved media
+        // Mark saved media and ensure unique IDs
         const formattedSavedMedia = savedMedia.map(media => ({
             ...media,
+            id: `saved-${media.id || Date.now()}`,
             source: 'saved'
         }));
 
@@ -161,7 +159,7 @@ export const getYoutubeVideos = async () => {
 // Get saved media only
 export const getSavedMedia = async () => {
     try {
-        const response = await api.get('/admin/media/all');
+        const response = await api.get('/admin/media/list');
         console.log("Saved media fetched successfully:", response.data);
         return response.data;
     } catch (error) {
