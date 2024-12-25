@@ -89,7 +89,14 @@ const MediaList = ({ navigation }) => {
         />
     ), [navigation]);
 
-    const keyExtractor = useCallback((item) => item.id, []);
+    const keyExtractor = useCallback((item) => {
+        // Create a truly unique key based on multiple properties
+
+        const baseId = item.id || item.snippet?.resourceId?.videoId || item.snippet?.videoId;
+        const timestamp = item.created_at || item.snippet?.publishedAt || Date.now();
+        const source = item.source || 'unknown';
+        return `${source}-${baseId}-${timestamp}`;
+    }, []);
 
     const getFilteredMedia = useCallback(() => {
         return searchQuery

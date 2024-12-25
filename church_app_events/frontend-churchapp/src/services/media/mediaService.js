@@ -98,43 +98,39 @@ export const getAllContent = async () => {
         ]);
 
         // Safely extract data from responses
-        const savedMedia = mediaResponse.status === 'fulfilled' ? mediaResponse.value.data || [] : [];
+        const savedMedia = mediaResponse.status === 'fulfilled'
+            ? (mediaResponse.value?.data || []).map(media => ({
+                ...media,
+                id: `saved-${media.id}-${Date.now()}`,
+                source: 'saved',
+                created_at: media.created_at || new Date().toISOString()
+            }))
+            : [];
 
         // Handle YouTube response data structure
         let youtubeVideos = [];
-        if (youtubeResponse.status === 'fulfilled' && youtubeResponse.value.data) {
+        if (youtubeResponse.status === 'fulfilled' && youtubeResponse.value?.data) {
             const ytData = youtubeResponse.value.data;
             console.log('Raw YouTube response:', ytData);
+            const videos = ytData.videos || ytData.items || [];
 
-            // Extract videos array from the response
-            if (ytData.videos && Array.isArray(ytData.videos)) {
-                youtubeVideos = ytData.videos;
-            } else if (Array.isArray(ytData)) {
-                youtubeVideos = ytData;
-            } else if (ytData.items && Array.isArray(ytData.items)) {
-                youtubeVideos = ytData.items;
-            }
+            youtubeVideos = videos.map((video, index) => {
+                const videoId = video.id?.videoId || video.id;
+                const timestamp = video.snippet?.publishedAt || new Date().toISOString();
+                return {
+                    id: videoId, // Keep the original videoId as id
+                    title: video.snippet?.title || video.title,
+                    description: video.snippet?.description || video.description,
+                    thumbnail_url: video.snippet?.thumbnails?.default?.url || video.thumbnail_url,
+                    media_type: 'youtube',
+                    source: 'youtube',
+                    created_at: timestamp,
+                    snippet: video.snippet // Preserve original snippet for additional data
+                };
+            });
         }
 
-        // Transform YouTube videos to match media format
-        const formattedYoutubeVideos = youtubeVideos.map(video => ({
-            id: `youtube-${video.id?.videoId || video.id || Date.now()}`,
-            title: video.snippet?.title || video.title,
-            description: video.snippet?.description || video.description,
-            thumbnail_url: video.snippet?.thumbnails?.default?.url || video.thumbnail_url,
-            media_type: 'youtube',
-            source: 'youtube',
-            created_at: video.snippet?.publishedAt || new Date().toISOString()
-        }));
-
-        // Mark saved media and ensure unique IDs
-        const formattedSavedMedia = savedMedia.map(media => ({
-            ...media,
-            id: `saved-${media.id || Date.now()}`,
-            source: 'saved'
-        }));
-
-        const combinedContent = [...formattedSavedMedia, ...formattedYoutubeVideos];
+        const combinedContent = [...savedMedia, ...youtubeVideos];
         console.log('Combined content:', combinedContent);
         return combinedContent;
     } catch (error) {
