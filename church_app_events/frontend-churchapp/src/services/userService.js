@@ -1,9 +1,107 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from './apiConfig';
+import { Platform } from "react-native";
+import axios from "axios";
+import { API_URL_ANDROID_DEVICE, API_URL_IOS, API_URL_WEB } from "@env"
+import NetInfo from "@react-native-community/netinfo";
+
+const getApiUrl = async () => {
+
+    const netInfo = await NetInfo.fetch();
+    console.log('NetInfo:', netInfo);
+
+    switch (Platform.OS) {
+        case "android":
+            if (!__DEV__) {
+                return API_URL_ANDROID_DEVICE || 'http://192.168.1.36:8080';
+            } else if (netInfo.type === 'wifi') {
+                return 'http://10.0.2.2:8080'
+            }
+            return 'http://10.0.2.2:8080'
+        case "ios":
+            return API_URL_IOS;
+        default:
+            return API_URL_WEB;
+    }
+}
+
+const createApi = async () => {
+    const apiUrl = await getApiUrl();
+    return axios.create({
+        baseURL: apiUrl,
+        timeout: Platform.OS === 'web' ? 30000 : 10000,
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Connection": "keep-alive",
+        },
+        retry: 3,
+        retryDelay: (retryCount) => {
+            console.log(`Retrying request, attempt ${retryCount + 1}`);
+            return 1000 * Math.pow(2, retryCount);
+        },
+    });
+
+    // Add request interception with timeout handling
+    api.interceptors.request.use(async (config) => {
+        // Check network status before making request
+        const netInfo = await NetInfo.fetch();
+        if (!netInfo.isConnected) {
+            throw new Error('No internet connection');
+        }
+        if (__DEV__) {
+            console.log('Starting Request:', {
+                url: config.url,
+                method: config.method,
+                baseURL: config.baseURL,
+                data: config.data
+            });
+        }
+        return config;
+    });
+
+    // Add response interceptor for debugging
+    api.interceptors.response.use(
+        response => {
+            if (__DEV__) {
+                console.log('Response:', response);
+            }
+            return response;
+        },
+        error => {
+            if (__DEV__) {
+                console.log('Response Error:', {
+                    message: error.message,
+                    response: error.response?.data,
+                    status: error.response?.status,
+                    config: error.config
+                });
+            }
+
+            // Handle timeout errors specifically
+            if (error.code === 'ECONNABORTED') {
+                throw new Error('Request timed out');
+            }
+
+            // Handle network errors
+            if (error.code === 'ENOTFOUND') {
+                throw new Error('Network error');
+            }
+
+            throw error;
+        }
+    );
+
+    return instance;
+}
+
+// Initialize the API instance
+let api;
+(async () => {
+    api = await createApi();
+})();
 
 
 // get users
-
 export const getUsers = async () => {
     try {
         const response = await api.get('/admin/users/list');
@@ -60,9 +158,6 @@ export const getUserByUsername = async (username) => {
 // Verify password with support for both email and username login
 export const verifyPassword = async (loginData) => {
     try {
-        console.log('API URL being used:', apiUrl);
-        console.log('Making request to:', `${apiUrl}/admin/users/verify-password`);
-
         const requestData = {
             identifier: loginData.identifier,
             password: loginData.password
@@ -212,29 +307,36 @@ const storeToken = async (token) => {
 
 export const login = async (loginData) => {
     try {
-        console.log('Attempting login with:', loginData);
+        const response = await api.post('/auth/login', {
+            identifier: loginData.identifier,
+            password: loginData.password
+        });
 
-        // Use the configured api instance instead of axios directly
-        const response = await api.post('/auth/login', loginData);
-        console.log('Login response received:', response.data);
+        console.log('Login successful:', {
+            status: response.status,
+            tokenReceived: !!response.data.token
+        });
 
         if (response.data.token) {
+            // Store the token
             await storeToken(response.data.token);
-            // Also store the token in the api instance headers
+
+            // Set the token in axios headers
             api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-            return response.data;
+
+            // Return the full response data (includes token, user info, and expires_in)
+            return {
+                user: response.data.user,
+                token: response.data.token,
+                expires_in: response.data.expires_in,
+                token_type: response.data.token_type
+            };
         } else {
-            throw new Error('No token received');
+            throw new Error('No token received in response');
         }
     } catch (error) {
-        console.error('Login service error:', error);
-        if (error.response) {
-            throw new Error(error.response.data.message || 'Failed to log in');
-        } else if (error.request) {
-            throw new Error('Network error - please check your connection');
-        } else {
-            throw new Error('Failed to log in');
-        }
+        console.error('Login error:', error.message);
+        throw new Error(error.response?.data?.message || 'Login failed');
     }
 };
 
@@ -265,5 +367,21 @@ export const setupApiToken = async () => {
         }
     } catch (error) {
         console.error('Error setting up API token:', error);
+    }
+};
+
+// Add a function to check if the token is still valid
+export const isTokenValid = async () => {
+    try {
+        const token = await AsyncStorage.getItem('token');
+        if (!token) return false;
+
+        // You can add additional token validation here if needed
+        // For example, checking if it's expired based on JWT decode
+
+        return true;
+    } catch (error) {
+        console.error('Token validation error:', error);
+        return false;
     }
 };

@@ -1,145 +1,83 @@
 import { Platform } from 'react-native';
-import Config from 'react-native-config';
 import axios from 'axios';
-import { logger } from "react-native-logs";
-
-const isEmulator = () => {
-    if (Platform.OS === 'android') {
-        return Platform.constants.Brand === 'google' ||
-            Platform.constants.Model?.includes('sdk') ||
-            Platform.constants.Model?.includes('Simulator');
-    } else if (Platform.OS === 'ios') {
-        return Platform.constants.isSimulator;
-    }
-    return false;
-};
+import Constants from 'expo-constants';
 
 const getBaseUrl = () => {
-    const platform = Platform.OS;
-    const emulator = isEmulator();
-
-    let baseUrl;
-    if (platform === 'android') {
-        baseUrl = emulator
-            ? Config.API_URL_ANDROID_EMULATOR
-            : Config.API_URL_ANDROID_DEVICE;
-    } else if (platform === 'ios') {
-        baseUrl = Config.API_URL_IOS;
-    } else {
-        baseUrl = Config.API_URL_WEB;
+    if (__DEV__) {
+        // When using adb reverse, localhost on the device points to localhost on the computer
+        return 'http://localhost:8080';
     }
-
-    console.log('Platform:', platform);
-    console.log('Is Emulator:', emulator);
-    console.log('Base URL:', baseUrl);
-
-    return baseUrl;
+    return 'https://your-production-url.com';
 };
 
-const baseURL = getBaseUrl();
-
+// Create axios instance
 const api = axios.create({
-    baseURL,
+    baseURL: getBaseUrl(),
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
     },
-    withCredentials: true,
-    timeout: 10000,
+    timeout: 10000
 });
 
-const log = logger.createLogger({
-    severity: "debug",
-    transport: (msg) => {
-        console.log(msg);
-    },
-    transportOptions: {
-        colors: "ansi"
-    }
-});
-
-// Enhanced request interceptor
+// Add request interceptor
 api.interceptors.request.use(
     config => {
-        const requestInfo = {
-            url: `${config.baseURL}${config.url}`,
-            method: config.method?.toUpperCase(),
-            headers: config.headers,
-            data: config.data,
-            platform: Platform.OS,
-            isEmulator: isEmulator(),
-            timestamp: new Date().toISOString()
-        };
-
-        console.log('\n🚀 Request:', JSON.stringify(requestInfo, null, 2));
-
-        // Add timing information
-        config.requestStartedAt = Date.now();
+        console.log('🚀 Making request:', {
+            fullUrl: `${config.baseURL}${config.url}`,
+            method: config.method,
+            headers: config.headers
+        });
         return config;
     },
     error => {
-        console.error('\n❌ Request Error:', {
-            message: error.message,
-            stack: error.stack,
-            config: error.config
-        });
+        console.error('Request Error:', error);
         return Promise.reject(error);
     }
 );
 
-// Enhanced response interceptor
+// Add response interceptor
 api.interceptors.response.use(
     response => {
-        const duration = Date.now() - response.config.requestStartedAt;
-        const responseInfo = {
-            url: `${response.config.baseURL}${response.config.url}`,
+        console.log('✅ Response:', {
             status: response.status,
-            statusText: response.statusText,
-            headers: response.headers,
-            data: response.data,
-            platform: Platform.OS,
-            isEmulator: isEmulator(),
-            duration: `${duration}ms`,
-            timestamp: new Date().toISOString()
-        };
-
-        console.log('\n✅ Response:', JSON.stringify(responseInfo, null, 2));
+            url: response.config.url,
+            data: response.data ? 'Data received' : 'No data'
+        });
         return response;
     },
     error => {
-        log.error('API Error:', {
-            url: error.config?.url,
-            status: error.response?.status,
+        const errorDetails = {
             message: error.message,
-            data: error.response?.data
-        });
+            code: error.code,
+            url: error.config?.url,
+            baseURL: error.config?.baseURL,
+            method: error.config?.method,
+            status: error.response?.status,
+            data: error.response?.data,
+            platform: Platform.OS
+        };
+
+        console.error('❌ Response Error:', errorDetails);
         return Promise.reject(error);
     }
 );
 
-// Test connection on initialization
+// Simple connection test
 const testConnection = async () => {
     try {
-        await api.get('/health');
-        console.log('🟢 API Connection Test: Success');
+        console.log('Testing connection to:', getBaseUrl());
+        const response = await fetch(`${getBaseUrl()}/health`);
+        const data = await response.json();
+        console.log('Connection test successful:', data);
+        return true;
     } catch (error) {
-        console.error('🔴 API Connection Test: Failed', {
-            url: baseURL,
-            error: error.message
-        });
+        console.error('Connection test failed:', error);
+        return false;
     }
 };
 
-// Run connection test in development
-if (__DEV__) {
-    testConnection();
-}
+// Run initial test
+testConnection();
 
-export const apiConfig = {
-    baseURL,
-    headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-    },
-    timeout: 10000,
-};
+export default api;

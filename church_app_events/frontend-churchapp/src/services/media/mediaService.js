@@ -1,4 +1,56 @@
-import api from '../apiConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from "react-native";
+import axios from "axios";
+import { API_URL_ANDROID_DEVICE, API_URL_IOS, API_URL_WEB } from "@env"
+
+const getApiUrl = () => {
+    switch (Platform.OS) {
+        case "android":
+            return API_URL_ANDROID_DEVICE;
+        case "ios":
+            return API_URL_IOS;
+        default:
+            return API_URL_WEB;
+    }
+}
+
+const apiUrl = getApiUrl();
+
+const api = axios.create({
+    baseURL: apiUrl,
+    headers: {
+        "Content-Type": "application/json",
+    },
+});
+
+// Add request interceptor for debugging
+api.interceptors.request.use(request => {
+    console.log('Starting Request:', {
+        url: request.url,
+        method: request.method,
+        baseURL: request.baseURL,
+        data: request.data
+    });
+    return request;
+});
+
+// Add response interceptor for debugging
+api.interceptors.response.use(
+    response => {
+        console.log('Response:', response);
+        return response;
+    },
+    error => {
+        console.log('Response Error:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            config: error.config
+        });
+        return Promise.reject(error);
+    }
+);
+
 
 // Create a new media
 export const createMedia = async (mediaData) => {

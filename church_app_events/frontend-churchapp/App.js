@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
@@ -7,6 +7,8 @@ import AuthNavigator from './src/navigation/AuthNavigator';
 import AdminNavigator from './src/navigation/AdminNavigator';
 import UserNavigator from './src/navigation/UserNavigator';
 import { View, Text, Alert, LogBox, AppState, Platform } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
+import { ActivityIndicator } from 'react-native-paper';
 
 const Stack = createStackNavigator();
 
@@ -65,16 +67,56 @@ class ErrorBoundary extends React.Component {
 }
 
 function AppContent() {
+
+  const [isConnected, setIsConnected] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+
+
   // Handle app state changes
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      console.log('App State:', nextAppState);
+    const checkConnection = async () => {
+      try {
+        const netInfo = await NetInfo.fetch();
+        setIsConnected(netInfo.isConnected);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error checking connection:', error);
+        setIsLoading(false);
+      }
+    };
+
+    checkConnection();
+
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsConnected(state.isConnected);
+      if (!state.isConnected) {
+        Alert.alert('No internet connection', 'Please check your internet connection and try again.');
+      }
     });
 
     return () => {
-      subscription.remove();
+      unsubscribe();
     };
   }, []);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (!isConnected) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 18, marginBottom: 10 }}>No Internet Connection</Text>
+        <Text style={{ textAlign: 'center' }}>
+          Please check your connection and restart the app
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer
