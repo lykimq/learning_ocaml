@@ -18,7 +18,6 @@ const MediaDetails = ({ route }) => {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
-    const [isSubscribed, setIsSubscribed] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
     const [saveModalVisible, setSaveModalVisible] = useState(false);
     const [playlists, setPlaylists] = useState([]);
@@ -206,24 +205,21 @@ const MediaDetails = ({ route }) => {
             }
 
             // Load all data in parallel
-            const [storedLikes, savedMedia, subscribedChannels, playlistsData, storedViews] = await Promise.all([
+            const [storedLikes, savedMedia, playlistsData, storedViews] = await Promise.all([
                 AsyncStorage.getItem('likedVideos'),
                 AsyncStorage.getItem('savedMedia'),
-                AsyncStorage.getItem('subscribedChannels'),
                 AsyncStorage.getItem('userPlaylists'),
                 AsyncStorage.getItem('videoViews')
             ]);
 
             const likedVideos = storedLikes ? JSON.parse(storedLikes) : {};
             const savedVideos = savedMedia ? JSON.parse(savedMedia) : {};
-            const channels = subscribedChannels ? JSON.parse(subscribedChannels) : {};
             const userPlaylists = playlistsData ? JSON.parse(playlistsData) : {};
             const viewsData = storedViews ? JSON.parse(storedViews) : {};
 
             // Update all states
             setIsLiked(!!likedVideos[videoKey]);
             setIsSaved(!!savedVideos[videoKey]);
-            setIsSubscribed(!!channels[media.channelId]);
             setLikeCount(media.likes || 0);
             setViewCount(viewsData[videoKey] || 0);
 
@@ -242,7 +238,6 @@ const MediaDetails = ({ route }) => {
                 videoKey,
                 isLiked: !!likedVideos[videoKey],
                 isSaved: !!savedVideos[videoKey],
-                isSubscribed: !!channels[media.channelId],
                 likeCount: media.likes || 0,
                 views: viewsData[videoKey] || 0,
                 playlistCount: sortedPlaylists.length
@@ -252,7 +247,7 @@ const MediaDetails = ({ route }) => {
         } finally {
             setIsLoading(false);
         }
-    }, [media.id, media.channelId, media.likes, updateViewCount]);
+    }, [media.id, media.likes, updateViewCount]);
 
     // Update useEffect to handle component mounting and updates
     useEffect(() => {
@@ -340,37 +335,6 @@ const MediaDetails = ({ route }) => {
             setSaveModalVisible(true);
         } catch (error) {
             console.error('Error handling save:', error);
-        }
-    };
-
-    const handleSubscribe = async () => {
-        try {
-            // Get channel ID from media object
-            const channelId = media.channelId || media.snippet?.channelId;
-
-            if (!channelId) {
-                console.error('No channel ID found in media:', media);
-                return;
-            }
-
-            const subscribedChannels = JSON.parse(await AsyncStorage.getItem('subscribedChannels')) || {};
-            const newIsSubscribed = !isSubscribed;
-
-            if (newIsSubscribed) {
-                subscribedChannels[channelId] = {
-                    timestamp: new Date().toISOString(),
-                    channelTitle: media.channelTitle || media.snippet?.channelTitle || '',
-                    channelId: channelId
-                };
-            } else {
-                delete subscribedChannels[channelId];
-            }
-
-            await AsyncStorage.setItem('subscribedChannels', JSON.stringify(subscribedChannels));
-            setIsSubscribed(newIsSubscribed);
-            console.log(`Channel ${newIsSubscribed ? 'subscribed' : 'unsubscribed'}: ${channelId}`);
-        } catch (error) {
-            console.error('Error subscribing to channel:', error);
         }
     };
 
@@ -1053,30 +1017,6 @@ const MediaDetails = ({ route }) => {
                         </View>
                     </View>
                 </View>
-
-                <Card style={styles.descriptionCard}>
-                    <Card.Content>
-                        <View style={styles.channelInfo}>
-                            <Avatar.Icon size={40} icon="account" />
-                            <View style={styles.channelText}>
-                                <Title style={styles.channelName}>
-                                    {media.channelTitle || 'Channel Name'}
-                                </Title>
-                                <Paragraph style={styles.subscriberCount}>
-                                    {media.subscriberCount || '0'} subscribers
-                                </Paragraph>
-                            </View>
-                            <Button mode="contained" style={styles.subscribeButton} onPress={handleSubscribe}>
-                                Subscribe
-                            </Button>
-                        </View>
-                        <Paragraph style={styles.description}>
-                            {media.description}
-                        </Paragraph>
-                    </Card.Content>
-                </Card>
-
-                {/* TODO: add related videos section here */}
             </ScrollView>
             <SaveModal />
             <PlaylistViewer />
@@ -1151,41 +1091,11 @@ const styles = StyleSheet.create({
         minWidth: 70,
         marginHorizontal: 4,
     },
-    descriptionCard: {
-        margin: 16,
-        elevation: 1,
-    },
-    channelInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    channelText: {
-        flex: 1,
-        marginLeft: 12,
-    },
-    channelName: {
-        fontSize: 16,
-    },
-    subscriberCount: {
-        fontSize: 14,
-        color: '#666',
-    },
-    subscribeButton: {
-        backgroundColor: '#FF0000',
-    },
-    description: {
-        fontSize: 14,
-        lineHeight: 20,
-    },
     likedButton: {
         backgroundColor: 'rgba(0, 0, 0, 0.05)',
     },
     savedButton: {
         backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    },
-    subscribedButton: {
-        backgroundColor: '#CC0000',
     },
     newPlaylistContainer: {
         padding: 16,
