@@ -32,6 +32,7 @@ const MediaDetails = ({ route }) => {
     const [showPlaylistDetails, setShowPlaylistDetails] = useState(false);
     const [currentPlaylists, setCurrentPlaylists] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [viewCount, setViewCount] = useState(0);
 
     // Function handle playlist creation
     const createNewPlaylist = async (playlistName) => {
@@ -171,7 +172,30 @@ const MediaDetails = ({ route }) => {
         }
     };
 
-    // Update loadInitialData to handle playlists
+    // Add function to update view count
+    const updateViewCount = useCallback(async () => {
+        try {
+            const videoKey = getYoutubeVideoId();
+            if (!videoKey) return;
+
+            // Get current views from storage
+            const storedViews = await AsyncStorage.getItem('videoViews') || '{}';
+            const viewsData = JSON.parse(storedViews);
+
+            // Update view count
+            const currentViews = (viewsData[videoKey] || 0) + 1;
+            viewsData[videoKey] = currentViews;
+
+            // Save updated views
+            await AsyncStorage.setItem('videoViews', JSON.stringify(viewsData));
+            setViewCount(currentViews);
+
+        } catch (error) {
+            console.error('Error updating view count:', error);
+        }
+    }, []);
+
+    // Update loadInitialData to include view count
     const loadInitialData = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -182,23 +206,26 @@ const MediaDetails = ({ route }) => {
             }
 
             // Load all data in parallel
-            const [storedLikes, savedMedia, subscribedChannels, playlistsData] = await Promise.all([
+            const [storedLikes, savedMedia, subscribedChannels, playlistsData, storedViews] = await Promise.all([
                 AsyncStorage.getItem('likedVideos'),
                 AsyncStorage.getItem('savedMedia'),
                 AsyncStorage.getItem('subscribedChannels'),
-                AsyncStorage.getItem('userPlaylists')
+                AsyncStorage.getItem('userPlaylists'),
+                AsyncStorage.getItem('videoViews')
             ]);
 
             const likedVideos = storedLikes ? JSON.parse(storedLikes) : {};
             const savedVideos = savedMedia ? JSON.parse(savedMedia) : {};
             const channels = subscribedChannels ? JSON.parse(subscribedChannels) : {};
             const userPlaylists = playlistsData ? JSON.parse(playlistsData) : {};
+            const viewsData = storedViews ? JSON.parse(storedViews) : {};
 
             // Update all states
             setIsLiked(!!likedVideos[videoKey]);
             setIsSaved(!!savedVideos[videoKey]);
             setIsSubscribed(!!channels[media.channelId]);
             setLikeCount(media.likes || 0);
+            setViewCount(viewsData[videoKey] || 0);
 
             // Sort and set playlists
             const sortedPlaylists = Object.values(userPlaylists)
@@ -208,13 +235,16 @@ const MediaDetails = ({ route }) => {
             setPlaylists(sortedPlaylists);
             setCurrentPlaylists(sortedPlaylists);
 
+            // Update view count when video is loaded
+            await updateViewCount();
+
             console.log('Initial data loaded:', {
                 videoKey,
                 isLiked: !!likedVideos[videoKey],
                 isSaved: !!savedVideos[videoKey],
                 isSubscribed: !!channels[media.channelId],
                 likeCount: media.likes || 0,
-                views: media.views || 0,
+                views: viewsData[videoKey] || 0,
                 playlistCount: sortedPlaylists.length
             });
         } catch (error) {
@@ -222,7 +252,7 @@ const MediaDetails = ({ route }) => {
         } finally {
             setIsLoading(false);
         }
-    }, [media.id, media.channelId, media.likes]);
+    }, [media.id, media.channelId, media.likes, updateViewCount]);
 
     // Update useEffect to handle component mounting and updates
     useEffect(() => {
@@ -991,7 +1021,7 @@ const MediaDetails = ({ route }) => {
                         <View style={styles.viewsDate}>
                             <MaterialIcons name="visibility" size={16} color="#666" />
                             <Text style={styles.metaText}>
-                                {formatViewCount(media.views || 0)} views • {new Date(media.created_at).toLocaleDateString()}
+                                {formatViewCount(viewCount)} views • {new Date(media.created_at).toLocaleDateString()}
                             </Text>
                         </View>
                         <View style={styles.actions}>
@@ -1046,7 +1076,7 @@ const MediaDetails = ({ route }) => {
                     </Card.Content>
                 </Card>
 
-                {/* You can add related videos section here */}
+                {/* TODO: add related videos section here */}
             </ScrollView>
             <SaveModal />
             <PlaylistViewer />
