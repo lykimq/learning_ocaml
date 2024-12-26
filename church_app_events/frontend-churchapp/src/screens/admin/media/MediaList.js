@@ -38,18 +38,24 @@ const CardComponent = React.memo(({ item, onPress }) => (
 const MediaList = ({ navigation }) => {
     const { width } = useWindowDimensions();
     const [media, setMedia] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [error, setError] = useState(null);
+    const [retryCount, setRetryCount] = useState(0);
+    const MAX_RETRIES = 3;
 
-    const loadMedia = useCallback(async (showRefreshing = false) => {
-        if (showRefreshing) setRefreshing(true);
-        else setLoading(true);
+    const loadMedia = useCallback(async (showRefreshing = false, isRetry = false) => {
+        if (showRefreshing) {
+            setRefreshing(true);
+        } else if (!isRetry) {
+            setLoading(true);
+        }
         setError(null);
 
         try {
             const response = await getAllContent();
+
             if (Array.isArray(response) && response.length > 0) {
                 // Ensure each item has a unique key
                 const processedMedia = response.map((item, index) => ({
@@ -57,46 +63,56 @@ const MediaList = ({ navigation }) => {
                     id: item.id || `${item.source}-${item.snippet?.resourceId?.videoId || index}-${Date.now()}`
                 }));
                 setMedia(processedMedia);
+                setRetryCount(0); // Reset retry count on success
+            } else if (retryCount < MAX_RETRIES) {
+                // Retry loading if no data received
+                console.log(`Retrying media load (${retryCount + 1}/${MAX_RETRIES})`);
+                setRetryCount(prev => prev + 1);
+                setTimeout(() => {
+                    loadMedia(showRefreshing, true);
+                }, 1000 * (retryCount + 1)); // Exponential backoff
             } else {
                 setError('No media content available');
             }
         } catch (err) {
             console.error('Error loading media:', err);
-            setError(err.message || 'Failed to load content');
+            if (retryCount < MAX_RETRIES) {
+                // Retry on error
+                console.log(`Retrying after error (${retryCount + 1}/${MAX_RETRIES})`);
+                setRetryCount(prev => prev + 1);
+                setTimeout(() => {
+                    loadMedia(showRefreshing, true);
+                }, 1000 * (retryCount + 1));
+            } else {
+                setError(err.message || 'Failed to load content');
+            }
         } finally {
-            setRefreshing(false);
-            setLoading(false);
+            if (showRefreshing) setRefreshing(false);
+            if (!isRetry) setLoading(false);
         }
-    }, []);
+    }, [retryCount]);
 
     useEffect(() => {
-        loadMedia();
+        let mounted = true;
+
+        const initializeData = async () => {
+            if (mounted) {
+                await loadMedia();
+            }
+        };
+
+        initializeData();
+
         return () => {
-            // Cleanup function
+            mounted = false;
             setMedia([]);
         };
-    }, []);
-
-    // Remove the navigation focus listener and handle refresh manually
-    const onRefresh = useCallback(() => {
-        loadMedia(true);
     }, [loadMedia]);
 
-    const renderItem = useCallback(({ item }) => (
-        <CardComponent
-            item={item}
-            onPress={() => navigation.navigate('MediaDetails', { media: item })}
-        />
-    ), [navigation]);
-
-    const keyExtractor = useCallback((item) => {
-        // Create a truly unique key based on multiple properties
-
-        const baseId = item.id || item.snippet?.resourceId?.videoId || item.snippet?.videoId;
-        const timestamp = item.created_at || item.snippet?.publishedAt || Date.now();
-        const source = item.source || 'unknown';
-        return `${source}-${baseId}-${timestamp}`;
-    }, []);
+    const onRefresh = useCallback(() => {
+        setRetryCount(0); // Reset retry count on manual refresh
+        loadMedia(true);
+    }, [loadMedia]);
 
     const getFilteredMedia = useCallback(() => {
         return searchQuery
@@ -129,15 +145,28 @@ const MediaList = ({ navigation }) => {
 
             <FlatList
                 data={getFilteredMedia()}
-                renderItem={renderItem}
-                keyExtractor={keyExtractor}
+                renderItem={({ item }) => (
+                    <CardComponent
+                        item={item}
+                        onPress={() => navigation.navigate('MediaDetails', { media: item })}
+                    />
+                )}
+                keyExtractor={item => {
+                    const baseId = item.id || item.snippet?.resourceId?.videoId || item.snippet?.videoId;
+                    const timestamp = item.created_at || item.snippet?.publishedAt || Date.now();
+                    const source = item.source || 'unknown';
+                    return `${source}-${baseId}-${timestamp}`;
+                }}
                 numColumns={Platform.select({
                     ios: width > 600 ? 2 : 1,
                     android: width > 600 ? 2 : 1,
                     default: Math.max(Math.floor(width / 300), 2)
                 })}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                    />
                 }
                 contentContainerStyle={styles.gridContainer}
                 ListEmptyComponent={
