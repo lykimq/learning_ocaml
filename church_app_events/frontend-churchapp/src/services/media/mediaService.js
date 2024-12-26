@@ -187,7 +187,7 @@ export const deleteMedia = async (mediaId) => {
 export const searchMedia = async (searchParams) => {
     try {
         const response = await api.get('/admin/media/search', { params: searchParams });
-        console.log("Media fetched successfully:", response.data);
+        console.log("Media fetched successfully:", response.data); ubuntu
         return response.data;
     } catch (error) {
         console.error('Error fetching media:', error);
