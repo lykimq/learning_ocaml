@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, ScrollView, useWindowDimensions, Platform, Share } from 'react-native';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { View, ScrollView, useWindowDimensions, Platform, Share, ToastAndroid, InteractionManager } from 'react-native';
 import { Title, Paragraph, Card, Chip, IconButton, Avatar, Button, Text } from 'react-native-paper';
 import { StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -9,6 +9,7 @@ import YoutubePlayer from 'react-native-youtube-iframe';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Modal, TouchableOpacity } from 'react-native';
 import { Portal, Dialog, List, TextInput } from 'react-native-paper';
+import { memo } from 'react';
 
 const MediaDetails = ({ route }) => {
     const navigation = useNavigation();
@@ -23,25 +24,33 @@ const MediaDetails = ({ route }) => {
     const [playlists, setPlaylists] = useState([]);
     const [newPlaylistName, setNewPlaylistName] = useState('');
     const [showNewPlaylistInput, setShowNewPlaylistInput] = useState(false);
+    const [showPlaylistViewer, setShowPlaylistViewer] = useState(false);
+    const [selectedPlaylist, setSelectedPlaylist] = useState(null);
     const embedHeight = width * 0.5625; // 16:9 aspect ratio
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
+    const [inputKey, setInputKey] = useState(0);
 
     // Function handle playlist creation
-    const createNewPlaylist = async () => {
+    const createNewPlaylist = async (playlistName) => {
         try {
-            if (!newPlaylistName.trim()) return;
-
             const videoKey = getYoutubeVideoId();
             if (!videoKey) {
-                console.error('No valid video ID found');
+                showToast('Error: Invalid video');
                 return;
             }
 
             const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
             const userPlaylists = JSON.parse(storedPlaylists);
 
+            // Check for duplicate playlist name
+            if (Object.values(userPlaylists).some(p => p.name.toLowerCase() === playlistName.toLowerCase())) {
+                showToast('A playlist with this name already exists');
+                return;
+            }
+
             const newPlaylist = {
                 id: Date.now().toString(),
-                name: newPlaylistName,
+                name: playlistName,
                 videos: [{
                     videoId: videoKey,
                     title: media.title || '',
@@ -54,15 +63,13 @@ const MediaDetails = ({ route }) => {
             userPlaylists[newPlaylist.id] = newPlaylist;
             await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
 
-            setPlaylists(Object.values(userPlaylists));
-            setNewPlaylistName('');
-            setShowNewPlaylistInput(false);
-            setSaveModalVisible(false);
+            await loadPlaylists(); // Refresh playlists
             setIsSaved(true);
-
-            console.log('New playlist created:', newPlaylist);
+            setSaveModalVisible(false);
+            showToast('Playlist created and video saved');
         } catch (error) {
             console.error('Error creating playlist:', error);
+            showToast('Error creating playlist');
         }
     };
 
@@ -71,9 +78,15 @@ const MediaDetails = ({ route }) => {
         try {
             const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
             const userPlaylists = JSON.parse(storedPlaylists);
-            setPlaylists(Object.values(userPlaylists));
+            const sortedPlaylists = Object.values(userPlaylists).sort((a, b) =>
+                b.created_at.localeCompare(a.created_at)
+            );
+            setPlaylists(sortedPlaylists);
+            return sortedPlaylists;
         } catch (error) {
             console.error('Error loading playlists:', error);
+            showToast('Error loading playlists');
+            return [];
         }
     };
 
@@ -82,7 +95,7 @@ const MediaDetails = ({ route }) => {
         try {
             const videoKey = getYoutubeVideoId();
             if (!videoKey) {
-                console.error('No valid video ID found');
+                showToast('Error: Invalid video');
                 return;
             }
 
@@ -90,27 +103,65 @@ const MediaDetails = ({ route }) => {
             const userPlaylists = JSON.parse(storedPlaylists);
 
             if (!userPlaylists[playlistId]) {
-                console.error('Playlist not found');
+                showToast('Error: Playlist not found');
                 return;
             }
 
-            // Check if video is already in playlist
+            // Check if video already exists
             const videoExists = userPlaylists[playlistId].videos.some(v => v.videoId === videoKey);
 
-            if (!videoExists) {
-                userPlaylists[playlistId].videos.push({
-                    videoId: videoKey,
-                    title: media.title || '',
-                    thumbnailUrl: media.thumbnailUrl || '',
-                    added_at: new Date().toISOString()
-                });
+            if (videoExists) {
+                // If video exists, remove it instead
+                await removeFromPlaylist(playlistId);
+                return;
             }
 
+            // Add video if it doesn't exist
+            userPlaylists[playlistId].videos.push({
+                videoId: videoKey,
+                title: media.title || '',
+                thumbnailUrl: media.thumbnailUrl || '',
+                added_at: new Date().toISOString()
+            });
+
             await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
+            await loadPlaylists();
             setIsSaved(true);
-            setSaveModalVisible(false);
+            showToast('Video saved to playlist');
         } catch (error) {
             console.error('Error saving to playlist:', error);
+            showToast('Error saving video');
+        }
+    };
+
+    // Add this function to handle video removal from playlist
+    const removeFromPlaylist = async (playlistId) => {
+        try {
+            const videoKey = getYoutubeVideoId();
+            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
+            const userPlaylists = JSON.parse(storedPlaylists);
+
+            if (userPlaylists[playlistId]) {
+                // Remove video from playlist
+                const updatedVideos = userPlaylists[playlistId].videos.filter(
+                    video => video.videoId !== videoKey
+                );
+
+                userPlaylists[playlistId].videos = updatedVideos;
+                await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
+
+                // Check if video exists in any playlist
+                const videoExistsInAnyPlaylist = Object.values(userPlaylists).some(
+                    playlist => playlist.videos.some(v => v.videoId === videoKey)
+                );
+
+                setIsSaved(videoExistsInAnyPlaylist);
+                await loadPlaylists(); // Refresh playlists
+                showToast('Video removed from playlist');
+            }
+        } catch (error) {
+            console.error('Error removing from playlist:', error);
+            showToast('Error removing video');
         }
     };
 
@@ -221,11 +272,15 @@ const MediaDetails = ({ route }) => {
         }
     };
 
-    const handleSave = () => {
-        setNewPlaylistName(''); // Reset the input
-        setShowNewPlaylistInput(false); // Reset the input visibility
-        loadPlaylists();
-        setSaveModalVisible(true);
+    const handleSave = async () => {
+        try {
+            setNewPlaylistName(''); // Reset the input
+            setShowNewPlaylistInput(false); // Reset the input visibility
+            await loadPlaylists(); // Load existing playlists
+            setSaveModalVisible(true);
+        } catch (error) {
+            console.error('Error handling save:', error);
+        }
     };
 
     const handleSubscribe = async () => {
@@ -376,56 +431,187 @@ const MediaDetails = ({ route }) => {
         }
     };
 
-    const SaveModal = () => (
+    const showToast = (message) => {
+        if (Platform.OS === 'android') {
+            ToastAndroid.show(message, ToastAndroid.SHORT);
+        }
+        // Add iOS notification handling if needed
+    };
+
+    const PlaylistInput = memo(({ onSubmit, onCancel }) => {
+        const [inputValue, setInputValue] = useState('');
+        const inputRef = useRef(null);
+
+        const handleSubmit = () => {
+            if (inputValue.trim()) {
+                onSubmit(inputValue.trim());
+                setInputValue('');
+            }
+        };
+
+        return (
+            <View style={styles.newPlaylistContainer}>
+                <TextInput
+                    ref={inputRef}
+                    key={inputKey}
+                    mode="outlined"
+                    value={inputValue}
+                    onChangeText={setInputValue}
+                    placeholder="Enter playlist name"
+                    style={styles.playlistInput}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSubmit}
+                    autoCapitalize="sentences"
+                    autoCorrect={false}
+                    maxLength={50}
+                />
+                <View style={styles.playlistButtonContainer}>
+                    <Button
+                        onPress={onCancel}
+                        style={styles.playlistButton}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        mode="contained"
+                        onPress={handleSubmit}
+                        style={styles.playlistButton}
+                        disabled={!inputValue.trim()}
+                    >
+                        Create
+                    </Button>
+                </View>
+            </View>
+        );
+    }, (prevProps, nextProps) => true); // Always prevent re-renders
+
+    const renderLikeButton = () => (
+        <Button
+            icon={isLiked ? "thumb-up" : "thumb-up-outline"}
+            mode="text"
+            onPress={handleLike}
+            style={[styles.actionButton, isLiked && styles.likedButton]}
+        >
+            Like
+        </Button>
+    );
+
+    const SaveModal = () => {
+        const videoKey = getYoutubeVideoId();
+
+        const handleCreateNewPlaylist = useCallback((playlistName) => {
+            createNewPlaylist(playlistName);
+            setShowNewPlaylistInput(false);
+            setInputKey(prev => prev + 1); // Reset input
+        }, []);
+
+        const handleCancelInput = useCallback(() => {
+            setShowNewPlaylistInput(false);
+            setInputKey(prev => prev + 1); // Reset input
+        }, []);
+
+        const renderPlaylistItems = useMemo(() => (
+            <List.Section>
+                {playlists.map(playlist => {
+                    const isVideoInPlaylist = playlist.videos?.some(v => v.videoId === videoKey);
+                    const uniqueVideos = playlist.videos?.filter((v, i, self) =>
+                        self.findIndex(t => t.videoId === v.videoId) === i
+                    );
+                    const videoCount = uniqueVideos?.length || 0;
+
+                    return (
+                        <List.Item
+                            key={playlist.id}
+                            title={playlist.name}
+                            description={`${videoCount} ${videoCount === 1 ? 'video' : 'videos'}`}
+                            left={props => <List.Icon {...props} icon="playlist-play" />}
+                            right={props =>
+                                isVideoInPlaylist ?
+                                    <List.Icon {...props} icon="check" color="#4CAF50" /> :
+                                    null
+                            }
+                            onPress={() => {
+                                if (isVideoInPlaylist) {
+                                    removeFromPlaylist(playlist.id);
+                                } else {
+                                    saveToPlaylist(playlist.id);
+                                }
+                            }}
+                            style={[
+                                styles.playlistItem,
+                                isVideoInPlaylist && styles.savedPlaylistItem
+                            ]}
+                        />
+                    );
+                })}
+            </List.Section>
+        ), [playlists, videoKey]);
+
+        return (
+            <Portal>
+                <Dialog
+                    visible={saveModalVisible}
+                    onDismiss={() => {
+                        setSaveModalVisible(false);
+                        setShowNewPlaylistInput(false);
+                        setInputKey(prev => prev + 1); // Reset input
+                    }}
+                    style={styles.saveDialog}
+                >
+                    <Dialog.Title>Save to...</Dialog.Title>
+                    <Dialog.ScrollArea style={styles.dialogScrollArea}>
+                        <ScrollView>
+                            {renderPlaylistItems}
+                            {showNewPlaylistInput ? (
+                                <PlaylistInput
+                                    onSubmit={handleCreateNewPlaylist}
+                                    onCancel={handleCancelInput}
+                                />
+                            ) : (
+                                <List.Item
+                                    title="Create new playlist"
+                                    left={props => <List.Icon {...props} icon="playlist-plus" />}
+                                    onPress={() => setShowNewPlaylistInput(true)}
+                                    style={styles.createPlaylistItem}
+                                />
+                            )}
+                        </ScrollView>
+                    </Dialog.ScrollArea>
+                </Dialog>
+            </Portal>
+        );
+    };
+
+    const PlaylistViewer = () => (
         <Portal>
-            <Dialog visible={saveModalVisible} onDismiss={() => setSaveModalVisible(false)}>
-                <Dialog.Title>Save to...</Dialog.Title>
+            <Dialog
+                visible={showPlaylistViewer}
+                onDismiss={() => setShowPlaylistViewer(false)}
+                style={styles.playlistDialog}
+            >
+                <Dialog.Title>Your Playlists</Dialog.Title>
                 <Dialog.Content>
-                    <List.Section>
+                    <ScrollView style={styles.playlistScroll}>
                         {playlists.map(playlist => (
                             <List.Item
                                 key={playlist.id}
                                 title={playlist.name}
+                                description={`${playlist.videos?.length || 0} ${playlist.videos?.length === 1 ? 'video' : 'videos'}`}
                                 left={props => <List.Icon {...props} icon="playlist-play" />}
-                                onPress={() => saveToPlaylist(playlist.id)}
+                                onPress={() => {
+                                    setSelectedPlaylist(playlist);
+                                    setShowPlaylistViewer(false);
+                                    // Navigate to playlist detail screen if you have one
+                                    // navigation.navigate('PlaylistDetail', { playlist });
+                                }}
+                                style={styles.playlistItem}
                             />
                         ))}
-                    </List.Section>
-                    {showNewPlaylistInput ? (
-                        <View style={styles.newPlaylistContainer}>
-                            <TextInput
-                                mode="outlined"
-                                value={newPlaylistName}
-                                onChangeText={setNewPlaylistName}
-                                placeholder="Enter playlist name"
-                                style={styles.playlistInput}
-                                autoFocus
-                            />
-                            <View style={styles.playlistButtonContainer}>
-                                <Button
-                                    onPress={() => setShowNewPlaylistInput(false)}
-                                    style={styles.playlistButton}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    mode="contained"
-                                    onPress={createNewPlaylist}
-                                    style={styles.playlistButton}
-                                    disabled={!newPlaylistName.trim()}
-                                >
-                                    Create
-                                </Button>
-                            </View>
-                        </View>
-                    ) : (
-                        <List.Item
-                            title="Create new playlist"
-                            left={props => <List.Icon {...props} icon="playlist-plus" />}
-                            onPress={() => setShowNewPlaylistInput(true)}
-                        />
-                    )}
+                    </ScrollView>
                 </Dialog.Content>
+                <Dialog.Actions>
+                    <Button onPress={() => setShowPlaylistViewer(false)}>Close</Button>
+                </Dialog.Actions>
             </Dialog>
         </Portal>
     );
@@ -444,17 +630,7 @@ const MediaDetails = ({ route }) => {
                             </Text>
                         </View>
                         <View style={styles.actions}>
-                            <Button
-                                icon="thumb-up"
-                                mode="text"
-                                onPress={handleLike}
-                                style={[
-                                    styles.actionButton,
-                                    isLiked && styles.likedButton
-                                ]}
-                            >
-                                {isLiked ? 'Liked' : 'Like'} {likeCount > 0 && `(${likeCount})`}
-                            </Button>
+                            {renderLikeButton()}
                             <Button
                                 icon="share"
                                 mode="text"
@@ -470,6 +646,14 @@ const MediaDetails = ({ route }) => {
                                 style={styles.actionButton}
                             >
                                 Save
+                            </Button>
+                            <Button
+                                icon="playlist-play"
+                                mode="text"
+                                onPress={() => setShowPlaylistViewer(true)}
+                                style={styles.actionButton}
+                            >
+                                Playlists
                             </Button>
                         </View>
                     </View>
@@ -500,6 +684,7 @@ const MediaDetails = ({ route }) => {
                 {/* You can add related videos section here */}
             </ScrollView>
             <SaveModal />
+            <PlaylistViewer />
         </View>
     );
 };
@@ -568,7 +753,8 @@ const styles = StyleSheet.create({
         paddingTop: 8,
     },
     actionButton: {
-        flex: 1,
+        minWidth: 70,
+        marginHorizontal: 4,
     },
     descriptionCard: {
         margin: 16,
@@ -607,17 +793,53 @@ const styles = StyleSheet.create({
         backgroundColor: '#CC0000',
     },
     newPlaylistContainer: {
-        marginTop: 10,
+        padding: 16,
+        backgroundColor: 'white',
     },
     playlistInput: {
-        marginBottom: 10,
+        backgroundColor: 'white',
+        marginBottom: 8,
     },
     playlistButtonContainer: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
+        gap: 8,
     },
     playlistButton: {
-        marginLeft: 10,
+        minWidth: 80,
+    },
+    saveDialog: {
+        maxHeight: '80%',
+    },
+    playlistDialog: {
+        maxHeight: '90%',
+    },
+    playlistScroll: {
+        maxHeight: 400,
+    },
+    playlistItem: {
+        height: 60,
+        justifyContent: 'center',
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: '#e0e0e0',
+    },
+    createPlaylistItem: {
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: '#e0e0e0',
+        marginTop: 8,
+    },
+    actionButtonsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        paddingVertical: 8,
+        borderTopWidth: 1,
+        borderTopColor: '#e0e0e0',
+    },
+    savedPlaylistItem: {
+        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    },
+    dialogScrollArea: {
+        paddingHorizontal: 0,
     },
 });
 
