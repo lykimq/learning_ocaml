@@ -327,16 +327,12 @@ const MediaDetails = ({ route }) => {
         }
     };
 
-    const handleSave = async () => {
-        try {
-            setNewPlaylistName(''); // Reset the input
-            setShowNewPlaylistInput(false); // Reset the input visibility
-            await loadPlaylists(); // Load existing playlists
-            setSaveModalVisible(true);
-        } catch (error) {
-            console.error('Error handling save:', error);
+    const handleSave = useCallback(() => {
+        if (showPlaylistViewer) {
+            setShowPlaylistViewer(false);
         }
-    };
+        setSaveModalVisible(true);
+    }, [showPlaylistViewer]);
 
     // Extract video ID from YouTube URL or use the provided ID
     const getYoutubeVideoId = () => {
@@ -520,49 +516,31 @@ const MediaDetails = ({ route }) => {
     );
 
     const PlaylistDetailsModal = memo(({ playlist, visible, onDismiss }) => {
-        if (!playlist) return null;
+        const handleClose = useCallback(() => {
+            onDismiss();
+        }, [onDismiss]);
 
-        // Find the current version of the playlist from currentPlaylists
-        const currentPlaylist = currentPlaylists.find(p => p.id === playlist.id) || playlist;
-
-        const renderThumbnail = (video) => {
-            if (!video.thumbnailUrl) {
-                return (
-                    <View style={[styles.thumbnailContainer, styles.placeholderThumbnail]}>
-                        <List.Icon icon="video" color="#666666" />
-                    </View>
-                );
-            }
-
-            return (
-                <View style={styles.thumbnailContainer}>
-                    <Image
-                        source={{ uri: video.thumbnailUrl }}
-                        style={styles.videoThumbnail}
-                        resizeMode="cover"
-                    />
-                </View>
-            );
-        };
+        if (!visible || !playlist) return null;
 
         return (
             <Portal>
                 <Dialog
-                    visible={visible}
-                    onDismiss={onDismiss}
+                    visible={true}
+                    onDismiss={handleClose}
                     style={styles.playlistDetailsDialog}
+                    dismissable={true}
                 >
-                    <Dialog.Title>{currentPlaylist.name}</Dialog.Title>
+                    <Dialog.Title>{playlist.name}</Dialog.Title>
                     <Dialog.ScrollArea style={styles.dialogScrollArea}>
                         <ScrollView>
-                            {currentPlaylist.videos.length === 0 ? (
+                            {playlist.videos.length === 0 ? (
                                 <List.Item
                                     title="No videos in playlist"
                                     description="Save some videos to see them here"
                                     left={props => <List.Icon {...props} icon="playlist-remove" />}
                                 />
                             ) : (
-                                currentPlaylist.videos.map((video, index) => (
+                                playlist.videos.map((video, index) => (
                                     <List.Item
                                         key={`${video.videoId}-${index}`}
                                         title={video.title || 'Untitled Video'}
@@ -583,7 +561,7 @@ const MediaDetails = ({ route }) => {
                                                             },
                                                             {
                                                                 text: 'Remove',
-                                                                onPress: () => handleDeleteVideo(currentPlaylist.id, video.videoId),
+                                                                onPress: () => handleDeleteVideo(playlist.id, video.videoId),
                                                                 style: 'destructive'
                                                             }
                                                         ]
@@ -598,7 +576,7 @@ const MediaDetails = ({ route }) => {
                         </ScrollView>
                     </Dialog.ScrollArea>
                     <Dialog.Actions>
-                        <Button onPress={onDismiss}>Close</Button>
+                        <Button onPress={handleClose}>Close</Button>
                     </Dialog.Actions>
                 </Dialog>
             </Portal>
@@ -679,20 +657,21 @@ const MediaDetails = ({ route }) => {
         }
     };
 
-    // Update SaveModal to use the new removal functions
-    const SaveModal = () => {
-        const videoKey = getYoutubeVideoId();
+    // Move SaveModal outside of the main component
+    const SaveModal = memo(({ visible, onClose, videoKey }) => {
+        const handleClose = useCallback(() => {
+            onClose();
+        }, [onClose]);
+
+        if (!visible) return null;
 
         return (
             <Portal>
                 <Dialog
-                    visible={saveModalVisible}
-                    onDismiss={() => {
-                        setSaveModalVisible(false);
-                        setShowNewPlaylistInput(false);
-                        setInputKey(prev => prev + 1);
-                    }}
+                    visible={true}
+                    onDismiss={handleClose}
                     style={styles.saveDialog}
+                    dismissable={true}
                 >
                     <Dialog.Title>Save to...</Dialog.Title>
                     <Dialog.ScrollArea style={styles.dialogScrollArea}>
@@ -766,47 +745,37 @@ const MediaDetails = ({ route }) => {
                             )}
                         </ScrollView>
                     </Dialog.ScrollArea>
+                    <Dialog.Actions>
+                        <Button onPress={handleClose}>Close</Button>
+                    </Dialog.Actions>
                 </Dialog>
             </Portal>
         );
-    };
+    });
 
-    const handleDeletePlaylist = async (playlistId) => {
-        try {
-            // Update state immediately
-            setCurrentPlaylists(prevPlaylists =>
-                prevPlaylists.filter(playlist => playlist.id !== playlistId)
-            );
+    // Move PlaylistViewer outside and make it a memo component
+    const PlaylistViewer = memo(({
+        visible,
+        onClose,
+        playlists,
+        showDetails,
+        selectedPlaylist,
+        onShowDetails,
+        onHideDetails
+    }) => {
+        const handleClose = useCallback(() => {
+            onClose();
+        }, [onClose]);
 
-            // Update AsyncStorage
-            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
-            const userPlaylists = JSON.parse(storedPlaylists);
+        if (!visible) return null;
 
-            delete userPlaylists[playlistId];
-
-            await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
-            showToast('Playlist deleted');
-
-            // Close modals if needed
-            setShowPlaylistDetails(false);
-            setSelectedPlaylist(null);
-            setShowPlaylistViewer(true);
-        } catch (error) {
-            console.error('Error deleting playlist:', error);
-            showToast('Error deleting playlist');
-            // Reload playlists in case of error
-            await loadPlaylists();
-        }
-    };
-
-    // Add loading state to PlaylistViewer
-    const PlaylistViewer = useMemo(() => {
-        return () => (
+        return (
             <Portal>
                 <Dialog
-                    visible={showPlaylistViewer}
-                    onDismiss={() => setShowPlaylistViewer(false)}
+                    visible={true}
+                    onDismiss={handleClose}
                     style={styles.playlistDialog}
+                    dismissable={true}
                 >
                     <Dialog.Title>Your Playlists</Dialog.Title>
                     <Dialog.ScrollArea style={styles.dialogScrollArea}>
@@ -873,107 +842,53 @@ const MediaDetails = ({ route }) => {
                         </ScrollView>
                     </Dialog.ScrollArea>
                     <Dialog.Actions>
-                        <Button onPress={() => setShowPlaylistViewer(false)}>Close</Button>
+                        <Button onPress={handleClose}>Close</Button>
                     </Dialog.Actions>
                 </Dialog>
 
-                <PlaylistDetailsModal
-                    playlist={selectedPlaylist}
-                    visible={showPlaylistDetails}
-                    onDismiss={() => {
-                        setShowPlaylistDetails(false);
-                        setSelectedPlaylist(null);
-                        setShowPlaylistViewer(true);
-                    }}
-                />
+                {showDetails && (
+                    <PlaylistDetailsModal
+                        playlist={selectedPlaylist}
+                        visible={true}
+                        onDismiss={onHideDetails}
+                    />
+                )}
             </Portal>
         );
-    }, [currentPlaylists, showPlaylistViewer, showPlaylistDetails, selectedPlaylist, isLoading]);
+    });
 
-    // Add handleDeleteVideo at parent level
-    const handleDeleteVideo = async (playlistId, videoId) => {
-        try {
-            // Update state immediately
-            setCurrentPlaylists(prevPlaylists =>
-                prevPlaylists.map(playlist => {
-                    if (playlist.id === playlistId) {
-                        return {
-                            ...playlist,
-                            videos: playlist.videos.filter(v => v.videoId !== videoId)
-                        };
-                    }
-                    return playlist;
-                })
-            );
-
-            // Update AsyncStorage
-            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
-            const userPlaylists = JSON.parse(storedPlaylists);
-
-            userPlaylists[playlistId].videos = userPlaylists[playlistId].videos.filter(
-                v => v.videoId !== videoId
-            );
-
-            await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
-            showToast('Video removed from playlist');
-        } catch (error) {
-            console.error('Error removing video:', error);
-            showToast('Error removing video');
-            // Reload playlists in case of error
-            await loadPlaylists();
-        }
-    };
-
-    // Add handleCreateNewPlaylist function
-    const handleCreateNewPlaylist = async (playlistName) => {
-        try {
-            const videoKey = getYoutubeVideoId();
-            if (!videoKey) {
-                showToast('Error: Invalid video');
-                return;
-            }
-
-            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
-            const userPlaylists = JSON.parse(storedPlaylists);
-
-            // Check for duplicate playlist name
-            if (Object.values(userPlaylists).some(p => p.name.toLowerCase() === playlistName.toLowerCase())) {
-                showToast('A playlist with this name already exists');
-                return;
-            }
-
-            const newPlaylist = {
-                id: Date.now().toString(),
-                name: playlistName,
-                videos: [{
-                    videoId: videoKey,
-                    title: media.title || '',
-                    thumbnailUrl: media.thumbnailUrl || '',
-                    added_at: new Date().toISOString()
-                }],
-                created_at: new Date().toISOString()
-            };
-
-            userPlaylists[newPlaylist.id] = newPlaylist;
-            await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
-
-            await loadPlaylists(); // Refresh playlists
-            setIsSaved(true);
-            setSaveModalVisible(false);
-            setShowNewPlaylistInput(false);
-            showToast('Playlist created and video saved');
-        } catch (error) {
-            console.error('Error creating playlist:', error);
-            showToast('Error creating playlist');
-        }
-    };
-
-    // Add handleCancelInput function
-    const handleCancelInput = () => {
+    // Main component handlers
+    const handleSaveModalClose = useCallback(() => {
+        setSaveModalVisible(false);
         setShowNewPlaylistInput(false);
-        setNewPlaylistName('');
-        setInputKey(prev => prev + 1); // Reset input key if you're using it
-    };
+        setInputKey(prev => prev + 1);
+    }, []);
+
+    const handlePlaylistViewerClose = useCallback(() => {
+        setShowPlaylistViewer(false);
+        setShowPlaylistDetails(false);
+        setSelectedPlaylist(null);
+    }, []);
+
+    const handleShowPlaylistDetails = useCallback((playlist) => {
+        setSelectedPlaylist(playlist);
+        setShowPlaylistDetails(true);
+        setShowPlaylistViewer(false);
+    }, []);
+
+    const handleHidePlaylistDetails = useCallback(() => {
+        setShowPlaylistDetails(false);
+        setSelectedPlaylist(null);
+        setShowPlaylistViewer(true);
+    }, []);
+
+    // Add handlePlaylistViewerOpen
+    const handlePlaylistViewerOpen = useCallback(() => {
+        if (saveModalVisible) {
+            setSaveModalVisible(false);
+        }
+        setShowPlaylistViewer(true);
+    }, [saveModalVisible]);
 
     return (
         <View style={styles.container}>
@@ -1009,7 +924,7 @@ const MediaDetails = ({ route }) => {
                             <Button
                                 icon="playlist-play"
                                 mode="text"
-                                onPress={() => setShowPlaylistViewer(true)}
+                                onPress={handlePlaylistViewerOpen}
                                 style={styles.actionButton}
                             >
                                 Playlists
@@ -1018,8 +933,20 @@ const MediaDetails = ({ route }) => {
                     </View>
                 </View>
             </ScrollView>
-            <SaveModal />
-            <PlaylistViewer />
+            <SaveModal
+                visible={saveModalVisible}
+                onClose={handleSaveModalClose}
+                videoKey={getYoutubeVideoId()}
+            />
+            <PlaylistViewer
+                visible={showPlaylistViewer}
+                onClose={handlePlaylistViewerClose}
+                playlists={currentPlaylists}
+                showDetails={showPlaylistDetails}
+                selectedPlaylist={selectedPlaylist}
+                onShowDetails={handleShowPlaylistDetails}
+                onHideDetails={handleHidePlaylistDetails}
+            />
         </View>
     );
 };
