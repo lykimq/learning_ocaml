@@ -8,7 +8,10 @@ import { useNavigation } from '@react-navigation/native';
 
 // Screens
 import HomeScreen from '../screens/user/HomeScreen';
-import MediaScreen from '../screens/user/MediaScreen';
+import MediaScreenUser from '../screens/user/media/MediaScreenUser';
+import MediaDetailsUser from '../screens/user/media/MediaDetailsUser';
+import MediaScreen from '../screens/user/media/MediaScreen';
+import MediaDetailsNonLogin from '../screens/user/media/MediaDetailsNonLogin';
 import EventsScreen from '../screens/user/events/EventsScreen';
 import HomeGroupScreen from '../screens/user/homegroups/HomeGroupScreen';
 import ServingScreen from '../screens/user/servings/ServingScreen';
@@ -16,12 +19,35 @@ import GivingScreen from '../screens/user/GivingScreen';
 import LogoutScreen from '../screens/shared/LogoutScreen';
 import LoginScreen from '../screens/shared/LoginScreen';
 import CustomTabButton from './CustomTabButton';
+import { createStackNavigator } from '@react-navigation/stack';
 
+const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const UserNavigator = () => {
   const { user, isLoading } = useAuth();
   const navigation = useNavigation();
+
+  // Media for user logged in
+  const MediaStackUser = () => {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="MediaScreenUser" component={MediaScreenUser} />
+        <Stack.Screen name="MediaDetailsUser" component={MediaDetailsUser} />
+      </Stack.Navigator>
+    );
+  };
+
+  // Media for non user logged in
+  const MediaStack = () => {
+    console.log('Rendering MediaStack');
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="MediaScreen" component={MediaScreen} />
+        <Stack.Screen name="MediaDetailsNonLogin" component={MediaDetailsNonLogin} />
+      </Stack.Navigator>
+    );
+  };
 
   const getTabScreens = () => {
     const screens = [
@@ -46,7 +72,8 @@ const UserNavigator = () => {
       <Tab.Screen
         key="Media"
         name="Media"
-        component={MediaScreen}
+        // conditionally render MediaScreenUser or MediaScreen
+        component={user ? MediaStackUser : MediaStack}
         options={{
           title: 'Media',
           tabBarButton: (props) => (

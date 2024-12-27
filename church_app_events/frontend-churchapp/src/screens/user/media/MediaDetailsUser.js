@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Portal, Dialog, List, TextInput } from 'react-native-paper';
 import { memo } from 'react';
 
-const MediaDetails = ({ route }) => {
+const MediaDetailsUser = ({ route }) => {
     const navigation = useNavigation();
     const { width } = useWindowDimensions();
     const { media } = route.params;
@@ -1238,4 +1238,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default MediaDetails;
+export default MediaDetailsUser;
