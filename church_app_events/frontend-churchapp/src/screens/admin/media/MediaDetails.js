@@ -9,8 +9,11 @@ import YoutubePlayer from 'react-native-youtube-iframe';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Portal, Dialog, List, TextInput } from 'react-native-paper';
 import { memo } from 'react';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const MediaDetails = ({ route }) => {
+    const { user } = useAuth();
+
     const navigation = useNavigation();
     const { width } = useWindowDimensions();
     const { media } = route.params;
@@ -32,6 +35,10 @@ const MediaDetails = ({ route }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [viewCount, setViewCount] = useState(0);
 
+    // Modify the playlist key to be usesr-specific
+    const getUserPlaylistKey = () => {
+        return `playlists_${user?.role}_${user?.id}`;
+    };
 
     // Load playlists
     const loadPlaylists = useCallback(async () => {
@@ -51,18 +58,19 @@ const MediaDetails = ({ route }) => {
             showToast('Error loading playlists');
             return [];
         }
-    }, []);
+    }, [user]);
 
     // Save to specific playlist
     const saveToPlaylist = async (playlistId) => {
         try {
+            const playlistKey = getUserPlaylistKey();
             const videoKey = getYoutubeVideoId();
             if (!videoKey) {
                 showToast('Error: Invalid video');
                 return;
             }
 
-            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
+            const storedPlaylists = await AsyncStorage.getItem(playlistKey) || '{}';
             const userPlaylists = JSON.parse(storedPlaylists);
 
             if (!userPlaylists[playlistId]) {
@@ -87,7 +95,7 @@ const MediaDetails = ({ route }) => {
                 added_at: new Date().toISOString()
             });
 
-            await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
+            await AsyncStorage.setItem(playlistKey, JSON.stringify(userPlaylists));
             await loadPlaylists();
             setIsSaved(true);
             showToast('Video saved to playlist');
@@ -100,8 +108,9 @@ const MediaDetails = ({ route }) => {
     // Add this function to handle video removal from playlist
     const removeFromPlaylist = async (playlistId) => {
         try {
+            const playlistKey = getUserPlaylistKey();
             const videoKey = getYoutubeVideoId();
-            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
+            const storedPlaylists = await AsyncStorage.getItem(playlistKey) || '{}';
             const userPlaylists = JSON.parse(storedPlaylists);
 
             if (userPlaylists[playlistId]) {
@@ -111,7 +120,7 @@ const MediaDetails = ({ route }) => {
                 );
 
                 userPlaylists[playlistId].videos = updatedVideos;
-                await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
+                await AsyncStorage.setItem(playlistKey, JSON.stringify(userPlaylists));
 
                 // Check if video exists in any playlist
                 const videoExistsInAnyPlaylist = Object.values(userPlaylists).some(
@@ -155,6 +164,7 @@ const MediaDetails = ({ route }) => {
     const loadInitialData = useCallback(async () => {
         setIsLoading(true);
         try {
+
             const videoKey = getYoutubeVideoId();
             if (!videoKey) {
                 console.error('No valid video ID found');
@@ -295,6 +305,7 @@ const MediaDetails = ({ route }) => {
     /* A. Handle Save */
     const handleDeletePlaylistFromSave = async (playlistId) => {
         try {
+            const playlistKey = getUserPlaylistKey();
             // Update both states immediately
             setPlaylists(prevPlaylists =>
                 prevPlaylists.filter(playlist => playlist.id !== playlistId)
@@ -304,12 +315,12 @@ const MediaDetails = ({ route }) => {
             );
 
             // Update AsyncStorage
-            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
+            const storedPlaylists = await AsyncStorage.getItem(playlistKey) || '{}';
             const userPlaylists = JSON.parse(storedPlaylists);
 
             delete userPlaylists[playlistId];
 
-            await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
+            await AsyncStorage.setItem(playlistKey, JSON.stringify(userPlaylists));
             showToast('Playlist deleted');
             setSaveModalVisible(false);
         } catch (error) {
@@ -325,6 +336,7 @@ const MediaDetails = ({ route }) => {
     // Update handleRemoveFromSave to also update currentPlaylists
     const handleRemoveFromSave = async (playlistId, videoId) => {
         try {
+            const playlistKey = getUserPlaylistKey();
             // Update both states immediately
             const updatePlaylist = playlist => {
                 if (playlist.id === playlistId) {
@@ -340,14 +352,14 @@ const MediaDetails = ({ route }) => {
             setCurrentPlaylists(prevPlaylists => prevPlaylists.map(updatePlaylist));
 
             // Update AsyncStorage
-            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
+            const storedPlaylists = await AsyncStorage.getItem(playlistKey) || '{}';
             const userPlaylists = JSON.parse(storedPlaylists);
 
             userPlaylists[playlistId].videos = userPlaylists[playlistId].videos.filter(
                 v => v.videoId !== videoId
             );
 
-            await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
+            await AsyncStorage.setItem(playlistKey, JSON.stringify(userPlaylists));
             showToast('Video removed from playlist');
 
             // Check if video exists in any playlist
