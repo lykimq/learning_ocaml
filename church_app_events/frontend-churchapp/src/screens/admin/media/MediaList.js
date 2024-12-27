@@ -134,6 +134,13 @@ const MediaList = ({ navigation }) => {
         );
     }
 
+    // Calculate the number of columns based on the screen width
+    const numColumns = Platform.select({
+        ios: width > 600 ? 2 : 1,
+        android: width > 600 ? 2 : 1,
+        default: Math.max(Math.floor(width / 300), 2)
+    });
+
     return (
         <View style={styles.container}>
             <Searchbar
@@ -144,6 +151,7 @@ const MediaList = ({ navigation }) => {
             />
 
             <FlatList
+                key={`mediaList-${numColumns}`}
                 data={getFilteredMedia()}
                 renderItem={({ item }) => (
                     <CardComponent
@@ -157,11 +165,7 @@ const MediaList = ({ navigation }) => {
                     const source = item.source || 'unknown';
                     return `${source}-${baseId}-${timestamp}`;
                 }}
-                numColumns={Platform.select({
-                    ios: width > 600 ? 2 : 1,
-                    android: width > 600 ? 2 : 1,
-                    default: Math.max(Math.floor(width / 300), 2)
-                })}
+                numColumns={numColumns}
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}

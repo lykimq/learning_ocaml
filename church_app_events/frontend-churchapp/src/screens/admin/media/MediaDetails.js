@@ -450,6 +450,7 @@ const MediaDetails = ({ route }) => {
         }
     };
 
+
     const showToast = (message) => {
         if (Platform.OS === 'android') {
             ToastAndroid.show(message, ToastAndroid.SHORT);
@@ -515,13 +516,32 @@ const MediaDetails = ({ route }) => {
         </Button>
     );
 
+    // Playlist Details Modal
     const PlaylistDetailsModal = memo(({ playlist, visible, onDismiss }) => {
         const handleClose = useCallback(() => {
             onDismiss();
         }, [onDismiss]);
 
+        const renderThumbnail = (video) => {
+            if (!video.thumbnailUrl) {
+                return (
+                    <View style={[styles.thumbnailContainer, styles.placeholderThumbnail]}>
+                        <MaterialIcons name="ondemand-video" size={24} color="#666" />
+                    </View>
+                );
+            }
+            return (<View style={styles.thumbnailContainer}>
+                <Image
+                    source={{ uri: video.thumbnailUrl }}
+                    style={styles.videoThumbnail}
+                    resizeMode="cover"
+                />
+            </View>);
+        };
+
         if (!visible || !playlist) return null;
 
+        // Render Playlist Details Modal
         return (
             <Portal>
                 <Dialog
@@ -582,6 +602,59 @@ const MediaDetails = ({ route }) => {
             </Portal>
         );
     });
+
+    // handle delete video from playlist
+    const handleDeleteVideo = async (playlistId, videoId) => {
+        try {
+            // Get current playlists from storage
+            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
+            const userPlaylists = JSON.parse(storedPlaylists);
+
+
+            if (!userPlaylists[playlistId]) {
+                showToast('Playlist not found');
+                return;
+            }
+
+            // remove video from playlist
+            userPlaylists[playlistId].videos = userPlaylists[playlistId].videos.filter(v => v.videoId !== videoId);
+
+            // Update playlists in storage
+            await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
+
+            // Immediately update the local state
+            setPlaylists(prevPlaylists =>
+                prevPlaylists.map(playlist =>
+                    playlist.id === playlistId ? { ...playlist, videos: playlist.videos.filter(v => v.videoId !== videoId) } : playlist
+                )
+            );
+            setCurrentPlaylists(prevPlaylists =>
+                prevPlaylists.map(playlist =>
+                    playlist.id === playlistId ? { ...playlist, videos: playlist.videos.filter(v => v.videoId !== videoId) } : playlist
+                )
+            );
+
+            // Update selected playlist if it is the one being modified
+            setSelectedPlaylist(prevPlaylist => {
+                if (prevPlaylist && prevPlaylist.id === playlistId) {
+                    return { ...prevPlaylist, videos: prevPlaylist.videos.filter(v => v.videoId !== videoId) }
+                }
+                return prevPlaylist;
+            });
+
+            //check if the current video exists in any playlist
+            const videoExistsInAnyPlaylist = Object.values(userPlaylists).some(
+                playlist => playlist.videos.some(v => v.videoId === videoId)
+            );
+
+            setIsSaved(videoExistsInAnyPlaylist);
+            showToast('Video removed from playlist');
+
+        } catch (error) {
+            console.error('Error deleting video:', error);
+            showToast('Error deleting video');
+        }
+    };
 
     // Update handleDeletePlaylistFromSave to also update currentPlaylists
     const handleDeletePlaylistFromSave = async (playlistId) => {
@@ -767,6 +840,10 @@ const MediaDetails = ({ route }) => {
             onClose();
         }, [onClose]);
 
+        const handlePlaylistSelect = useCallback((playlist) => {
+            onShowDetails(playlist);
+        }, [onShowDetails]);
+
         if (!visible) return null;
 
         return (
@@ -802,11 +879,7 @@ const MediaDetails = ({ route }) => {
                                             <View style={styles.playlistItemActions}>
                                                 <IconButton
                                                     icon="dots-vertical"
-                                                    onPress={() => {
-                                                        setSelectedPlaylist(playlist);
-                                                        setShowPlaylistDetails(true);
-                                                        setShowPlaylistViewer(false);
-                                                    }}
+                                                    onPress={() => handlePlaylistSelect(playlist)}
                                                 />
                                                 <IconButton
                                                     icon="delete"
@@ -830,11 +903,7 @@ const MediaDetails = ({ route }) => {
                                                 />
                                             </View>
                                         )}
-                                        onPress={() => {
-                                            setSelectedPlaylist(playlist);
-                                            setShowPlaylistDetails(true);
-                                            setShowPlaylistViewer(false);
-                                        }}
+                                        onPress={() => handlePlaylistSelect(playlist)}
                                         style={styles.playlistItem}
                                     />
                                 ))
@@ -846,13 +915,11 @@ const MediaDetails = ({ route }) => {
                     </Dialog.Actions>
                 </Dialog>
 
-                {showDetails && (
-                    <PlaylistDetailsModal
-                        playlist={selectedPlaylist}
-                        visible={true}
-                        onDismiss={onHideDetails}
-                    />
-                )}
+                <PlaylistDetailsModal
+                    playlist={selectedPlaylist}
+                    visible={showDetails}
+                    onDismiss={onHideDetails}
+                />
             </Portal>
         );
     });
@@ -873,13 +940,11 @@ const MediaDetails = ({ route }) => {
     const handleShowPlaylistDetails = useCallback((playlist) => {
         setSelectedPlaylist(playlist);
         setShowPlaylistDetails(true);
-        setShowPlaylistViewer(false);
     }, []);
 
     const handleHidePlaylistDetails = useCallback(() => {
         setShowPlaylistDetails(false);
         setSelectedPlaylist(null);
-        setShowPlaylistViewer(true);
     }, []);
 
     // Add handlePlaylistViewerOpen
@@ -890,6 +955,118 @@ const MediaDetails = ({ route }) => {
         setShowPlaylistViewer(true);
     }, [saveModalVisible]);
 
+    // Handle create new playlist
+    const handleCreateNewPlaylist = useCallback(async (playlistName) => {
+        try {
+            if (!playlistName.trim()) {
+                showToast('Please enter a playlist name');
+                return;
+            }
+
+            const videoKey = getYoutubeVideoId();
+
+            if (!videoKey) {
+                showToast('Error getting video key');
+                return;
+            }
+
+            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
+            const userPlaylists = JSON.parse(storedPlaylists);
+
+            // Check for duplicate playlist name
+            if (Object.values(userPlaylists).some(playlist => playlist.name === playlistName)) {
+                showToast('Playlist name already exists');
+                return;
+            }
+
+            // Create new playlist
+            const newPlaylist = {
+                id: Date.now().toString(),
+                name: playlistName,
+                videos: [{
+                    videoId: videoKey,
+                    title: media.title || '',
+                    thumbnailUrl: media.thumbnail || '',
+                    added_at: new Date().toISOString()
+                }],
+                created_at: new Date().toISOString()
+            };
+
+            userPlaylists[newPlaylist.id] = newPlaylist;
+            await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
+
+            // Update state immediately
+            setPlaylists(prevPlaylists => [...prevPlaylists, newPlaylist]);
+            setCurrentPlaylists(prevPlaylists => [...prevPlaylists, newPlaylist]);
+            setIsSaved(true);
+            setShowNewPlaylistInput(false);
+            setNewPlaylistName('');
+            showToast('Playlist created and video saved');
+        } catch (error) {
+            console.error('Error creating playlist:', error);
+            showToast('Error creating playlist');
+        }
+    }, [media, getYoutubeVideoId, showToast]);
+
+    // Handle cancel playlist input
+    const handleCancelInput = useCallback(() => {
+        setShowNewPlaylistInput(false);
+        setNewPlaylistName('');
+    }, []);
+
+
+    // Handle delete playlist
+    const handleDeletePlaylist = async (playlistId) => {
+        try {
+            // Get current playlists from storage
+            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
+            const userPlaylists = JSON.parse(storedPlaylists);
+
+            if (!userPlaylists[playlistId]) {
+                showToast('Playlist not found');
+                return;
+            }
+
+            // Delete playlist from storage
+            delete userPlaylists[playlistId];
+
+            // Update storage
+            await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
+
+            // Immediately update state
+            setPlaylists(prevPlaylists => prevPlaylists.filter(playlist => playlist.id !== playlistId));
+            setCurrentPlaylists(prevPlaylists => prevPlaylists.filter(playlist => playlist.id !== playlistId));
+
+            // If the deleted playlist was selected, clear the selected playlist
+            if (selectedPlaylist?.id === playlistId) {
+                setSelectedPlaylist(null);
+                setShowPlaylistDetails(false);
+            }
+
+            // Check if the current video exists in any remaining playlists
+            const videoKey = getYoutubeVideoId();
+            const videoExistsInPlaylists = Object.values(userPlaylists).some(playlist => playlist.videos?.some(v => v.videoId === videoKey));
+            setIsSaved(videoExistsInPlaylists);
+
+            showToast('Playlist deleted');
+
+            // Close modals if needed
+            if (saveModalVisible) {
+                setSaveModalVisible(false);
+            }
+            if (showPlaylistViewer) {
+                setShowPlaylistViewer(false);
+            }
+            if (showPlaylistDetails) {
+                setShowPlaylistDetails(false);
+            }
+        } catch (error) {
+            console.error('Error deleting playlist:', error);
+            showToast('Error deleting playlist');
+        }
+    };
+
+    console.log('selectedPlaylist', selectedPlaylist);
     return (
         <View style={styles.container}>
             {renderVideoPlayer()}
