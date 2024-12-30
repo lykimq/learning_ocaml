@@ -35,21 +35,36 @@ const MediaDetails = ({ route }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [viewCount, setViewCount] = useState(0);
 
-    // Modify the playlist key to be usesr-specific
-    const getUserPlaylistKey = () => {
-        return `playlists_${user?.role}_${user?.id}`;
-    };
+    // Add getUserStorageKeys function
+    const getUserStorageKeys = () => ({
+        playlists: `playlists_${user?.role}_${user?.id}`,
+        likes: `likes_${user?.role}_${user?.id}`,
+        saves: `saves_${user?.role}_${user?.id}`,
+        views: `views_${user?.role}_${user?.id}`
+    });
 
-    // Load playlists
+    // Add authentication check
+    const checkUserAuth = useCallback(() => {
+        if (!user) {
+            showToast('Please login to use this feature');
+            navigation.navigate('Login');
+            return false;
+        }
+        return true;
+    }, [user, navigation]);
+
+    // Update loadPlaylists to use user-specific key
     const loadPlaylists = useCallback(async () => {
+        if (!checkUserAuth()) return [];
+
         try {
-            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
+            const { playlists: playlistKey } = getUserStorageKeys();
+            const storedPlaylists = await AsyncStorage.getItem(playlistKey) || '{}';
             const userPlaylists = JSON.parse(storedPlaylists);
             const sortedPlaylists = Object.values(userPlaylists)
-                .filter(playlist => playlist && playlist.videos) // Add null check
+                .filter(playlist => playlist && playlist.videos)
                 .sort((a, b) => b.created_at.localeCompare(a.created_at));
 
-            // Update both states atomically
             setPlaylists(sortedPlaylists);
             setCurrentPlaylists(sortedPlaylists);
             return sortedPlaylists;
@@ -58,12 +73,14 @@ const MediaDetails = ({ route }) => {
             showToast('Error loading playlists');
             return [];
         }
-    }, [user]);
+    }, [user, checkUserAuth]);
 
-    // Save to specific playlist
+    // Update saveToPlaylist to use user-specific key
     const saveToPlaylist = async (playlistId) => {
+        if (!checkUserAuth()) return;
+
         try {
-            const playlistKey = getUserPlaylistKey();
+            const { playlists: playlistKey } = getUserStorageKeys();
             const videoKey = getYoutubeVideoId();
             if (!videoKey) {
                 showToast('Error: Invalid video');
@@ -105,10 +122,12 @@ const MediaDetails = ({ route }) => {
         }
     };
 
-    // Add this function to handle video removal from playlist
+    // Update removeFromPlaylist to use user-specific key
     const removeFromPlaylist = async (playlistId) => {
+        if (!checkUserAuth()) return;
+
         try {
-            const playlistKey = getUserPlaylistKey();
+            const { playlists: playlistKey } = getUserStorageKeys();
             const videoKey = getYoutubeVideoId();
             const storedPlaylists = await AsyncStorage.getItem(playlistKey) || '{}';
             const userPlaylists = JSON.parse(storedPlaylists);
@@ -137,34 +156,33 @@ const MediaDetails = ({ route }) => {
         }
     };
 
-    // Add function to update view count
+    // Update updateViewCount to use user-specific key
     const updateViewCount = useCallback(async () => {
+        if (!user) return;
+
         try {
+            const { views: viewsKey } = getUserStorageKeys();
             const videoKey = getYoutubeVideoId();
             if (!videoKey) return;
 
-            // Get current views from storage
-            const storedViews = await AsyncStorage.getItem('videoViews') || '{}';
+            const storedViews = await AsyncStorage.getItem(viewsKey) || '{}';
             const viewsData = JSON.parse(storedViews);
 
-            // Update view count
             const currentViews = (viewsData[videoKey] || 0) + 1;
             viewsData[videoKey] = currentViews;
 
-            // Save updated views
-            await AsyncStorage.setItem('videoViews', JSON.stringify(viewsData));
+            await AsyncStorage.setItem(viewsKey, JSON.stringify(viewsData));
             setViewCount(currentViews);
-
         } catch (error) {
             console.error('Error updating view count:', error);
         }
-    }, []);
+    }, [user]);
 
-    // Update loadInitialData to include view count
+    // Update loadInitialData to use user-specific keys
     const loadInitialData = useCallback(async () => {
         setIsLoading(true);
         try {
-
+            const { likes: likesKey, saves: savesKey, playlists: playlistsKey, views: viewsKey } = getUserStorageKeys();
             const videoKey = getYoutubeVideoId();
             if (!videoKey) {
                 console.error('No valid video ID found');
@@ -173,10 +191,10 @@ const MediaDetails = ({ route }) => {
 
             // Load all data in parallel
             const [storedLikes, savedMedia, playlistsData, storedViews] = await Promise.all([
-                AsyncStorage.getItem('likedVideos'),
-                AsyncStorage.getItem('savedMedia'),
-                AsyncStorage.getItem('userPlaylists'),
-                AsyncStorage.getItem('videoViews')
+                AsyncStorage.getItem(likesKey),
+                AsyncStorage.getItem(savesKey),
+                AsyncStorage.getItem(playlistsKey),
+                AsyncStorage.getItem(viewsKey)
             ]);
 
             const likedVideos = storedLikes ? JSON.parse(storedLikes) : {};
@@ -214,7 +232,7 @@ const MediaDetails = ({ route }) => {
         } finally {
             setIsLoading(false);
         }
-    }, [media.id, media.likes, updateViewCount]);
+    }, [media.id, media.likes, updateViewCount, user]);
 
     // Update useEffect to handle component mounting and updates
     useEffect(() => {
@@ -233,19 +251,21 @@ const MediaDetails = ({ route }) => {
         };
     }, [loadInitialData]);
 
+    // Update handleLike to use user-specific key
     const handleLike = async () => {
+        if (!checkUserAuth()) return;
+
         try {
-            // Get the correct video ID to use as the key
+            const { likes: likesKey } = getUserStorageKeys();
             const videoKey = getYoutubeVideoId();
             if (!videoKey) {
                 console.error('No valid video ID found');
                 return;
             }
 
-            // Get current liked videos from storage
             let likedVideos = {};
             try {
-                const storedLikes = await AsyncStorage.getItem('likedVideos');
+                const storedLikes = await AsyncStorage.getItem(likesKey);
                 likedVideos = storedLikes ? JSON.parse(storedLikes) : {};
             } catch (parseError) {
                 console.warn('Error parsing stored likes, resetting:', parseError);
@@ -268,7 +288,7 @@ const MediaDetails = ({ route }) => {
             }
 
             // Save to AsyncStorage
-            await AsyncStorage.setItem('likedVideos', JSON.stringify(likedVideos));
+            await AsyncStorage.setItem(likesKey, JSON.stringify(likedVideos));
             setIsLiked(newIsLiked);
 
             console.log(`Video ${newIsLiked ? 'liked' : 'unliked'}: ${videoKey}`);
@@ -303,9 +323,10 @@ const MediaDetails = ({ route }) => {
 
 
     /* A. Handle Save */
+    // Update handleDeletePlaylistFromSave to use getUserStorageKeys
     const handleDeletePlaylistFromSave = async (playlistId) => {
         try {
-            const playlistKey = getUserPlaylistKey();
+            const { playlists: playlistKey } = getUserStorageKeys();
             // Update both states immediately
             setPlaylists(prevPlaylists =>
                 prevPlaylists.filter(playlist => playlist.id !== playlistId)
@@ -317,6 +338,11 @@ const MediaDetails = ({ route }) => {
             // Update AsyncStorage
             const storedPlaylists = await AsyncStorage.getItem(playlistKey) || '{}';
             const userPlaylists = JSON.parse(storedPlaylists);
+
+            if (!userPlaylists[playlistId]) {
+                showToast('Playlist not found');
+                return;
+            }
 
             delete userPlaylists[playlistId];
 
@@ -333,48 +359,83 @@ const MediaDetails = ({ route }) => {
         }
     };
 
-    // Update handleRemoveFromSave to also update currentPlaylists
+    // Update handleRemoveFromSave to use getUserStorageKeys
     const handleRemoveFromSave = async (playlistId, videoId) => {
+        if (!checkUserAuth()) return;
+
         try {
-            const playlistKey = getUserPlaylistKey();
-            // Update both states immediately
-            const updatePlaylist = playlist => {
-                if (playlist.id === playlistId) {
-                    return {
-                        ...playlist,
-                        videos: playlist.videos.filter(v => v.videoId !== videoId)
-                    };
-                }
-                return playlist;
-            };
+            const { playlists: playlistKey } = getUserStorageKeys();
 
-            setPlaylists(prevPlaylists => prevPlaylists.map(updatePlaylist));
-            setCurrentPlaylists(prevPlaylists => prevPlaylists.map(updatePlaylist));
-
-            // Update AsyncStorage
+            // Get current playlists from storage
             const storedPlaylists = await AsyncStorage.getItem(playlistKey) || '{}';
-            const userPlaylists = JSON.parse(storedPlaylists);
+            let userPlaylists = JSON.parse(storedPlaylists);
 
+            // Debug logging
+            console.log('Removing video from playlist:', {
+                playlistId,
+                videoId,
+                availablePlaylists: Object.keys(userPlaylists)
+            });
+
+            // Check if playlist exists
+            if (!userPlaylists[playlistId]) {
+                console.error('Playlist not found:', {
+                    playlistId,
+                    availablePlaylists: Object.keys(userPlaylists)
+                });
+                showToast('Error: Playlist not found');
+                return;
+            }
+
+            // Ensure videos array exists
+            if (!Array.isArray(userPlaylists[playlistId].videos)) {
+                userPlaylists[playlistId].videos = [];
+            }
+
+            // Remove video from playlist
             userPlaylists[playlistId].videos = userPlaylists[playlistId].videos.filter(
                 v => v.videoId !== videoId
             );
 
+            // Update storage
             await AsyncStorage.setItem(playlistKey, JSON.stringify(userPlaylists));
-            showToast('Video removed from playlist');
+
+            // Update local states
+            const updatedPlaylists = Object.values(userPlaylists)
+                .filter(playlist => playlist && playlist.videos)
+                .sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+            setPlaylists(updatedPlaylists);
+            setCurrentPlaylists(updatedPlaylists);
+
+            // Update selected playlist if it's the one being modified
+            if (selectedPlaylist?.id === playlistId) {
+                setSelectedPlaylist(prev => ({
+                    ...prev,
+                    videos: prev.videos.filter(v => v.videoId !== videoId)
+                }));
+            }
 
             // Check if video exists in any playlist
             const videoExistsInAnyPlaylist = Object.values(userPlaylists).some(
-                playlist => playlist.videos.some(v => v.videoId === videoId)
+                playlist => playlist.videos?.some(v => v.videoId === videoId)
             );
 
             setIsSaved(videoExistsInAnyPlaylist);
+            showToast('Video removed from playlist');
+
         } catch (error) {
             console.error('Error removing video:', error);
             showToast('Error removing video');
-            // Reload both states in case of error
-            const reloadedPlaylists = await loadPlaylists();
-            setPlaylists(reloadedPlaylists);
-            setCurrentPlaylists(reloadedPlaylists);
+
+            // Reload playlists in case of error
+            try {
+                const reloadedPlaylists = await loadPlaylists();
+                setPlaylists(reloadedPlaylists);
+                setCurrentPlaylists(reloadedPlaylists);
+            } catch (reloadError) {
+                console.error('Error reloading playlists:', reloadError);
+            }
         }
     };
 
@@ -412,6 +473,8 @@ const MediaDetails = ({ route }) => {
     }, [saveModalVisible]);
 
     const handleCreateNewPlaylist = useCallback(async (playlistName) => {
+        if (!checkUserAuth()) return;
+
         try {
             if (!playlistName.trim()) {
                 showToast('Please enter a playlist name');
@@ -419,13 +482,14 @@ const MediaDetails = ({ route }) => {
             }
 
             const videoKey = getYoutubeVideoId();
-
             if (!videoKey) {
                 showToast('Error getting video key');
                 return;
             }
 
-            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
+            // Use the correct user-specific storage key
+            const { playlists: playlistKey } = getUserStorageKeys();
+            const storedPlaylists = await AsyncStorage.getItem(playlistKey) || '{}';
             const userPlaylists = JSON.parse(storedPlaylists);
 
             // Check for duplicate playlist name
@@ -441,27 +505,45 @@ const MediaDetails = ({ route }) => {
                 videos: [{
                     videoId: videoKey,
                     title: media.title || '',
-                    thumbnailUrl: media.thumbnail || '',
+                    thumbnailUrl: media.thumbnailUrl || '',
                     added_at: new Date().toISOString()
                 }],
                 created_at: new Date().toISOString()
             };
 
+            // Add new playlist to storage
             userPlaylists[newPlaylist.id] = newPlaylist;
-            await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
+            await AsyncStorage.setItem(playlistKey, JSON.stringify(userPlaylists));
 
-            // Update state immediately
-            setPlaylists(prevPlaylists => [...prevPlaylists, newPlaylist]);
-            setCurrentPlaylists(prevPlaylists => [...prevPlaylists, newPlaylist]);
+            // Update states
+            const updatedPlaylists = Object.values(userPlaylists)
+                .filter(playlist => playlist && playlist.videos)
+                .sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+            setPlaylists(updatedPlaylists);
+            setCurrentPlaylists(updatedPlaylists);
             setIsSaved(true);
             setShowNewPlaylistInput(false);
             setNewPlaylistName('');
+
+            // Close the modal after successful creation
+            setSaveModalVisible(false);
             showToast('Playlist created and video saved');
+
         } catch (error) {
             console.error('Error creating playlist:', error);
             showToast('Error creating playlist');
+
+            // Reload playlists in case of error
+            try {
+                const reloadedPlaylists = await loadPlaylists();
+                setPlaylists(reloadedPlaylists);
+                setCurrentPlaylists(reloadedPlaylists);
+            } catch (reloadError) {
+                console.error('Error reloading playlists:', reloadError);
+            }
         }
-    }, [media, getYoutubeVideoId, showToast]);
+    }, [media, getYoutubeVideoId, showToast, checkUserAuth, getUserStorageKeys, loadPlaylists]);
 
     const handleCancelInput = useCallback(() => {
         setShowNewPlaylistInput(false);
@@ -471,77 +553,128 @@ const MediaDetails = ({ route }) => {
 
     // handle delete video from playlist
     const handleDeleteVideoPlaylist = async (playlistId, videoId) => {
+        if (!checkUserAuth()) return;
+
         try {
+            const { playlists: playlistKey } = getUserStorageKeys();
+
             // Get current playlists from storage
-            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
-            const userPlaylists = JSON.parse(storedPlaylists);
+            const storedPlaylists = await AsyncStorage.getItem(playlistKey) || '{}';
+            let userPlaylists = JSON.parse(storedPlaylists);
 
+            // Debug logging
+            console.log('Attempting to remove video:', {
+                playlistId,
+                videoId,
+                availablePlaylists: Object.keys(userPlaylists),
+                playlistExists: !!userPlaylists[playlistId],
+                videosCount: userPlaylists[playlistId]?.videos?.length
+            });
 
+            // Check if playlist exists
             if (!userPlaylists[playlistId]) {
-                showToast('Playlist not found');
+                console.error('Playlist not found:', playlistId);
+                showToast('Error: Playlist not found');
                 return;
             }
 
-            // remove video from playlist
-            userPlaylists[playlistId].videos = userPlaylists[playlistId].videos.filter(v => v.videoId !== videoId);
+            // Ensure videos array exists
+            if (!Array.isArray(userPlaylists[playlistId].videos)) {
+                userPlaylists[playlistId].videos = [];
+            }
 
-            // Update playlists in storage
-            await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
-
-            // Immediately update the local state
-            setPlaylists(prevPlaylists =>
-                prevPlaylists.map(playlist =>
-                    playlist.id === playlistId ? { ...playlist, videos: playlist.videos.filter(v => v.videoId !== videoId) } : playlist
-                )
+            // Remove video from playlist
+            const originalLength = userPlaylists[playlistId].videos.length;
+            userPlaylists[playlistId].videos = userPlaylists[playlistId].videos.filter(
+                video => video.videoId !== videoId
             );
-            setCurrentPlaylists(prevPlaylists =>
-                prevPlaylists.map(playlist =>
-                    playlist.id === playlistId ? { ...playlist, videos: playlist.videos.filter(v => v.videoId !== videoId) } : playlist
-                )
-            );
+            const newLength = userPlaylists[playlistId].videos.length;
 
-            // Update selected playlist if it is the one being modified
-            setSelectedPlaylist(prevPlaylist => {
-                if (prevPlaylist && prevPlaylist.id === playlistId) {
-                    return { ...prevPlaylist, videos: prevPlaylist.videos.filter(v => v.videoId !== videoId) }
-                }
-                return prevPlaylist;
+            console.log('Video removal result:', {
+                originalLength,
+                newLength,
+                videoRemoved: originalLength !== newLength
             });
 
-            //check if the current video exists in any playlist
+            // Update storage
+            await AsyncStorage.setItem(playlistKey, JSON.stringify(userPlaylists));
+
+            // Update local states
+            const updatedPlaylists = Object.values(userPlaylists)
+                .filter(playlist => playlist && playlist.videos)
+                .sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+            setPlaylists(updatedPlaylists);
+            setCurrentPlaylists(updatedPlaylists);
+
+            // Update selected playlist if it's the one being modified
+            if (selectedPlaylist?.id === playlistId) {
+                setSelectedPlaylist(prev => ({
+                    ...prev,
+                    videos: prev.videos.filter(v => v.videoId !== videoId)
+                }));
+            }
+
+            // Check if video exists in any playlist
             const videoExistsInAnyPlaylist = Object.values(userPlaylists).some(
-                playlist => playlist.videos.some(v => v.videoId === videoId)
+                playlist => playlist.videos?.some(v => v.videoId === videoId)
             );
 
             setIsSaved(videoExistsInAnyPlaylist);
             showToast('Video removed from playlist');
 
+            // If the playlist is now empty, you might want to handle that case
+            if (userPlaylists[playlistId].videos.length === 0) {
+                console.log('Playlist is now empty');
+            }
+
         } catch (error) {
-            console.error('Error deleting video:', error);
-            showToast('Error deleting video');
+            console.error('Error removing video from playlist:', error);
+            showToast('Error removing video');
+
+            // Reload playlists in case of error
+            try {
+                const reloadedPlaylists = await loadPlaylists();
+                setPlaylists(reloadedPlaylists);
+                setCurrentPlaylists(reloadedPlaylists);
+            } catch (reloadError) {
+                console.error('Error reloading playlists:', reloadError);
+            }
         }
     };
 
     const handleDeletePlaylist = async (playlistId) => {
-        try {
-            // Get current playlists from storage
-            const storedPlaylists = await AsyncStorage.getItem('userPlaylists') || '{}';
-            const userPlaylists = JSON.parse(storedPlaylists);
+        if (!checkUserAuth()) return;
 
+        try {
+            const { playlists: playlistKey } = getUserStorageKeys();
+            const storedPlaylists = await AsyncStorage.getItem(playlistKey) || '{}';
+            let userPlaylists = JSON.parse(storedPlaylists);
+
+            // Check if playlist exists
             if (!userPlaylists[playlistId]) {
+                console.log('Playlist not found:', playlistId);
+                console.log('Available playlists:', Object.keys(userPlaylists));
                 showToast('Playlist not found');
                 return;
             }
+
+            // Store playlist name for the toast message
+            const playlistName = userPlaylists[playlistId].name;
 
             // Delete playlist from storage
             delete userPlaylists[playlistId];
 
             // Update storage
-            await AsyncStorage.setItem('userPlaylists', JSON.stringify(userPlaylists));
+            await AsyncStorage.setItem(playlistKey, JSON.stringify(userPlaylists));
 
-            // Immediately update state
-            setPlaylists(prevPlaylists => prevPlaylists.filter(playlist => playlist.id !== playlistId));
-            setCurrentPlaylists(prevPlaylists => prevPlaylists.filter(playlist => playlist.id !== playlistId));
+            // Immediately update both state arrays with the filtered playlists
+            const updatedPlaylists = Object.values(userPlaylists)
+                .filter(playlist => playlist && playlist.videos)
+                .sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+            setPlaylists(updatedPlaylists);
+            setCurrentPlaylists(updatedPlaylists);
 
             // If the deleted playlist was selected, clear the selected playlist
             if (selectedPlaylist?.id === playlistId) {
@@ -551,24 +684,30 @@ const MediaDetails = ({ route }) => {
 
             // Check if the current video exists in any remaining playlists
             const videoKey = getYoutubeVideoId();
-            const videoExistsInPlaylists = Object.values(userPlaylists).some(playlist => playlist.videos?.some(v => v.videoId === videoKey));
+            const videoExistsInPlaylists = Object.values(userPlaylists).some(playlist =>
+                playlist.videos?.some(v => v.videoId === videoKey)
+            );
             setIsSaved(videoExistsInPlaylists);
 
-            showToast('Playlist deleted');
+            showToast(`Playlist "${playlistName}" deleted`);
 
-            // Close modals if needed
-            if (saveModalVisible) {
-                setSaveModalVisible(false);
-            }
-            if (showPlaylistViewer) {
-                setShowPlaylistViewer(false);
-            }
-            if (showPlaylistDetails) {
-                setShowPlaylistDetails(false);
-            }
+            // Close all relevant modals
+            setSaveModalVisible(false);
+            setShowPlaylistViewer(false);
+            setShowPlaylistDetails(false);
+
         } catch (error) {
             console.error('Error deleting playlist:', error);
             showToast('Error deleting playlist');
+
+            // Reload playlists in case of error
+            try {
+                const reloadedPlaylists = await loadPlaylists();
+                setPlaylists(reloadedPlaylists);
+                setCurrentPlaylists(reloadedPlaylists);
+            } catch (reloadError) {
+                console.error('Error reloading playlists:', reloadError);
+            }
         }
     };
 
