@@ -55,7 +55,7 @@ pub enum DonationFrequency {
 /// Types of payment methods
 ///
 /// Supported payment methods for donations.
-#[derive(Debug, Serialize, Deserialize, Type)]
+#[derive(Debug, Serialize, Deserialize, Type, Clone, Copy)]
 #[sqlx(type_name = "payment_method_type", rename_all = "lowercase")]
 pub enum PaymentMethodType {
     /// Credit card payment
