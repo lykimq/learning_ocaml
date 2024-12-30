@@ -4,11 +4,53 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{PgPool, Type};
 use anyhow::Result;
-use super::donation::PaymentMethodType;
 
 // ============= Types =============
+
+/// Payment method information
+///
+/// Stores payment method details for recurring donations.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PaymentMethod {
+    /// Unique identifier
+    pub id: String,
+    /// Type of payment method
+    pub payment_type: PaymentMethodType,
+    /// Last 4 digits (for cards)
+    pub last_four: Option<String>,
+    /// Expiry date (for cards)
+    pub expiry_date: Option<String>,
+    /// Card brand (for cards)
+    pub card_brand: Option<String>,
+    /// Whether this is the default payment method
+    pub is_default: bool,
+    /// When the payment method was created
+    pub created_at: DateTime<Utc>,
+}
+
+/// Types of payment methods
+///
+/// Supported payment methods for donations.
+#[derive(Debug, Serialize, Deserialize, Type, Clone, Copy)]
+#[sqlx(type_name = "payment_method_type", rename_all = "lowercase")]
+pub enum PaymentMethodType {
+    /// Credit card payment
+    CreditCard,
+    /// Debit card payment
+    DebitCard,
+    /// PayPal payment
+    PayPal,
+    /// Direct bank transfer
+    BankTransfer,
+    /// Cryptocurrency payment
+    Crypto,
+    /// Apple Pay
+    ApplePay,
+    /// Google Pay
+    GooglePay,
+}
 
 /// Represents a user's payment method
 #[derive(Debug, Serialize, Deserialize)]

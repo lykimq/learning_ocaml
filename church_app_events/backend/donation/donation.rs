@@ -8,10 +8,12 @@
 //! - Status enums
 //! - Currency handling
 
+use super::payment_method::PaymentMethodType;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
+
 // ============= Status Enums =============
 
 /// Status of a donation
@@ -50,28 +52,6 @@ pub enum DonationFrequency {
     Quarterly,
     /// Repeats every year
     Yearly,
-}
-
-/// Types of payment methods
-///
-/// Supported payment methods for donations.
-#[derive(Debug, Serialize, Deserialize, Type, Clone, Copy)]
-#[sqlx(type_name = "payment_method_type", rename_all = "lowercase")]
-pub enum PaymentMethodType {
-    /// Credit card payment
-    CreditCard,
-    /// Debit card payment
-    DebitCard,
-    /// PayPal payment
-    PayPal,
-    /// Direct bank transfer
-    BankTransfer,
-    /// Cryptocurrency payment
-    Crypto,
-    /// Apple Pay
-    ApplePay,
-    /// Google Pay
-    GooglePay,
 }
 
 // ============= Core Types =============
@@ -150,56 +130,6 @@ pub struct RecurringDonation {
     pub created_at: DateTime<Utc>,
     /// When the recurring donation was last updated
     pub updated_at: DateTime<Utc>,
-}
-
-// ============= Helper Types =============
-
-/// Payment method information
-///
-/// Stores payment method details for recurring donations.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PaymentMethod {
-    /// Unique identifier
-    pub id: String,
-    /// Type of payment method
-    pub payment_type: PaymentMethodType,
-    /// Last 4 digits (for cards)
-    pub last_four: Option<String>,
-    /// Expiry date (for cards)
-    pub expiry_date: Option<String>,
-    /// Card brand (for cards)
-    pub card_brand: Option<String>,
-    /// Whether this is the default payment method
-    pub is_default: bool,
-    /// When the payment method was created
-    pub created_at: DateTime<Utc>,
-}
-
-/// Donation receipt
-///
-/// Generated for tax purposes and record keeping.
-#[derive(Debug, Serialize)]
-pub struct DonationReceipt {
-    /// Unique identifier
-    pub receipt_number: String,
-    /// Associated donation ID
-    pub donation_id: i32,
-    /// Donation amount
-    pub amount: Decimal,
-    /// Currency code
-    pub currency: String,
-    /// Donor information
-    pub donor_name: Option<String>,
-    /// Donor email
-    pub donor_email: Option<String>,
-    /// When the donation was made
-    pub donation_date: DateTime<Utc>,
-    /// Tax deductible amount
-    pub tax_deductible_amount: Decimal,
-    /// Organization's tax ID
-    pub organization_tax_id: String,
-    /// When the receipt was generated
-    pub generated_at: DateTime<Utc>,
 }
 
 // ============= Implementation Blocks =============

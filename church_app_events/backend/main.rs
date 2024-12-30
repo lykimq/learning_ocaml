@@ -37,6 +37,7 @@ mod media {
 mod donation{
     pub mod donation;
     pub mod receipt;
+    pub mod receipt_repository;
     pub mod payment_method;
     pub mod currency;
 }
