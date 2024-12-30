@@ -3,8 +3,7 @@ use actix_web::{
     HttpResponse,
     Responder,
     HttpRequest,
-    body::MessageBody
-
+    HttpMessage
 };
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
@@ -16,12 +15,14 @@ use bcrypt;
 use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation};
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::Error;
-use futures::future::{ok, Ready};
-use std::task::{Context, Poll};
+use actix_web::body::{BoxBody, EitherBody};
 use dotenv::dotenv;
 use chrono::{Utc, Duration as ChronoDuration};
 use std::sync::Mutex;
 use std::collections::HashSet;
+use std::future::{ready, Ready};
+use futures_util::future::{ok, LocalBoxFuture};
+use std::task::{Poll};
 
 lazy_static! {
     static ref EMAIL_REGEX: Regex =
@@ -134,6 +135,142 @@ pub struct Claims {
     pub role: UserRole,
     pub email: String,
     pub username: String,
+}
+
+// AuthenticatedUser struct
+#[derive(Debug, Clone)]
+pub struct AuthenticatedUser {
+    pub id: i32,
+    pub email: String,
+    pub username: String,
+    pub role: UserRole,
+    pub is_admin: bool,
+}
+
+impl AuthenticatedUser {
+    fn from_claims(claims: Claims) -> Self {
+        Self {
+            id: claims.sub,
+            email: claims.email,
+            username: claims.username,
+            role: claims.role,
+            is_admin: claims.role == UserRole::Admin,
+        }
+    }
+}
+
+// Auth Middleware
+pub struct AuthMiddleware;
+
+impl<S> Transform<S, ServiceRequest> for AuthMiddleware
+where
+    S: Service<ServiceRequest, Response = ServiceResponse<EitherBody<BoxBody>>, Error = Error> + 'static,
+{
+    type Response = ServiceResponse<EitherBody<BoxBody>>;
+    type Error = Error;
+    type InitError = ();
+    type Transform = AuthMiddlewareService<S>;
+    type Future = Ready<Result<Self::Transform, Self::InitError>>;
+
+    fn new_transform(&self, service: S) -> Self::Future {
+        ready(Ok(AuthMiddlewareService { service }))
+    }
+}
+
+pub struct AuthMiddlewareService<S> {
+    service: S,
+}
+
+impl<S> Service<ServiceRequest> for AuthMiddlewareService<S>
+where
+    S: Service<ServiceRequest, Response = ServiceResponse<EitherBody<BoxBody>>, Error = Error> + 'static,
+{
+    type Response = ServiceResponse<EitherBody<BoxBody>>;
+    type Error = Error;
+    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
+
+    fn poll_ready(&self, ctx: &mut core::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.service.poll_ready(ctx)
+    }
+
+    fn call(&self, req: ServiceRequest) -> Self::Future {
+        // Skip authentication for login and logout routes
+        if req.path() == "/auth/login" || req.path() == "/auth/logout" {
+            let fut = self.service.call(req);
+            return Box::pin(async move {
+                let res = fut.await?;
+                Ok(res)
+            });
+        }
+
+        // Check for Authorization header
+        if let Some(auth_header) = req.headers().get("Authorization") {
+            if let Ok(auth_str) = auth_header.to_str() {
+                if auth_str.starts_with("Bearer ") {
+                    let token = &auth_str[7..];
+
+                    // Check if token is blacklisted
+                    if let Ok(blacklist) = TOKEN_BLACKLIST.lock() {
+                        if blacklist.contains(token) {
+                            return Box::pin(async move {
+                                Ok(ServiceResponse::<EitherBody<BoxBody>>::new(
+                                    req.into_parts().0,
+                                    HttpResponse::Unauthorized()
+                                        .json(json!({"error": "Token has been invalidated"}))
+                                        .map_into_right_body()
+                                ))
+                            });
+                        }
+                    }
+
+                    // Verify JWT token
+                    match decode::<Claims>(
+                        token,
+                        &DecodingKey::from_secret(
+                            std::env::var("JWT_SECRET")
+                                .expect("JWT_SECRET must be set")
+                                .as_bytes(),
+                        ),
+                        &Validation::default(),
+                    ) {
+                        Ok(token_data) => {
+                            // Create AuthenticatedUser from claims
+                            let user = AuthenticatedUser::from_claims(token_data.claims);
+
+                            // Insert user into request extensions
+                            req.extensions_mut().insert(user);
+
+                            let fut = self.service.call(req);
+                            return Box::pin(async move {
+                                let res = fut.await?;
+                                Ok(res)
+                            });
+                        }
+                        Err(_) => {
+                            return Box::pin(async move {
+                                Ok(ServiceResponse::<EitherBody<BoxBody>>::new(
+                                    req.into_parts().0,
+                                    HttpResponse::Unauthorized()
+                                        .json(json!({"error": "Invalid token"}))
+                                        .map_into_right_body()
+                                ))
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // No valid authentication found
+        Box::pin(async move {
+            Ok(ServiceResponse::<EitherBody<BoxBody>>::new(
+                req.into_parts().0,
+                HttpResponse::Unauthorized()
+                    .json(json!({"error": "Missing or invalid authentication"}))
+                    .map_into_right_body()
+            ))
+        })
+    }
 }
 
 // Login handler
@@ -263,52 +400,6 @@ pub fn verify_jwt (token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
         &validation
     )
     .map(|token_data| token_data.claims)
-}
-
-// Middleware to protect routes
-#[derive(Clone)]
-pub struct AuthMiddleware;
-
-// Implement the necessary traits for AuthMiddleware
-impl<S, B> Transform<S, ServiceRequest> for AuthMiddleware
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-    B: MessageBody + 'static,
-{
-    type Response = ServiceResponse<B>;
-    type Error = Error;
-    type Transform = AuthMiddlewareService<S>;
-    type InitError = ();
-    type Future = Ready<Result<Self::Transform, Self::InitError>>;
-
-    fn new_transform(&self, service: S) -> Self::Future {
-        ok(AuthMiddlewareService { service })
-    }
-}
-
-// Define the service that will be used by the middleware
-pub struct AuthMiddlewareService<S> {
-    service: S,
-}
-
-// Implement the necessary traits for AuthMiddlewareService
-impl<S, B> Service<ServiceRequest> for AuthMiddlewareService<S>
-where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
-    B: MessageBody + 'static,
-{
-    type Response = ServiceResponse<B>;
-    type Error = Error;
-    type Future = S::Future;
-
-    fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.service.poll_ready(cx)
-    }
-
-    fn call(&self, req: ServiceRequest) -> Self::Future {
-        // Add your authentication logic here
-        self.service.call(req)
-    }
 }
 
 fn validate_username(username: &str) -> Result<(), String> {

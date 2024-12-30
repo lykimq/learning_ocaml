@@ -34,6 +34,11 @@ mod media {
     pub mod media; // Core media functionality
 }
 
+mod donation{
+    pub mod donation;
+}
+
+
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     dotenv().ok();
