@@ -9,17 +9,19 @@
 //! - Currency handling
 
 use super::payment_method::PaymentMethodType;
+use actix_web::cookie::time::Duration;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
+use std::str::FromStr;
 
 // ============= Status Enums =============
 
 /// Status of a donation
 ///
 /// Represents the current state of a donation in the system.
-#[derive(Debug, Serialize, Deserialize, Type)]
+#[derive(Debug, Serialize, Deserialize, sqlx::Type, PartialEq, Clone, Copy)]
 #[sqlx(type_name = "donation_status", rename_all = "lowercase")]
 pub enum DonationStatus {
     /// Payment is being processed
@@ -32,6 +34,27 @@ pub enum DonationStatus {
     Refunded,
     /// Donation was cancelled before processing
     Cancelled,
+}
+
+impl std::fmt::Display for DonationStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+
+impl FromStr for DonationStatus {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "pending" => Ok(Self::Pending),
+            "completed" => Ok(Self::Completed),
+            "failed" => Ok(Self::Failed),
+            "refunded" => Ok(Self::Refunded),
+            "cancelled" => Ok(Self::Cancelled),
+            _ => Err(anyhow::anyhow!("Invalid donation status: {}", s)),
+        }
+    }
 }
 
 /// Frequency of recurring donations
@@ -59,7 +82,7 @@ pub enum DonationFrequency {
 /// One-time donation
 ///
 /// Represents a single donation transaction in the system.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, sqlx::FromRow)]
 pub struct Donation {
     /// Unique identifier
     pub id: i32,
@@ -68,8 +91,10 @@ pub struct Donation {
     /// Currency code (e.g., USD, EUR)
     pub currency: String,
     /// Current status of the donation
+    #[sqlx(rename = "status")]
     pub status: DonationStatus,
     /// Payment method used
+    #[sqlx(rename = "payment_method")]
     pub payment_method: PaymentMethodType,
     /// External payment processor transaction ID
     pub transaction_id: Option<String>,
@@ -90,7 +115,7 @@ pub struct Donation {
     /// IP address of the donor
     pub ip_address: Option<String>,
     /// Country code derived from IP or payment info
-    pub country: Option<String>,
+    pub country_code: Option<String>,
     /// When the donation was created
     pub created_at: DateTime<Utc>,
     /// When the donation was last updated
@@ -100,13 +125,15 @@ pub struct Donation {
 /// Recurring donation
 ///
 /// Represents a recurring donation setup with scheduled payments.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, sqlx::FromRow)]
 pub struct RecurringDonation {
     /// Unique identifier
     pub id: i32,
+    /// User ID
+    pub user_id: i32,
     /// Amount to be charged each time
     pub amount: Decimal,
-    /// Currency code
+    /// Currency code (3 letters)
     pub currency: String,
     /// Current status of the recurring donation
     pub status: DonationStatus,
@@ -120,12 +147,12 @@ pub struct RecurringDonation {
     pub next_payment_date: DateTime<Utc>,
     /// Optional end date for the recurring donation
     pub end_date: Option<DateTime<Utc>>,
-    /// Total number of donations to process (optional)
-    pub total_donations: Option<i32>,
-    /// Number of successful donations processed
-    pub completed_donations: i32,
-    /// When the last donation was processed
-    pub last_donation_date: Option<DateTime<Utc>>,
+    /// Total number of payments to process (optional)
+    pub total_payments_count: Option<i32>,
+    /// Number of successful payments processed
+    pub completed_payments_count: i32,
+    /// When the last payment was processed
+    pub last_payment_date: Option<DateTime<Utc>>,
     /// When the recurring donation was created
     pub created_at: DateTime<Utc>,
     /// When the recurring donation was last updated
@@ -151,7 +178,7 @@ impl Default for Donation {
             is_anonymous: false,
             converted_amount_usd: Decimal::new(0, 0),
             ip_address: None,
-            country: None,
+            country_code: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         }
@@ -179,4 +206,116 @@ impl Donation {
         // Implementation depends on local tax laws
         self.amount
     }
+}
+
+// Recurring Donation
+
+impl Default for RecurringDonation {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            user_id: 0,
+            amount: Decimal::new(0, 0),
+            currency: "USD".to_string(),
+            status: DonationStatus::Pending,
+            frequency: DonationFrequency::Monthly,
+            payment_method: PaymentMethodType::CreditCard,
+            start_date: Utc::now(),
+            next_payment_date: Utc::now(),
+            end_date: None,
+            total_payments_count: None,
+            completed_payments_count: 0,
+            last_payment_date: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+}
+
+impl RecurringDonation {
+    /// Creates a new recurring donation with default values
+    pub fn new(
+        user_id: i32,
+        amount: Decimal,
+        currency: String,
+        frequency: DonationFrequency,
+        payment_method: PaymentMethodType,
+        start_date: DateTime<Utc>,
+    ) -> Self {
+        Self {
+            user_id,
+            amount,
+            currency,
+            frequency,
+            payment_method,
+            start_date,
+            next_payment_date: start_date,
+            ..Default::default()
+        }
+    }
+
+    // Calculate next payment date based on frequency
+    pub fn calculate_next_payment_date(&self) -> DateTime<Utc> {
+        use chrono::Duration;
+
+        match self.frequency {
+            DonationFrequency::Daily => self.next_payment_date + Duration::days(1),
+
+            DonationFrequency::Weekly => self.next_payment_date + Duration::weeks(1),
+
+            DonationFrequency::Monthly =>
+            // Add one month, handling month boundaries
+            {
+                let next = self.next_payment_date.naive_utc();
+                let next = next
+                    .checked_add_months(chrono::Months::new(1))
+                    .unwrap_or(next);
+                DateTime::<Utc>::from_naive_utc_and_offset(next, Utc)
+            }
+
+            DonationFrequency::Quarterly => {
+                let next = self.next_payment_date.naive_utc();
+                let next = next
+                    .checked_add_months(chrono::Months::new(3))
+                    .unwrap_or(next);
+                DateTime::<Utc>::from_naive_utc_and_offset(next, Utc)
+            }
+
+            DonationFrequency::Yearly => {
+                let next = self.next_payment_date.naive_utc();
+                let next = next
+                    .checked_add_months(chrono::Months::new(12))
+                    .unwrap_or(next);
+                DateTime::<Utc>::from_naive_utc_and_offset(next, Utc)
+            }
+            DonationFrequency::OneTime => self.next_payment_date,
+        }
+    }
+
+    // Check if the recurring donation is active
+    pub fn is_active(&self) -> bool {
+        matches!(
+            self.status,
+            DonationStatus::Pending
+                | DonationStatus::Completed
+                | DonationStatus::Refunded
+                | DonationStatus::Cancelled
+        ) && self.end_date.map_or(true, |end_date| end_date > Utc::now())
+            && self
+                .total_payments_count
+                .map_or(true, |total_payments_count| {
+                    total_payments_count > self.completed_payments_count
+                })
+    }
+}
+
+// ============= Donation Summary =============
+
+/// Summary of a donation
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DonationSummary {
+    pub id: i32,
+    pub amount: Decimal,
+    pub currency: String,
+    pub status: DonationStatus,
 }

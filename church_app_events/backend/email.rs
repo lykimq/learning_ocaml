@@ -62,7 +62,7 @@ async fn get_event_details(pool: &PgPool, event_id: i32) -> Result<(String, Stri
     ))
 }
 
-async fn create_mailer(
+pub async fn create_mailer(
     config: &EmailConfig,
 ) -> Result<AsyncSmtpTransport<lettre::Tokio1Executor>, lettre::transport::smtp::Error> {
     let creds = Credentials::new(

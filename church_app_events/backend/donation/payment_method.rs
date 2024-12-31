@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Type};
 use anyhow::Result;
+use std::str::FromStr;
 
 // ============= Types =============
 
@@ -50,6 +51,26 @@ pub enum PaymentMethodType {
     ApplePay,
     /// Google Pay
     GooglePay,
+}
+
+impl std::fmt::Display for PaymentMethodType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+
+impl FromStr for PaymentMethodType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "credit_card" => Ok(Self::CreditCard),
+            "debit_card" => Ok(Self::DebitCard),
+            "bank_transfer" => Ok(Self::BankTransfer),
+            "paypal" => Ok(Self::PayPal),
+            _ => Err(anyhow::anyhow!("Invalid payment method: {}", s))
+        }
+    }
 }
 
 /// Represents a user's payment method

@@ -41,6 +41,9 @@ mod donation{
     pub mod payment_method;
     pub mod currency;
     pub mod currency_service;
+    pub mod notification_service;
+    pub mod donation_repository;
+    pub mod donation_service;
 }
 
 
