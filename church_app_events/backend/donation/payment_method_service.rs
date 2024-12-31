@@ -20,7 +20,7 @@ pub struct PaymentMethodService {
     pub payment_provider: PaymentMethod,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct PaymentResponse {
     pub transaction_id: String,
     pub success: bool

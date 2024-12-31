@@ -18,7 +18,7 @@ use reqwest::Client;
 
 /// Core payment method struct representing validated payment information
 /// Used for storing the result of payment method validation before persistence
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PaymentMethod {
     /// Unique identifier
     pub id: String,
@@ -90,6 +90,29 @@ impl PaymentMethod {
     /// Factory method to create new PaymentMethod instances
     pub fn new(id: String, user_id: Option<i32>, payment_type: PaymentMethodType, last_four: Option<String>, expiry_date: Option<String>, card_brand: Option<String>, is_default: bool, created_at: DateTime<Utc>) -> Self {
         Self { id, user_id, payment_type, last_four, expiry_date, card_brand, is_default, created_at }
+    }
+
+    /// Converts a validated payment method to a UserPaymentMethod
+    pub fn into_user_payment_method(self) -> UserPaymentMethod {
+        UserPaymentMethod {
+            id: Default::default(),
+            user_id: self.user_id.unwrap_or_default(),
+            payment_type: self.payment_type,
+            provider_payment_id: Some(self.id.clone()),
+            last_four: self.last_four.clone(),
+            card_brand: self.card_brand.clone(),
+            expiry_date: self.expiry_date.clone(),
+            is_default: self.is_default,
+            is_active: true,
+            billing_address_line1: None,
+            billing_address_line2: None,
+            billing_city: None,
+            billing_state: None,
+            billing_postal_code: None,
+            billing_country: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
     }
 
     /// Validates payment methods across different providers
