@@ -1,22 +1,29 @@
 //! Payment Method Module
 //!
-//! Handles user payment methods and related operations
+//! This module handles all payment method operations including:
+//! - Payment method validation for different providers (Stripe, PayPal, etc.)
+//! - Database operations for storing and managing payment methods
+//! - Support for multiple payment types (credit/debit cards, PayPal, bank transfers, etc.)
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Type};
 use anyhow::Result;
 use std::str::FromStr;
+use std::env;
+use serde_json::json;
+use reqwest::Client;
 
 // ============= Types =============
 
-/// Payment method information
-///
-/// Stores payment method details for recurring donations.
+/// Core payment method struct representing validated payment information
+/// Used for storing the result of payment method validation before persistence
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PaymentMethod {
     /// Unique identifier
     pub id: String,
+    /// User ID
+    pub user_id: Option<i32>,
     /// Type of payment method
     pub payment_type: PaymentMethodType,
     /// Last 4 digits (for cards)
@@ -31,9 +38,339 @@ pub struct PaymentMethod {
     pub created_at: DateTime<Utc>,
 }
 
-/// Types of payment methods
-///
-/// Supported payment methods for donations.
+// Provider-specific response types for parsing API responses
+/// Stripe API response structures
+#[derive(Deserialize)]
+struct StripePaymentMethod {
+    id: String,
+    card: StripeCard,
+}
+
+#[derive(Deserialize)]
+struct StripeCard {
+    brand: String,
+    last4: String,
+    exp_month: u32,
+    exp_year: u32,
+}
+
+/// PayPal authentication response
+#[derive(Deserialize)]
+struct PayPalAuth {
+    access_token: String,
+}
+
+#[derive(Deserialize)]
+struct PlaidPaymentMethod {
+    payment_id: String,
+    account_last4: String
+}
+
+#[derive(Deserialize)]
+struct ApplePayResponse {
+    id: String,
+    card: CardDetails,
+ }
+
+#[derive(Deserialize)]
+struct GooglePayResponse {
+    id: String,
+    card: CardDetails,
+}
+
+#[derive(Deserialize)]
+struct CardDetails {
+    last_four: String,
+    expiry_month: u32,
+    expiry_year: u32
+}
+
+/// Payment Method Implementation
+impl PaymentMethod {
+    /// Factory method to create new PaymentMethod instances
+    pub fn new(id: String, user_id: Option<i32>, payment_type: PaymentMethodType, last_four: Option<String>, expiry_date: Option<String>, card_brand: Option<String>, is_default: bool, created_at: DateTime<Utc>) -> Self {
+        Self { id, user_id, payment_type, last_four, expiry_date, card_brand, is_default, created_at }
+    }
+
+    /// Validates payment methods across different providers
+    /// Routes to specific validation methods based on payment type
+    pub async fn validate_payment_method
+    (token : &str, payment_type: PaymentMethodType) -> Result<PaymentMethod> {
+
+        Ok (match payment_type {
+            PaymentMethodType::CreditCard
+            | PaymentMethodType::DebitCard => {
+                Self::validate_card_payment(token).await?
+            }
+            PaymentMethodType::PayPal => {
+                Self::validate_paypal_payment(token).await?
+            }
+            PaymentMethodType::BankTransfer => {
+                Self::validate_bank_transfer_payment(token).await?
+            }
+            PaymentMethodType::Crypto => {
+                Self::validate_crypto_payment(token).await?
+            }
+            PaymentMethodType::ApplePay  => {
+                Self::validate_apple_pay_payment(token).await?
+            }
+            PaymentMethodType::GooglePay => {
+                Self::validate_google_pay_payment(token).await?
+            }
+        })
+    }
+
+
+    /// Validates credit/debit card payments through Stripe
+    /// Handles token validation and payment method creation
+    async fn validate_card_payment(token : &str) -> Result<PaymentMethod> {
+        let client = Client::new();
+        // TODO: Get stripe key from env
+            let stripe_key = env::var("STRIPE_SECRET_KEY")?;
+
+            let response = client
+                .post("https://api.stripe.com/v1/payment_methods")
+                .header("Authorization", format!("Bearer {}", stripe_key))
+                .json(&json!({
+                    "type": "card",
+                    "card[token]": token
+                }))
+                .send()
+                .await?;
+
+            if !response.status().is_success() {
+                return Err(anyhow::anyhow!("Failed to validate card payment"));
+            }
+
+            let stripe_response: StripePaymentMethod = response.json().await?;
+
+            Ok(PaymentMethod {
+                id: stripe_response.id,
+                user_id: None,
+                payment_type: PaymentMethodType::CreditCard,
+                last_four: Some(stripe_response.card.last4),
+                expiry_date: Some(format!("{:02}/{:04}",
+                stripe_response.card.exp_month, stripe_response.card.exp_year)),
+                card_brand: Some(stripe_response.card.brand),
+                is_default: false,
+                created_at: Utc::now()
+            })
+    }
+
+    // Validate PayPal payment
+    async fn validate_paypal_payment(token : &str) -> Result<PaymentMethod> {
+
+        let client = Client::new();
+        // TODO: Get paypal key from env
+        let paypal_client_id = env::var("PAYPAL_CLIENT_ID")?;
+        let paypal_client_secret = env::var("PAYPAL_CLIENT_SECRET")?;
+
+        // First get the access token
+        let auth_response = client
+            .post("https://api-m.sandbox.paypal.com/v1/oauth2/token")
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .basic_auth(&paypal_client_id, Some(&paypal_client_secret))
+            .body(format!("grant_type=client_credentials"))
+            .send()
+            .await?;
+
+        let auth : PayPalAuth = auth_response.json().await?;
+
+        // Validate the payment method
+
+        let response = client
+            .post("https://api-m.sandbox.paypal.com/v1/payments/payment")
+            .bearer_auth(auth.access_token)
+            .json(&serde_json::json!({
+                "token": token,
+                "validate_only": true
+            }))
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("Failed to validate PayPal payment"));
+        }
+
+        Ok(PaymentMethod {
+            id: "".to_string(),
+            user_id: None,
+            payment_type: PaymentMethodType::PayPal,
+            last_four: None, // PayPal doesn't have a last 4
+            expiry_date: None, // PayPal doesn't have an expiry date
+            card_brand: None, // PayPal doesn't have a card brand
+            is_default: false,
+            created_at: Utc::now()
+        })
+    }
+
+
+    // Validate bank transfer payment
+    async fn validate_bank_transfer_payment(token : &str) -> Result<PaymentMethod> {
+
+        let client = Client::new();
+
+        let plaid_secret = env::var("PLAID_SECRET")?;
+        let plaid_public_key = env::var("PLAID_PUBLIC_KEY")?;
+
+        let response = client
+            .post("https://sandbox.plaid.com/link/token/create")
+            .header("PLAID_SECRET", plaid_secret)
+            .header("PLAID_PUBLIC_KEY", plaid_public_key)
+            .json(&serde_json::json!({
+                "public_token": token,
+                "account_id": "account_id" // TODO: Get account id from plaid
+            }))
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("Failed to validate bank transfer payment"));
+        }
+
+        let plaid_response: PlaidPaymentMethod = response.json().await?;
+
+        Ok(PaymentMethod {
+            id: plaid_response.payment_id,
+            user_id: None,
+            payment_type: PaymentMethodType::BankTransfer,
+            last_four: Some(plaid_response.account_last4),
+            expiry_date: None,
+            card_brand: None,
+            is_default: false,
+            created_at: Utc::now()
+        })
+    }
+
+
+    // Validate apple pay payment
+    async fn validate_apple_pay_payment(token : &str) -> Result<PaymentMethod> {
+
+        let client = Client::new();
+        // TODO: Get stripe key from env
+        let stripe_key = env::var("STRIPE_SECRET_KEY")?;
+
+        let response = client
+            .post("https://api.stripe.com/v1/payment_methods")
+            .header("Authorization", format!("Bearer {}", stripe_key))
+            .json(&json!({
+                "type": "apple_pay",
+                "token": token
+            }))
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("Failed to validate apple pay payment"));
+        }
+
+        let apple_pay_response: ApplePayResponse = response.json().await?;
+
+        Ok(PaymentMethod {
+            id: apple_pay_response.id,
+            user_id: None,
+            payment_type: PaymentMethodType::ApplePay,
+            last_four: Some(apple_pay_response.card.last_four),
+            expiry_date: Some(format!("{:02}/{:04}",
+            apple_pay_response.card.expiry_month, apple_pay_response.card.expiry_year)),
+            card_brand: Some("Apple Pay".to_string()),
+            is_default: false,
+            created_at: Utc::now()
+        })
+    }
+
+    // Validate google pay payment
+    async fn validate_google_pay_payment(token : &str) -> Result<PaymentMethod> {
+
+        let client = Client::new();
+        // TODO: Get stripe key from env
+        let stripe_key = env::var("STRIPE_SECRET_KEY")?;
+
+        let response = client
+            .post("https://api.stripe.com/v1/payment_methods")
+            .header("Authorization", format!("Bearer {}", stripe_key))
+            .json(&json!({
+                "type": "google_pay",
+                "token": token
+            }))
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("Failed to validate google pay payment"));
+        }
+
+        let google_pay_response: GooglePayResponse = response.json().await?;
+
+        Ok(PaymentMethod {
+            id: google_pay_response.id,
+            user_id: None,
+            payment_type: PaymentMethodType::GooglePay,
+            last_four: Some(google_pay_response.card.last_four),
+            expiry_date: Some(format!("{:02}/{:04}",
+            google_pay_response.card.expiry_month, google_pay_response.card.expiry_year)),
+            card_brand: Some("Google Pay".to_string()),
+            is_default: false,
+            created_at: Utc::now()
+        })
+    }
+
+
+    // validate crypto payment
+    async fn validate_crypto_payment(token : &str) -> Result<PaymentMethod> {
+        // TODO: Implement crypto payment validation
+        Ok(PaymentMethod {
+            id: "".to_string(),
+            user_id: None,
+            payment_type: PaymentMethodType::Crypto,
+            last_four: None,
+            expiry_date: None,
+            card_brand: None,
+            is_default: false,
+            created_at: Utc::now()
+        })
+    }
+
+    // Deactivate payment method
+    pub async fn deactivate_payment_method(id : &str) -> Result<()> {
+        let client = Client::new();
+        // TODO: Get stripe key from env
+        let stripe_key = env::var("STRIPE_SECRET_KEY")?;
+
+        let response = client
+            .post(format!("https://api.stripe.com/v1/payment_methods/{}/detach", id))
+            .header("Authorization", format!("Bearer {}", stripe_key))
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("Failed to deactivate payment method"));
+        }
+
+        Ok(())
+    }
+
+    // Validate existing payment method
+    pub async fn validate_existing_payment_method(id : &str) -> Result<(bool)> {
+
+        let client = Client::new();
+        // TODO: Get stripe key from env
+        let stripe_key = env::var("STRIPE_SECRET_KEY")?;
+
+        let response = client
+            .get(format!("https://api.stripe.com/v1/payment_methods/{}", id))
+            .header("Authorization", format!("Bearer {}", stripe_key))
+            .send()
+            .await?;
+
+        Ok(response.status().is_success())
+    }
+
+}
+
+
+/// Payment method types supported by the application
+/// Maps to database enum type 'payment_method_type'
 #[derive(Debug, Serialize, Deserialize, Type, Clone, Copy)]
 #[sqlx(type_name = "payment_method_type", rename_all = "lowercase")]
 pub enum PaymentMethodType {
@@ -73,8 +410,15 @@ impl FromStr for PaymentMethodType {
     }
 }
 
-/// Represents a user's payment method
-#[derive(Debug, Serialize, Deserialize)]
+impl Default for PaymentMethodType {
+    fn default() -> Self {
+        Self::CreditCard
+    }
+}
+
+/// Database model for stored payment methods
+/// Contains additional fields for user association and billing details
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct UserPaymentMethod {
     /// Unique identifier
     pub id: i32,
@@ -118,7 +462,8 @@ pub struct BillingAddress {
     pub country: Option<String>,
 }
 
-/// Repository for payment method operations
+/// Repository for database operations related to payment methods
+/// Handles CRUD operations for user payment methods
 pub struct PaymentMethodRepository {
     pool: PgPool,
 }
@@ -182,7 +527,8 @@ impl PaymentMethodRepository {
         Ok(result)
     }
 
-    /// Gets all payment methods for a user
+    /// Retrieves all active payment methods for a specific user
+    /// Orders by default status and creation date
     pub async fn get_user_payment_methods(
         &self,
         user_id: i32
@@ -249,7 +595,8 @@ impl PaymentMethodRepository {
         Ok(method)
     }
 
-    /// Sets a payment method as default
+    /// Sets a payment method as the default for a user
+    /// Ensures only one default method exists per user
     pub async fn set_default_payment_method(
         &self,
         id: i32,
@@ -289,7 +636,7 @@ impl PaymentMethodRepository {
         Ok(method)
     }
 
-    /// Deactivates a payment method
+    /// Soft deletes a payment method by marking it as inactive
     pub async fn deactivate_payment_method(
         &self,
         id: i32,

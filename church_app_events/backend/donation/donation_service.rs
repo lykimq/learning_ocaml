@@ -9,18 +9,18 @@ use chrono::{DateTime, Utc, Duration as ChronoDuration};
 use serde::{Deserialize, Serialize};
 use super::currency_service::CurrencyService;
 use crate::donation::donation::{Donation, DonationStatus, RecurringDonation, DonationFrequency};
-use crate::donation::payment_method::{PaymentMethodType};
+use crate::donation::payment_method::{PaymentMethodType, PaymentMethod};
 use crate::donation::notification_service::NotificationService;
 use crate::donation::donation_repository::DonationRepository;
 use rust_decimal::prelude::Zero;
-use crate::donation::payment_service::PaymentService;
+use crate::donation::payment_method_service::PaymentMethodService;
 
 // ============= Service Types =============
 
 /// Service for handling all donation-related operations
 pub struct DonationService {
     donation_repository: DonationRepository,
-    payment_service: PaymentService,
+    payment_method_service: PaymentMethodService,
     notification_service: NotificationService,
     currency_service: CurrencyService,
 }
@@ -74,13 +74,13 @@ impl DonationService {
     /// Creates a new DonationService instance
     pub fn new(
         donation_repository: DonationRepository,
-        payment_service: PaymentService,
+        payment_method_service: PaymentMethodService,
         notification_service: NotificationService,
         currency_service: CurrencyService,
     ) -> Self {
         Self {
             donation_repository,
-            payment_service,
+            payment_method_service,
             notification_service,
             currency_service,
         }
@@ -102,7 +102,7 @@ impl DonationService {
         self.process_currency_conversion(&mut donation).await?;
 
         // Process payment
-        let payment = self.payment_service
+        let payment = self.payment_method_service
             .process_payment(&payment_token, donation.amount)
             .await?;
 
@@ -148,12 +148,11 @@ impl DonationService {
         payment_token: String
     ) -> Result<RecurringDonation> {
         // 1. Validate the payment method
-        let payment_method = self.payment_service
-            .validate_payment_method(&payment_token)
+        let payment_method = PaymentMethod::validate_payment_method(&payment_token, PaymentMethodType::CreditCard)
             .await?;
 
         // 2. Store the payment method for future use
-        let stored_payment_method = self.payment_service
+        let stored_payment_method = self.payment_method_service
             .store_payment_method(payment_method)
             .await?;
 
@@ -165,7 +164,7 @@ impl DonationService {
 
         // 4. Create the recurring donation record
         let mut new_recurring_donation = recurring_donation;
-        new_recurring_donation.payment_method = Some(stored_payment_method.id);
+        new_recurring_donation.payment_method = stored_payment_method.payment_type;
         new_recurring_donation.next_payment_date = next_payment_date;
         new_recurring_donation.status = DonationStatus::Completed;
         new_recurring_donation.completed_payments_count = 0;
