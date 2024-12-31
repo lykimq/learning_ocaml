@@ -15,7 +15,7 @@ use anyhow::Result;
 // ============= Types =============
 
 /// Represents a currency in the system
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Currency {
     /// ISO 4217 currency code (e.g., USD, EUR)
     pub code: String,

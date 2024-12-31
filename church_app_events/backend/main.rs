@@ -40,6 +40,7 @@ mod donation{
     pub mod receipt_repository;
     pub mod payment_method;
     pub mod currency;
+    pub mod currency_service;
 }
 
 
