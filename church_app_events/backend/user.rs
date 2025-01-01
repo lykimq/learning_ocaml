@@ -21,7 +21,7 @@ use chrono::{Utc, Duration as ChronoDuration};
 use std::sync::Mutex;
 use std::collections::HashSet;
 use std::future::{ready, Ready};
-use futures_util::future::{ok, LocalBoxFuture};
+use futures_util::future::{ LocalBoxFuture};
 use std::task::{Poll};
 
 lazy_static! {

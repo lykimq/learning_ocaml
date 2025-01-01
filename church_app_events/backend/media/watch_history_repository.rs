@@ -1,14 +1,12 @@
-use actix_web::{HttpResponse, Responder, ResponseError};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sqlx::{FromRow, PgPool};
 
 
 use crate::{
     media::error::AppError,
     media::watch_history::WatchHistory,
-    media::models::{Media, MediaStatus, MediaType},
+    media::models::{MediaStatus, MediaType},
 };
 
 /// Request structure for updating watch progress
@@ -133,7 +131,7 @@ impl WatchHistoryRepository {
                     completed,
                     request.last_watched_at
                 )
-                .fetch_one(&mut tx)
+                .fetch_one(&mut *tx)
                 .await;
 
                 match watch_history_result {

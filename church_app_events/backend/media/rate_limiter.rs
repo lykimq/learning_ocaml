@@ -20,6 +20,10 @@ impl RateLimiter {
         Self { client, window, max_requests }
     }
 
+    async fn get_async_connection(&self) -> Result<redis::aio::Connection> {
+        Ok(self.client.get_async_connection().await?)
+    }
+
     /// Checks if a request from an IP should be rate limited
     ///
     /// # Arguments
@@ -28,8 +32,9 @@ impl RateLimiter {
     /// # Returns
     /// * `Ok(true)` if request is allowed
     /// * `Ok(false)` if rate limit exceeded
+    #[warn(dependency_on_unit_never_type_fallback)]
     pub async fn check_rate_limit(&self, ip: &str) -> Result<bool> {
-        let mut conn = self.client.get_async_connection().await?;
+        let mut conn = self.get_async_connection().await?;
 
         match conn.get::<_, Option<String>>(ip).await? {
             Some(count) => {
@@ -37,12 +42,12 @@ impl RateLimiter {
                 if count >= self.max_requests {
                     Ok(false)
                 } else {
-                    conn.incr(ip, 1).await?;
+                    let _: () = conn.incr(ip, 1).await?;
                     Ok(true)
                 }
             }
             None => {
-                conn.set_ex(ip, "0", self.window.as_secs() as usize).await?;
+                let _: () = conn.set_ex(ip, "0", self.window.as_secs() as usize).await?;
                 Ok(true)
             }
         }

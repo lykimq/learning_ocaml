@@ -38,18 +38,21 @@ mod donation{
     pub mod donation;
     pub mod receipt;
     pub mod receipt_repository;
-    pub mod payment_method;
-    pub mod payment_method_service;
-    pub mod payment_method_handlers;
-    pub mod currency;
-    pub mod currency_service;
-    pub mod notification_service;
-    pub mod donation_repository;
-    pub mod donation_service;
+    pub mod receipt_handlers;
+    //pub mod payment_method;
+    //pub mod payment_method_service;
+    //pub mod payment_method_handlers;
+    //pub mod currency;
+    //pub mod currency_service;
+    //pub mod currency_handlers;
+    //pub mod notification_service;
+    //pub mod donation_repository;
+    //pub mod donation_service;
 }
 
 
 #[tokio::main]
+#[allow(unused_variables)]
 async fn main() -> Result<(), anyhow::Error> {
     dotenv().ok();
 
@@ -93,7 +96,7 @@ let pool = PgPool::connect(&database_url).await.unwrap();
     println!("Redis client created successfully");
 
     // Then try to get a connection
-    let mut conn = client.get_async_connection().await
+    let conn = client.get_async_connection().await
         .map_err(|e| {
             println!("Redis connection error: {:?}", e);
             e
