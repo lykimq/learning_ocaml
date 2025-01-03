@@ -54,7 +54,7 @@ pub async fn store_payment_method(
     let mut payment_method = req.payment_method;
     payment_method.user_id = Some(user.id);
 
-    match payment_service.store_payment_method(payment_method).await {
+    match payment_service.store_payment_method(payment_method, &req.payment_token).await {
         Ok(result) => HttpResponse::Ok().json(result),
         Err(e) => HttpResponse::InternalServerError().json(e.to_string())
     }

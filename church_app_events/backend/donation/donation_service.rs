@@ -1,23 +1,28 @@
 //! Donation Service Module
-//! Handles all business logic for donations and recurring donations
-
-use std::sync::Arc;
+//!
+//! This module handles all business logic for donations including:
+//! - One-time donations processing
+//! - Recurring donation management
+//! - Payment processing and validation
+//! - Currency conversion
+//! - Notification handling
+//! - Statistics and reporting
 
 use anyhow::Result;
-use rust_decimal::Decimal;
-use chrono::{DateTime, Utc, Duration as ChronoDuration};
-use serde::{Deserialize, Serialize};
-use super::currency_service::CurrencyService;
-use crate::donation::donation::{Donation, DonationStatus, RecurringDonation, DonationFrequency};
-use crate::donation::payment_method::{PaymentMethodType, PaymentMethod};
-use crate::donation::notification_service::NotificationService;
-use crate::donation::donation_repository::DonationRepository;
+use chrono::{DateTime, Duration as ChronoDuration, Utc, TimeZone};
 use rust_decimal::prelude::Zero;
+use rust_decimal::Decimal;
+use super::currency_service::CurrencyService;
+use crate::donation::donation::{Donation, DonationStatus};
+use crate::donation::recurring_donation::{DonationFrequency, RecurringDonation};
+use crate::donation::notification_service::NotificationService;
+use crate::donation::payment_method::{PaymentMethod, PaymentMethodType};
 use crate::donation::payment_method_service::PaymentMethodService;
+use crate::donation::donation_repository::{DonationRepository, DonationSearchQuery, DonationStatistics};
 
-// ============= Service Types =============
+// ============= Type Definitions =============
 
-/// Service for handling all donation-related operations
+/// Core service for handling all donation-related operations
 pub struct DonationService {
     donation_repository: DonationRepository,
     payment_method_service: PaymentMethodService,
@@ -25,53 +30,8 @@ pub struct DonationService {
     currency_service: CurrencyService,
 }
 
-/// Query parameters for searching donations
-#[derive(Debug, Deserialize)]
-pub struct DonationSearchQuery {
-    pub start_date: Option<DateTime<Utc>>,
-    pub end_date: Option<DateTime<Utc>>,
-    pub min_amount: Option<Decimal>,
-    pub max_amount: Option<Decimal>,
-    pub status: Option<DonationStatus>,
-    pub currency: Option<String>,
-    pub donor_email: Option<String>,
-    pub page: Option<i32>,
-    pub per_page: Option<i32>,
-}
-
-/// Statistics about donations
-#[derive(Debug, Serialize)]
-pub struct DonationStatistics {
-    pub total_amount: Decimal,
-    pub total_count: i64,
-    pub average_amount: Decimal,
-    pub currency_breakdown: Vec<CurrencyStats>,
-    pub status_breakdown: Vec<StatusStats>,
-    pub monthly_totals: Vec<MonthlyStats>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct CurrencyStats {
-    pub currency: String,
-    pub total_amount: Decimal,
-    pub count: i64,
-}
-
-#[derive(Debug, Serialize)]
-pub struct StatusStats {
-    pub status: DonationStatus,
-    pub count: i64,
-}
-
-#[derive(Debug, Serialize)]
-pub struct MonthlyStats {
-    pub month: DateTime<Utc>,
-    pub total_amount: Decimal,
-    pub count: i64,
-}
-
 impl DonationService {
-    /// Creates a new DonationService instance
+    /// Creates a new DonationService instance with required dependencies
     pub fn new(
         donation_repository: DonationRepository,
         payment_method_service: PaymentMethodService,
@@ -86,27 +46,30 @@ impl DonationService {
         }
     }
 
-    // ============= One-Time Donation Operations =============
+    // ============= One-Time Donation Methods =============
 
-    /// Processes a one-time donation
+    /// Processes a one-time donation with payment validation and processing
     ///
     /// # Arguments
-    /// * `donation` - The donation to process
+    /// * `donation` - The donation details to process
     /// * `payment_token` - Token for payment processing
+    ///
+    /// # Returns
+    /// * `Result<Donation>` - Processed donation or error
     pub async fn process_donation(
         &self,
         mut donation: Donation,
         payment_token: String,
     ) -> Result<Donation> {
-        // Process currency conversion
+        // Convert currency and calculate USD equivalent
         self.process_currency_conversion(&mut donation).await?;
 
-        // Process payment
+        // Process payment through payment service
         let payment = self.payment_method_service
             .process_payment(&payment_token, donation.amount)
             .await?;
 
-        // Update donation with payment result
+        // Update donation with payment results
         donation.transaction_id = Some(payment.transaction_id);
         donation.status = if payment.success {
             DonationStatus::Completed
@@ -114,12 +77,12 @@ impl DonationService {
             DonationStatus::Failed
         };
 
-        // Save donation
+        // Save to database
         let donation = self.donation_repository
             .create_donation(&donation)
             .await?;
 
-        // Send notification
+        // Send success notification if applicable
         if donation.status == DonationStatus::Completed {
             self.notification_service
                 .send_donation_success_notification(
@@ -135,53 +98,121 @@ impl DonationService {
         Ok(donation)
     }
 
-    // ============= Recurring Donation Operations =============
 
-    /// Sets up a new recurring donation
-    ///
-    /// # Arguments
-    /// * `recurring_donation` - The recurring donation details
-    /// * `payment_token` - Token for payment method validation
+    // Get donation by id
+    pub async fn get_donation(&self, id: i32) -> Result<Donation> {
+        let donation = self.donation_repository.get_donation(id).await?;
+
+        donation.ok_or_else(|| anyhow::anyhow!("Donation not found"))
+    }
+
+    // Get donation statistics
+    pub async fn get_donation_statistics(&self) -> Result<DonationStatistics> {
+        self.donation_repository.get_donation_statistics().await
+    }
+
+    // Get donation by tax year
+    pub async fn get_donations_by_tax_year(&self, tax_year: i32) -> Result<Vec<Donation>> {
+        let start_date = Utc.with_ymd_and_hms(tax_year, 1, 1, 0, 0, 0).unwrap();
+        let end_date = Utc.with_ymd_and_hms(tax_year, 12, 31, 23, 59, 59).unwrap();
+
+
+        self.donation_repository.get_donations_by_tax_year(start_date, end_date).await
+    }
+
+
+    /// Retrieves donation history for a specific user
+    pub async fn get_user_donation_history(&self, user_id: i32) -> Result<Vec<Donation>> {
+        self.donation_repository.get_user_donations(user_id).await
+    }
+
+    /// Searches donations based on provided criteria
+    pub async fn search_donations(&self, query: DonationSearchQuery) -> Result<Vec<Donation>> {
+        let page = query.page.unwrap_or(1);
+        let per_page = query.per_page.unwrap_or(20);
+        let offset = (page - 1) * per_page;
+
+        self.donation_repository
+            .search_donations(query, offset as i64, per_page as i64)
+            .await
+    }
+
+    // ============= Recurring Donation Methods =============
+
+
+    // Create a new recurring donation
+    pub async fn create_recurring_donation(
+        &self,
+        recurring_donation: RecurringDonation,
+        payment_token: String
+    ) -> Result<RecurringDonation> {
+        // Validate payment method
+        let payment_method = PaymentMethod::validate_payment_method(
+            &payment_token,
+            PaymentMethodType::CreditCard
+        ).await?;
+
+        self.payment_method_service.store_payment_method(payment_method, &payment_token).await?;
+
+        // Create the recurring donation
+        self.donation_repository.create_recurring_donation(&recurring_donation).await?;
+
+        // Schedule the next payment
+        self.schedule_next_payment(&recurring_donation).await?;
+
+        // Send confirmation notification
+        self.notification_service
+            .send_donation_success_notification(
+                recurring_donation.user_id,
+                recurring_donation.id,
+                &recurring_donation.currency,
+                recurring_donation.amount,
+                true
+            )
+            .await?;
+
+        Ok(recurring_donation)
+    }
+
+    /// Sets up a new recurring donation subscription
     pub async fn setup_recurring_donation(
         &self,
         recurring_donation: RecurringDonation,
         payment_token: String
     ) -> Result<RecurringDonation> {
-        // 1. Validate the payment method
-        let payment_method = PaymentMethod::validate_payment_method(&payment_token, PaymentMethodType::CreditCard)
-            .await?;
+        // Validate payment method
+        let payment_method = PaymentMethod::validate_payment_method(
+            &payment_token,
+            PaymentMethodType::CreditCard
+        ).await?;
 
-        // 2. Store the payment method for future use
+        // Store payment method for future use
         let stored_payment_method = self.payment_method_service
-            .store_payment_method(payment_method)
+            .store_payment_method(payment_method, &payment_token)
             .await?;
 
-        // 3. Calculate the next payment date
-        let next_payment_date = self.calculate_next_payment_date(
-            Utc::now(),
-            &recurring_donation.frequency
-        );
-
-        // 4. Create the recurring donation record
+        // Initialize recurring donation
         let mut new_recurring_donation = recurring_donation;
         new_recurring_donation.payment_method = stored_payment_method.payment_type;
-        new_recurring_donation.next_payment_date = next_payment_date;
+        new_recurring_donation.next_payment_date = self.calculate_next_payment_date(
+            Utc::now(),
+            &new_recurring_donation.frequency
+        );
         new_recurring_donation.status = DonationStatus::Completed;
         new_recurring_donation.completed_payments_count = 0;
         new_recurring_donation.start_date = Utc::now();
 
-        // 5. Validate donation amount and currency
+        // Validate donation parameters
         self.validate_recurring_donation(&new_recurring_donation)?;
 
-        // 6. Save to database
+        // Save and schedule next payment
         let saved_donation = self.donation_repository
             .create_recurring_donation(&new_recurring_donation)
             .await?;
 
-        // 7. Schedule the next payment
         self.schedule_next_payment(&saved_donation).await?;
 
-        // 8. Send confirmation notification
+        // Send confirmation notification
         self.notification_service
             .send_donation_success_notification(
                 saved_donation.user_id,
@@ -195,14 +226,64 @@ impl DonationService {
         Ok(saved_donation)
     }
 
-    /// Processes the next scheduled payment for a recurring donation
+    // Get recurring donation by id
+    pub async fn get_recurring_donation(&self, id: i32) -> Result<RecurringDonation> {
+        self.donation_repository.get_recurring_donation(id).await
+    }
+
+    // Get recurring donation by tax year
+    pub async fn get_recurring_donations_by_tax_year(&self, tax_year: i32) -> Result<Vec<RecurringDonation>> {
+        let start_date = Utc.with_ymd_and_hms(tax_year, 1, 1, 0, 0, 0).unwrap();
+        let end_date = Utc.with_ymd_and_hms(tax_year + 1, 1, 1, 0, 0, 0).unwrap();
+
+        self.donation_repository.get_recurring_donations_by_tax_year(start_date, end_date).await
+    }
+
+    /// Updates the status of a recurring donation
+    pub async fn update_recurring_donation_status(
+        &self,
+        id: i32,
+        status: DonationStatus
+    ) -> Result<RecurringDonation> {
+        // Get current donation
+        let donation = self.donation_repository
+            .get_recurring_donation(id)
+            .await?;
+
+        // Validate status transition
+        self.validate_recurring_status_transition(&donation.status, &status)?;
+
+        // Update status
+        let updated_donation = self.donation_repository
+            .update_recurring_donation_status(id, status)
+            .await?;
+
+        // Handle status-specific actions
+        match &status {
+            DonationStatus::Cancelled => {
+                self.cancel_scheduled_payments(&updated_donation).await?;
+            }
+            DonationStatus::Completed => {
+                if donation.status == DonationStatus::Pending {
+                    self.schedule_next_payment(&updated_donation).await?;
+                }
+            }
+            _ => {}
+        }
+
+        Ok(updated_donation)
+    }
+
+    // ============= Helper Methods =============
+
+    /// Processes recurring payments that are due
     async fn process_recurring_payment(&self, recurring_donation: &RecurringDonation) -> Result<()> {
-        // 1. Verify donation is still active
+        // Verify donation is still active
         if recurring_donation.status != DonationStatus::Completed {
             return Ok(());
         }
 
-        // 2. Create a new donation instance
+        // Create new donation instance for this payment
         let donation = Donation {
             user_id: Some(recurring_donation.user_id),
             amount: recurring_donation.amount,
@@ -213,13 +294,13 @@ impl DonationService {
             ..Default::default()
         };
 
-        // 3. Process the payment
+        // Process the payment
         let processed_donation = self.process_donation(
             donation,
             recurring_donation.payment_method.to_string()
         ).await?;
 
-        // 4. Handle the payment result
+        // Handle payment result
         if processed_donation.status == DonationStatus::Completed {
             let new_count = recurring_donation.completed_payments_count + 1;
 
@@ -249,156 +330,8 @@ impl DonationService {
         Ok(())
     }
 
-    // ============= Status Management =============
-
-    /// Updates the status of a recurring donation
-    pub async fn update_recurring_donation_status(
-        &self,
-        id: i32,
-        status: DonationStatus
-    ) -> Result<RecurringDonation> {
-        // 1. Get current donation
-        let donation = self.donation_repository
-            .get_recurring_donation(id)
-            .await?;
-
-        // 2. Validate status transition
-        self.validate_recurring_status_transition(&donation.status, &status)?;
-
-        // 3. Update status
-        let updated_donation = self.donation_repository
-            .update_recurring_donation_status(id, status)
-            .await?;
-
-        // 4. Handle status-specific actions
-        let status = status.clone();
-        match &status {
-            DonationStatus::Cancelled => {
-                self.cancel_scheduled_payments(&updated_donation).await?;
-            }
-            DonationStatus::Completed => {
-                if donation.status == DonationStatus::Pending {
-                    self.schedule_next_payment(&updated_donation).await?;
-                }
-            }
-            _ => {}
-        }
-
-        Ok(updated_donation)
-    }
-
-    // ============= Query Operations =============
-
-    /// Retrieves donation history for a user
-    pub async fn get_user_donation_history(&self, user_id: i32) -> Result<Vec<Donation>> {
-        self.donation_repository.get_user_donations(user_id).await
-    }
-
-    /// Searches donations based on criteria
-    pub async fn search_donations(&self, query: DonationSearchQuery) -> Result<Vec<Donation>> {
-        let page = query.page.unwrap_or(1);
-        let per_page = query.per_page.unwrap_or(20);
-        let offset = (page - 1) * per_page;
-
-        let donations = sqlx::query_as!(
-            Donation,
-            r#"
-            SELECT
-                id,
-                amount,
-                currency,
-                status as "status: DonationStatus",
-                payment_method as "payment_method: PaymentMethodType",
-                transaction_id,
-                donor_name,
-                donor_email,
-                donor_phone,
-                user_id,
-                message,
-                COALESCE(is_anonymous, false) as "is_anonymous!: bool",
-                converted_amount_usd,
-                ip_address,
-                country_code,
-                created_at as "created_at!: DateTime<Utc>",
-                updated_at as "updated_at!: DateTime<Utc>"
-            FROM donations
-            WHERE ($1::timestamptz IS NULL OR created_at >= $1)
-            AND ($2::timestamptz IS NULL OR created_at <= $2)
-            AND ($3::decimal IS NULL OR amount >= $3)
-            AND ($4::decimal IS NULL OR amount <= $4)
-            AND ($5::donation_status IS NULL OR status = $5)
-            AND ($6::text IS NULL OR currency = $6)
-            AND ($7::text IS NULL OR donor_email = $7)
-            ORDER BY created_at DESC
-            LIMIT $8 OFFSET $9
-            "#,
-            query.start_date,
-            query.end_date,
-            query.min_amount,
-            query.max_amount,
-            query.status as _,
-            query.currency,
-            query.donor_email,
-            per_page as i64,
-            offset as i64
-        )
-        .fetch_all(&self.donation_repository.pool)
-        .await?;
-
-        Ok(donations)
-    }
-
-    // ============= Helper Functions =============
-
-    /// Validates a recurring donation
-    fn validate_recurring_donation(&self, donation: &RecurringDonation) -> Result<()> {
-        if donation.amount <= Decimal::zero() {
-            return Err(anyhow::anyhow!("Donation amount must be positive"));
-        }
-
-        if let Some(total) = donation.total_payments_count {
-            if total <= 0 {
-                return Err(anyhow::anyhow!("Total payments count must be positive"));
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Validates recurring donation status transitions
-    fn validate_recurring_status_transition(
-        &self,
-        current: &DonationStatus,
-        new: &DonationStatus
-    ) -> Result<()> {
-
-        match (current, new) {
-            // Pending to Completed, Failed, Refunded, or Cancelled
-            (DonationStatus::Pending, DonationStatus::Completed) => Ok(()),
-            (DonationStatus::Pending, DonationStatus::Failed) => Ok(()),
-            (DonationStatus::Pending, DonationStatus::Refunded) => Ok(()),
-            (DonationStatus::Pending, DonationStatus::Cancelled) => Ok(()),
-
-            // From Completed, can only be Refuned or Cancelled
-            (DonationStatus::Completed, DonationStatus::Refunded) => Ok(()),
-            (DonationStatus::Completed, DonationStatus::Cancelled) => Ok(()),
-
-            // From Failed, can retry (back to Completed) or Cancelled
-            (DonationStatus::Failed, DonationStatus::Completed) => Ok(()),
-            (DonationStatus::Failed, DonationStatus::Cancelled) => Ok(()),
-
-            // Terminal states - no transitions allowed from Refunded or Cancelled
-
-            _ => Err(anyhow::anyhow!(
-                "Invalid status transition from {:?} to {:?}",
-                current,
-                new
-            ))
-        }
-    }
-
     /// Calculates the next payment date based on frequency
-    fn calculate_next_payment_date(
+    pub fn calculate_next_payment_date(
         &self,
         current: DateTime<Utc>,
         frequency: &DonationFrequency
@@ -413,84 +346,101 @@ impl DonationService {
         }
     }
 
-    // Schedule next payment
-    async fn schedule_next_payment(&self, recurring_donation: &RecurringDonation) -> Result<()> {
-        let next_payment_date =
-         self.calculate_next_payment_date(
+    /// Validates recurring donation parameters
+   pub fn validate_recurring_donation(&self, donation: &RecurringDonation) -> Result<()> {
+        if donation.amount <= Decimal::zero() {
+            return Err(anyhow::anyhow!("Donation amount must be positive"));
+        }
+
+        if let Some(total) = donation.total_payments_count {
+            if total <= 0 {
+                return Err(anyhow::anyhow!("Total payments count must be positive"));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validates status transitions for recurring donations
+    pub fn validate_recurring_status_transition(
+        &self,
+        current: &DonationStatus,
+        new: &DonationStatus
+    ) -> Result<()> {
+        match (current, new) {
+            // Valid transitions from Pending
+            (DonationStatus::Pending, DonationStatus::Completed) |
+            (DonationStatus::Pending, DonationStatus::Failed) |
+            (DonationStatus::Pending, DonationStatus::Refunded) |
+            (DonationStatus::Pending, DonationStatus::Cancelled) => Ok(()),
+
+            // Valid transitions from Completed
+            (DonationStatus::Completed, DonationStatus::Refunded) |
+            (DonationStatus::Completed, DonationStatus::Cancelled) => Ok(()),
+
+            // Valid transitions from Failed
+            (DonationStatus::Failed, DonationStatus::Completed) |
+            (DonationStatus::Failed, DonationStatus::Cancelled) => Ok(()),
+
+            // Invalid transitions
+            _ => Err(anyhow::anyhow!(
+                "Invalid status transition from {:?} to {:?}",
+                current,
+                new
+            ))
+        }
+    }
+
+    /// Processes currency conversion for donations
+    async fn process_currency_conversion(&self, donation: &mut Donation) -> Result<()> {
+        let currency = self.currency_service.get_currency(&donation.currency).await?;
+        donation.converted_amount_usd = currency.to_usd(donation.amount);
+        Ok(())
+    }
+
+
+    // Update the payment count for a recurring donation
+    pub async fn update_recurring_donation_payment_count(&self, id: i32, count: i32) -> Result<RecurringDonation> {
+        self.donation_repository.update_recurring_donation_payment_count(id, count).await
+    }
+
+    // ============= Private Helper Methods =============
+
+    /// Schedules the next payment for a recurring donation
+    pub async fn schedule_next_payment(&self, recurring_donation: &RecurringDonation) -> Result<()> {
+        let next_payment_date = self.calculate_next_payment_date(
             recurring_donation.next_payment_date,
             &recurring_donation.frequency
         );
 
-        sqlx::query!(
-            r#"
-            UPDATE recurring_donations
-            SET next_payment_date = $1
-            WHERE id = $2
-            "#,
-            next_payment_date.naive_utc(),
-            recurring_donation.id
-        )
-        .execute(&self.donation_repository.pool)
-        .await?;
+        self.donation_repository
+            .update_next_payment_date(recurring_donation.id, next_payment_date)
+            .await?;
 
         Ok(())
     }
 
-    // Complete recurring donation
-    async fn complete_recurring_donation(&self, donation_id: i32) -> Result<()> {
-
-        sqlx::query!(
-            r#"
-            UPDATE recurring_donations
-            SET status = 'completed'
-            WHERE id = $1
-            "#,
-            donation_id
-        )
-        .execute(&self.donation_repository.pool)
-        .await?;
-
+    /// Marks a recurring donation as completed
+    pub async fn complete_recurring_donation(&self, donation_id: i32) -> Result<()> {
+        self.donation_repository
+            .update_recurring_donation_status(donation_id, DonationStatus::Completed)
+            .await?;
         Ok(())
     }
 
-    // Handle failed recurring payment
-    async fn handle_failed_recurring_payment(&self, recurring_donation: &RecurringDonation) -> Result<()> {
-        sqlx::query!(
-            r#"
-            UPDATE recurring_donations
-            SET status = 'failed'
-            WHERE id = $1
-            "#,
-            recurring_donation.id
-        )
-        .execute(&self.donation_repository.pool)
-        .await?;
-
+    /// Handles failed recurring payments
+    pub async fn handle_failed_recurring_payment(&self, recurring_donation: &RecurringDonation) -> Result<()> {
+        self.donation_repository
+            .update_recurring_donation_status(recurring_donation.id, DonationStatus::Failed)
+            .await?;
         Ok(())
     }
 
-
-    // Cancel scheduled payments
-    async fn cancel_scheduled_payments(&self, recurring_donation: &RecurringDonation) -> Result<()> {
-        sqlx::query!(
-            r#"
-            UPDATE recurring_donations
-            SET status = 'cancelled',
-                next_payment_date = NULL
-            WHERE id = $1
-            "#,
-            recurring_donation.id
-        )
-        .execute(&self.donation_repository.pool)
-        .await?;
-
-        Ok(())
-    }
-
-    /// Processes currency conversion
-    async fn process_currency_conversion(&self, donation: &mut Donation) -> Result<()> {
-        let currency = self.currency_service.get_currency(&donation.currency).await?;
-        donation.converted_amount_usd = currency.to_usd(donation.amount);
+    /// Cancels all scheduled payments for a recurring donation
+    pub async fn cancel_scheduled_payments(&self, recurring_donation: &RecurringDonation) -> Result<()> {
+        self.donation_repository
+            .cancel_recurring_donation(recurring_donation.id)
+            .await?;
         Ok(())
     }
 }

@@ -35,19 +35,26 @@ mod media {
 }
 
 mod donation{
-    pub mod donation;
+    pub mod currency;
+    pub mod currency_service;
+    pub mod currency_handlers;
+
+    pub mod notification_service;
+
+    pub mod payment_method;
+    pub mod payment_method_service;
+    pub mod payment_method_handlers;
+
     pub mod receipt;
-    pub mod receipt_repository;
     pub mod receipt_handlers;
-    //pub mod payment_method;
-    //pub mod payment_method_service;
-    //pub mod payment_method_handlers;
-    //pub mod currency;
-    //pub mod currency_service;
-    //pub mod currency_handlers;
-    //pub mod notification_service;
-    //pub mod donation_repository;
-    //pub mod donation_service;
+
+    pub mod donation;
+    pub mod donation_service;
+    pub mod donation_repository;
+    pub mod donation_handlers;
+
+    pub mod recurring_donation;
+    pub mod recurring_donation_service;
 }
 
 
