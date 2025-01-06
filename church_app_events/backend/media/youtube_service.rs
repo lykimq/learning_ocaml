@@ -13,8 +13,8 @@ use std::sync::Mutex;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PageInfo {
-    pub totalResults: u64,
-    pub resultsPerPage: u64,
+    pub total_results: u64,
+    pub results_per_page: u64,
 }
 
 /// Response structure for YouTube API requests containing a list of items and pagination token
@@ -22,7 +22,7 @@ pub struct PageInfo {
 pub struct YouTubeResponse {
     pub kind: String,
     pub etag: String,
-    pub pageInfo: PageInfo,
+    pub page_info: PageInfo,
     pub items: Vec<YouTubeItem>,
     pub next_page_token: Option<String>,
 }
@@ -41,8 +41,8 @@ pub struct YouTubeChannel {
 pub struct ChannelSnippet {
     pub title: String,
     pub description: String,
-    pub customUrl: Option<String>,
-    pub publishedAt: String,
+    pub custom_url: Option<String>,
+    pub published_at: String,
     pub thumbnails: Thumbnails,
     pub localized: Option<Localized>,
     pub country: Option<String>,
@@ -137,7 +137,7 @@ pub struct ChannelVideosResponse {
 pub struct YouTubeChannelResponse {
     pub kind: String,
     pub etag: String,
-    pub pageInfo: PageInfo,
+    pub page_info: PageInfo,
     pub items: Vec<YouTubeChannel>,
 }
 

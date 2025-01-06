@@ -37,11 +37,13 @@ impl RateLimiter {
                 if count >= self.max_requests {
                     Ok(false)
                 } else {
+                    let _ : i64 =
                     conn.incr(ip, 1).await?;
                     Ok(true)
                 }
             }
             None => {
+               let _ : () =
                 conn.set_ex(ip, "0", self.window.as_secs() as usize).await?;
                 Ok(true)
             }

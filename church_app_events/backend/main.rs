@@ -1,7 +1,7 @@
 use actix_cors::Cors;
 use actix_web::{
     web::{self},
-    App, HttpServer, HttpResponse, Responder,
+    App, HttpServer, HttpResponse
 };
 use dotenv::dotenv;
 use sqlx::PgPool;
@@ -78,7 +78,7 @@ let pool = PgPool::connect(&database_url).await.unwrap();
     println!("Redis client created successfully");
 
     // Then try to get a connection
-    let mut conn = client.get_async_connection().await
+    let mut _conn = client.get_async_connection().await
         .map_err(|e| {
             println!("Redis connection error: {:?}", e);
             e
@@ -332,12 +332,4 @@ let pool = PgPool::connect(&database_url).await.unwrap();
     .await
     .map_err(anyhow::Error::from)
 
-}
-
-// Health check endpoint
-async fn health_check() -> impl Responder {
-    HttpResponse::Ok().json(serde_json::json!({
-        "status": "healthy",
-        "timestamp": chrono::Utc::now().to_rfc3339()
-    }))
 }

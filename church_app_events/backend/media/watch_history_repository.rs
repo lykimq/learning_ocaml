@@ -1,14 +1,12 @@
-use actix_web::{HttpResponse, Responder, ResponseError};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sqlx::{FromRow, PgPool};
 
 
 use crate::{
     media::error::AppError,
     media::watch_history::WatchHistory,
-    media::models::{Media, MediaStatus, MediaType},
+    media::models::{MediaStatus, MediaType},
 };
 
 /// Request structure for updating watch progress

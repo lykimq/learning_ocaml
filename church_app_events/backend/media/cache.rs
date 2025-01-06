@@ -41,7 +41,7 @@ impl Cache {
     pub async fn set<T: Serialize>(&self, key: &str, value: &T, expiry: Duration) -> Result<()> {
         let mut conn = self.get_connection().await?;
         let serialized = serde_json::to_string(value)?;
-        conn.set_ex(key, serialized, expiry.as_secs() as usize).await?;
+        let _: () = conn.set_ex(key, serialized, expiry.as_secs() as usize).await?;
         Ok(())
     }
 
